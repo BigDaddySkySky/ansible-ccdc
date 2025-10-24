@@ -1,5 +1,14 @@
+# Ansible
+*.retry
+.vault_pass
+group_vars/vault_*.yml
+
+# Python
 .venv/
 __pycache__/
-*.retry
-vault.yml
-*.log
+*.pyc
+
+# Sensitive
+*.pem
+*.key
+incidents/

@@ -1,0 +1,4 @@
+---
+ansible_user: "{{ vault_paloalto_user }}"
+ansible_password: "{{ vault_paloalto_pass }}"
+paloalto_pass_new: "{{ vault_paloalto_pass_new }}"

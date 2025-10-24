@@ -1,43 +1,86 @@
-# pass_reset.yml
+# playbooks/pass_reset.yml
 ---
-- name: Reset Linux default passwords
-  hosts: linux_servers
+- name: Reset Linux passwords (standard systems)
+  hosts: debian,fedora_webmail
   become: true
-  vars_files:
-    - ../vault.yml   # store new passwords here, encrypted with ansible-vault
   tasks:
     - name: Reset sysadmin password
       ansible.builtin.user:
         name: sysadmin
-        password: "{{ linux_sysadmin_pass | password_hash('sha512') }}"
-
+        password: "{{ linux_sysadmin_new | password_hash('sha512') }}"
+    
     - name: Reset root password
       ansible.builtin.user:
         name: root
-        password: "{{ linux_root_pass | password_hash('sha512') }}"
+        password: "{{ linux_root_new | password_hash('sha512') }}"
 
-- name: Reset Windows default passwords
-  hosts: windows_servers
-  vars_files:
-    - ../vault.yml
+- name: Reset Splunk passwords
+  hosts: splunk
+  become: true
+  tasks:
+    - name: Reset sysadmin password
+      ansible.builtin.user:
+        name: sysadmin
+        password: "{{ splunk_sysadmin_new | password_hash('sha512') }}"
+    
+    - name: Reset root password
+      ansible.builtin.user:
+        name: root
+        password: "{{ splunk_root_new | password_hash('sha512') }}"
+    
+    - name: Reset Splunk admin password (web interface)
+      ansible.builtin.shell: |
+        /opt/splunk/bin/splunk edit user admin \
+          -password '{{ splunk_admin_new }}' \
+          -auth admin:{{ splunk_admin_default }}
+      register: splunk_pass_change
+      failed_when: false
+      changed_when: splunk_pass_change.rc == 0
+
+- name: Reset Windows passwords
+  hosts: windows
   tasks:
     - name: Reset Administrator password
       ansible.windows.win_user:
         name: Administrator
-        password: "{{ windows_admin_pass }}"
-
-    - name: Reset UserOne password (if present)
+        password: "{{ windows_admin_new }}"
+        password_never_expires: true
+    
+    - name: Reset UserOne password (Win11 workstation)
       ansible.windows.win_user:
         name: UserOne
-        password: "{{ windows_userone_pass }}"
-      ignore_errors: true   # in case UserOne doesn’t exist on some hosts
+        password: "{{ windows_userone_new }}"
+      when: inventory_hostname == 'windows11_wks'
+      ignore_errors: true
 
-- name: Reset network device passwords (manual modules later)
-  hosts: firewalls:router
+- name: Display network device password reset instructions
+  hosts: localhost
   gather_facts: false
-  vars_files:
-    - ../vault.yml
   tasks:
-    - name: Placeholder - Palo Alto / Cisco FTD / VyOS password reset
+    - name: Manual password changes required
       ansible.builtin.debug:
-        msg: "Reset firewall/router creds manually or via vendor modules."
+        msg:
+          - "=============================================="
+          - "MANUAL PASSWORD CHANGES REQUIRED"
+          - "=============================================="
+          - ""
+          - "Palo Alto Firewall:"
+          - "  URL: https://172.20.242.150"
+          - "  Current: admin / Changeme123"
+          - "  New: admin / {{ hostvars['paloalto']['paloalto_pass_new'] }}"
+          - ""
+          - "Cisco FTD Firewall:"
+          - "  URL: https://172.20.240.200"
+          - "  Current: admin / !Changeme123"
+          - "  New: admin / {{ hostvars['cisco_ftd']['cisco_ftd_pass_new'] }}"
+          - ""
+          - "VyOS Router:"
+          - "  SSH: ssh vyos@172.31.21.2"
+          - "  Current: vyos / changeme"
+          - "  Commands:"
+          - "    configure"
+          - "    set system login user vyos authentication plaintext-password"
+          - "    (enter new password when prompted)"
+          - "    commit"
+          - "    save"
+          - "=============================================="

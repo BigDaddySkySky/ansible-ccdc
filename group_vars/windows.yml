@@ -1,0 +1,7 @@
+---
+# Reference encrypted variables from vault_windows.yml
+ansible_password: "{{ vault_windows_admin_pass }}"
+
+# New passwords for reset playbook
+windows_admin_new: "{{ vault_windows_admin_new }}"
+windows_userone_new: "{{ vault_windows_userone_new }}"
