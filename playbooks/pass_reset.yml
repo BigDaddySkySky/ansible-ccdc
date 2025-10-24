@@ -1,0 +1,42 @@
+---
+- name: Reset Linux default passwords
+  hosts: linux_servers
+  become: true
+  vars_files:
+    - ../vault.yml   # store new passwords here, encrypted with ansible-vault
+  tasks:
+    - name: Reset sysadmin password
+      ansible.builtin.user:
+        name: sysadmin
+        password: "{{ linux_sysadmin_pass | password_hash('sha512') }}"
+
+    - name: Reset root password
+      ansible.builtin.user:
+        name: root
+        password: "{{ linux_root_pass | password_hash('sha512') }}"
+
+- name: Reset Windows default passwords
+  hosts: windows_servers
+  vars_files:
+    - ../vault.yml
+  tasks:
+    - name: Reset Administrator password
+      ansible.windows.win_user:
+        name: Administrator
+        password: "{{ windows_admin_pass }}"
+
+    - name: Reset UserOne password (if present)
+      ansible.windows.win_user:
+        name: UserOne
+        password: "{{ windows_userone_pass }}"
+      ignore_errors: true   # in case UserOne doesn’t exist on some hosts
+
+- name: Reset network device passwords (manual modules later)
+  hosts: firewalls:router
+  gather_facts: false
+  vars_files:
+    - ../vault.yml
+  tasks:
+    - name: Placeholder - Palo Alto / Cisco FTD / VyOS password reset
+      ansible.builtin.debug:
+        msg: "Reset firewall/router creds manually or via vendor modules."
