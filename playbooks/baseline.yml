@@ -1,3 +1,4 @@
+# baseline.yml
 ---
 - name: First 15 Minute Baseline
   hosts: all
@@ -6,6 +7,16 @@
     - ../vault.yml
 
   tasks:
+
+  - name: Backup configurations before changes
+    hosts: all
+    tasks:
+      - name: Backup Apache configurations
+        ansible.builtin.copy:
+          src: /etc/apache2/
+          dest: /root/backup_apache2/
+          remote_src: true
+        when: "'web' in inventory_hostname"
 
   # ---------------- Linux ----------------
   - name: Update packages (Debian/Ubuntu)

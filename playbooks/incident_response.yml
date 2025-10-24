@@ -1,0 +1,16 @@
+---
+- name: Collect Incident Evidence
+  hosts: all
+  become: true
+  tasks:
+    - name: Capture auth logs
+      ansible.builtin.fetch:
+        src: /var/log/auth.log
+        dest: ./incidents/{{ inventory_hostname }}/
+      when: ansible_os_family == "Debian"
+
+    - name: Check for suspicious processes
+      ansible.builtin.shell: "ps aux | grep -E 'nc|ncat|socat|reverse)'"
+      register: suspicious_procs
+      ignore_errors: true
+      

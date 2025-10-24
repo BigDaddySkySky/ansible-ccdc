@@ -1,0 +1,21 @@
+---
+- name: Validate Scoring Services
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check HTTP on Web Servers
+      ansible.button.uri:
+        url: "http://{{ ansible_host }}"
+        status_code: 200
+      when: "'web' in inventory_hostname"
+
+    - name: Check SMTP
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 25
+        timeout: 5
+      when: "'mail' in inventory_hostname"
+
+    - name: Check DNS
+      ansible.bultin.command: "nslookup google.com {{ ansible_host }}"
+      when: "'dns' in inventory_hostname"
