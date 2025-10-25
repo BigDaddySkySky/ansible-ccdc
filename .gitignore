@@ -1,14 +1,61 @@
 # Ansible
 *.retry
 .vault_pass
-group_vars/vault_*.yml
+vault.yml
+ansible.log
+*.log
 
-# Python
+# Encrypted vault files should be committed, but just in case:
+# group_vars/vault_*.yml
+
+# Python virtual environment
 .venv/
+venv/
+env/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Sensitive
+# Sensitive files
 *.pem
 *.key
+*.crt
+*.p12
+*.pfx
+id_rsa*
+*.ppk
+
+# Incident response artifacts
 incidents/
+evidence/
+logs/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Ansible cache
+/tmp/ansible_*
+.ansible/
+
+# Competition artifacts
+competition_init.log

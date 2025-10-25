@@ -1,0 +1,16 @@
+---
+- name: Capture auth logs (Debian)
+  ansible.builtin.fetch:
+    src: /var/log/auth.log
+    dest: ./incidents/{{ inventory_hostname }}/
+    flat: no
+  when: ansible_os_family == "Debian"
+  ignore_errors: true
+
+- name: Capture secure logs (RedHat)
+  ansible.builtin.fetch:
+    src: /var/log/secure
+    dest: ./incidents/{{ inventory_hostname }}/
+    flat: no
+  when: ansible_os_family == "RedHat"
+  ignore_errors: true

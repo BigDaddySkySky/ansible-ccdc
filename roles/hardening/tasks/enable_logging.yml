@@ -1,0 +1,6 @@
+---
+- name: Ensure auditd is running
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true

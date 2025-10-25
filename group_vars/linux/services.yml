@@ -1,0 +1,9 @@
+---
+services_to_disable:
+  - cups
+  - avahi-daemon
+  - bluetooth
+
+services_to_enable:
+  - ssh
+  - firewalld

@@ -1,0 +1,15 @@
+---
+common_packages:
+  - vim
+  - htop
+  - net-tools
+  - curl
+  - wget
+
+debian_packages:
+  - ufw
+  - apt-transport-https
+
+redhat_packages:
+  - firewalld
+  - policycoreutils-python-utils

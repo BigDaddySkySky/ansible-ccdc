@@ -1,0 +1,19 @@
+---
+- name: Send Team Notification
+  hosts: localhost
+  gather_facts: false
+  vars:
+    webhook_url: "{{ lookup('env', 'TEAM_WEBHOOK_URL') }}"
+    message: "Ansible task completed"
+  
+  tasks:
+    - name: Send Slack notification
+      ansible.builtin.uri:
+        url: "{{ webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          text: "{{ message }}"
+        status_code: 200
+      when: webhook_url != ""
+      ignore_errors: true

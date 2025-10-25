@@ -1,0 +1,16 @@
+---
+- name: Update packages (Debian/Ubuntu)
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: dist
+  when: ansible_os_family == "Debian"
+  async: 600
+  poll: 0
+
+- name: Update packages (RedHat/Fedora)
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+  when: ansible_os_family == "RedHat"
+  async: 600
+  poll: 0

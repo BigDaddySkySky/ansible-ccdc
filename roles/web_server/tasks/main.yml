@@ -1,0 +1,4 @@
+---
+- name: Web server tasks placeholder
+  ansible.builtin.debug:
+    msg: "Web server role ready for customization"

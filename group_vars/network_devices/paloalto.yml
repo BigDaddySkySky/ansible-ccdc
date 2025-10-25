@@ -1,0 +1,5 @@
+---
+ansible_user: admin
+ansible_password: "Changeme123"
+paloalto_pass_new: "CompPalo2025!Secure"
+paloalto_mgmt_interface: "172.20.242.150"

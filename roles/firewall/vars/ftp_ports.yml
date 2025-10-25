@@ -1,0 +1,3 @@
+---
+ftp_firewall_ports:
+  - "{{ ftp_ports.ftp }}"

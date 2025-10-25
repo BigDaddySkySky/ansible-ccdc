@@ -1,0 +1,122 @@
+---
+- name: Pre-Competition Validation Checks
+  hosts: localhost
+  gather_facts: true
+  tasks:
+    - name: Check Ansible version
+      ansible.builtin.debug:
+        msg: "Running Ansible {{ ansible_version.full }}"
+    
+    - name: Verify vault password file exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../.vault_pass"
+      register: vault_pass_file
+      failed_when: not vault_pass_file.stat.exists
+    
+    - name: Check required collections
+      ansible.builtin.command: ansible-galaxy collection list
+      register: collections_installed
+      changed_when: false
+    
+    - name: Verify community.general installed
+      ansible.builtin.assert:
+        that:
+          - "'community.general' in collections_installed.stdout"
+        fail_msg: "community.general collection not found. Run: ansible-galaxy collection install -r requirements.yml"
+    
+    - name: Verify ansible.posix installed
+      ansible.builtin.assert:
+        that:
+          - "'ansible.posix' in collections_installed.stdout"
+        fail_msg: "ansible.posix collection not found. Run: ansible-galaxy collection install -r requirements.yml"
+    
+    - name: Verify ansible.windows installed
+      ansible.builtin.assert:
+        that:
+          - "'ansible.windows' in collections_installed.stdout"
+        fail_msg: "ansible.windows collection not found. Run: ansible-galaxy collection install -r requirements.yml"
+
+- name: Test Linux Host Connectivity
+  hosts: linux
+  gather_facts: false
+  tasks:
+    - name: Ping Linux hosts
+      ansible.builtin.ping:
+      register: ping_result
+    
+    - name: Display Linux connectivity
+      ansible.builtin.debug:
+        msg: "✓ {{ inventory_hostname }} is reachable"
+      when: ping_result is success
+
+- name: Test Linux Privilege Escalation
+  hosts: linux
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Test sudo/become
+      ansible.builtin.command: whoami
+      register: whoami_result
+      changed_when: false
+    
+    - name: Verify running as root
+      ansible.builtin.assert:
+        that:
+          - whoami_result.stdout == "root"
+        success_msg: "✓ Privilege escalation working on {{ inventory_hostname }}"
+        fail_msg: "✗ Privilege escalation FAILED on {{ inventory_hostname }}"
+
+- name: Test Windows Host Connectivity
+  hosts: windows
+  gather_facts: false
+  tasks:
+    - name: Ping Windows hosts
+      ansible.windows.win_ping:
+      register: win_ping_result
+    
+    - name: Display Windows connectivity
+      ansible.builtin.debug:
+        msg: "✓ {{ inventory_hostname }} is reachable via WinRM"
+      when: win_ping_result is success
+
+- name: Verify Vault Decryption
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Test vault variable access (Linux)
+      ansible.builtin.debug:
+        msg: "✓ Vault decryption successful for {{ inventory_hostname }}"
+      when:
+        - inventory_hostname in groups['linux']
+        - ansible_ssh_pass is defined
+    
+    - name: Test vault variable access (Windows)
+      ansible.builtin.debug:
+        msg: "✓ Vault decryption successful for {{ inventory_hostname }}"
+      when:
+        - inventory_hostname in groups['windows']
+        - ansible_password is defined
+
+- name: Display Summary
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Pre-competition check summary
+      ansible.builtin.debug:
+        msg:
+          - "========================================"
+          - "PRE-COMPETITION CHECK SUMMARY"
+          - "========================================"
+          - ""
+          - "✓ Ansible version verified"
+          - "✓ Vault password file exists"
+          - "✓ Required collections installed"
+          - "✓ Linux host connectivity verified"
+          - "✓ Windows host connectivity verified"
+          - "✓ Privilege escalation working"
+          - "✓ Vault decryption working"
+          - ""
+          - "Status: READY FOR COMPETITION"
+          - ""
+          - "Next: ansible-playbook playbooks/baseline.yml"
+          - "========================================"

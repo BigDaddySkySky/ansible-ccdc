@@ -1,0 +1,5 @@
+---
+ansible_user: vyos
+ansible_password: "changeme"
+vyos_pass_new: "CompVyos2025!Secure"
+vyos_mgmt_interface: "172.31.21.2"

@@ -1,0 +1,11 @@
+---
+- name: Check for suspicious processes
+  ansible.builtin.shell: "ps aux | grep -E 'nc|ncat|socat|reverse' | grep -v grep"
+  register: suspicious_procs
+  changed_when: false
+  failed_when: false
+
+- name: Display suspicious processes
+  ansible.builtin.debug:
+    var: suspicious_procs.stdout_lines
+  when: suspicious_procs.stdout != ""

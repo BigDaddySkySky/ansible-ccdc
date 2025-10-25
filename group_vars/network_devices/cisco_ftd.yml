@@ -1,0 +1,5 @@
+---
+ansible_user: admin
+ansible_password: "!Changeme123"
+cisco_ftd_pass_new: "CompCisco2025!Secure"
+cisco_ftd_mgmt_interface: "172.20.240.200"

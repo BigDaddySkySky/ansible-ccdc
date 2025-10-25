@@ -1,0 +1,8 @@
+---
+- name: Include backup tasks
+  include_tasks: backup.yml
+  tags: [backup]
+
+- name: Include update tasks
+  include_tasks: updates.yml
+  tags: [updates]

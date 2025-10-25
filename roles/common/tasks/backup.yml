@@ -1,0 +1,13 @@
+---
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0700'
+  when: ansible_os_family != "Windows"
+
+- name: Backup /etc directory
+  ansible.builtin.archive:
+    path: /etc
+    dest: "{{ backup_dir }}/etc_backup_{{ ansible_date_time.epoch }}.tar.gz"
+  when: ansible_os_family != "Windows"

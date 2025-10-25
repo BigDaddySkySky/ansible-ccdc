@@ -1,178 +1,24 @@
-
 ---
 - name: First 15 Minute Baseline - Linux
   hosts: linux
-  gather_facts: true
   become: true
-  vars_files:
-    - ../vault.yml
+  tags: [baseline, linux, critical]
   
   tasks:
-    # Backup critical configs first
     - name: Create backup directory
       ansible.builtin.file:
         path: /root/ccdc_backup
         state: directory
-        mode: '0700'
+      tags: [backup, always]
     
-    - name: Backup /etc directory
-      ansible.builtin.archive:
-        path: /etc
-        dest: /root/ccdc_backup/etc_backup.tar.gz
-    
-    # Updates
     - name: Update packages (Debian/Ubuntu)
       ansible.builtin.apt:
         update_cache: yes
         upgrade: dist
       when: ansible_os_family == "Debian"
-      async: 600
-      poll: 0
-      register: apt_update
+      tags: [updates, slow]
     
-    - name: Update packages (RedHat/Fedora/Oracle)
-      ansible.builtin.dnf:
-        name: "*"
-        state: latest
-      when: ansible_os_family == "RedHat"
-      async: 600
-      poll: 0
-      register: dnf_update
-    
-    # Firewall configuration
-    - name: Install firewalld (RedHat family)
-      ansible.builtin.dnf:
-        name: firewalld
-        state: present
-      when: ansible_os_family == "RedHat"
-    
-    - name: Start firewalld
-      ansible.builtin.service:
-        name: firewalld
-        state: started
-        enabled: true
-      when: ansible_os_family == "RedHat"
-    
-    - name: Install ufw (Debian family)
-      ansible.builtin.apt:
-        name: ufw
-        state: present
-      when: ansible_os_family == "Debian"
-    
-    - name: Configure UFW default policies
-      community.general.ufw:
-        state: enabled
-        policy: deny
-        direction: incoming
-      when: ansible_os_family == "Debian"
-    
-    # Allow required services
-    - name: Allow SSH (firewalld)
-      ansible.posix.firewalld:
-        service: ssh
-        permanent: true
-        state: enabled
-        immediate: true
-      when: ansible_os_family == "RedHat"
-    
-    - name: Allow SSH (ufw)
-      community.general.ufw:
-        rule: allow
-        port: '22'
-        proto: tcp
-      when: ansible_os_family == "Debian"
-
-- name: First 15 Minute Baseline - Web Servers
-  hosts: web_servers
-  become: true
-  tasks:
-    - name: Allow HTTP (firewalld)
-      ansible.posix.firewalld:
-        service: http
-        permanent: true
-        state: enabled
-        immediate: true
-      when: ansible_os_family == "RedHat"
-    
-    - name: Allow HTTPS (firewalld)
-      ansible.posix.firewalld:
-        service: https
-        permanent: true
-        state: enabled
-        immediate: true
-      when: ansible_os_family == "RedHat"
-    
-    - name: Allow HTTP/HTTPS (ufw)
-      community.general.ufw:
-        rule: allow
-        port: "{{ item }}"
-        proto: tcp
-      loop:
-        - '80'
-        - '443'
-      when: ansible_os_family == "Debian"
-
-- name: First 15 Minute Baseline - Windows
-  hosts: windows
-  vars_files:
-    - ../vault.yml
-  
-  tasks:
-    - name: Enable Windows Firewall (all profiles)
-      community.windows.win_firewall:
-        state: enabled
-        profiles:
-          - Domain
-          - Private
-          - Public
-    
-    - name: Allow RDP (for management)
-      community.windows.win_firewall_rule:
-        name: "Remote Desktop"
-        localport: 3389
-        action: allow
-        direction: in
-        protocol: tcp
-        state: present
-        enabled: true
-    
-    - name: Allow WinRM (for Ansible)
-      community.windows.win_firewall_rule:
-        name: "Windows Remote Management"
-        localport: 5985
-        action: allow
-        direction: in
-        protocol: tcp
-        state: present
-        enabled: true
-
-- name: First 15 Minute Baseline - FTP Server
-  hosts: ftp_servers
-  tasks:
-    - name: Allow FTP
-      community.windows.win_firewall_rule:
-        name: "FTP Server"
-        localport: 21
-        action: allow
-        direction: in
-        protocol: tcp
-        state: present
-        enabled: true
-
-- name: First 15 Minute Baseline - Mail Server
-  hosts: mail_servers
-  become: true
-  tasks:
-    - name: Allow SMTP (firewalld)
-      ansible.posix.firewalld:
-        service: smtp
-        permanent: true
-        state: enabled
-        immediate: true
-    
-    - name: Allow POP3 (firewalld)
-      ansible.posix.firewalld:
-        service: pop3
-        permanent: true
-        state: enabled
-        immediate: true
+    - name: Configure firewall
+      include_role:
+        name: firewall
+      tags: [firewall, security]

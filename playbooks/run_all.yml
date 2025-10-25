@@ -1,0 +1,42 @@
+---
+# Master playbook for competition start
+# Runs everything in correct order
+
+- name: Import pre-flight checks
+  import_playbook: pre_check.yml
+  tags: [pre_check]
+
+- name: Import baseline configuration
+  import_playbook: baseline.yml
+  tags: [baseline, critical]
+
+- name: Import password reset
+  import_playbook: pass_reset.yml
+  tags: [passwords, critical]
+
+- name: Import hardening
+  import_playbook: hardening.yml
+  tags: [hardening]
+
+- name: Import scoring validation
+  import_playbook: scoring_validation.yml
+  tags: [validation]
+
+- name: Competition Ready
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg:
+          - "========================================"
+          - "COMPETITION INITIALIZATION COMPLETE"
+          - "========================================"
+          - ""
+          - "Next steps:"
+          - "1. Manually change network device passwords"
+          - "2. Monitor Splunk for incidents"
+          - "3. Re-run scoring validation every 15 min"
+          - ""
+          - "Run: ansible-playbook playbooks/scoring_validation.yml"
+          - "========================================"

@@ -1,0 +1,36 @@
+---
+- name: Rollback Configuration Changes
+  hosts: all
+  become: true
+  tasks:
+    - name: Check if backup exists
+      ansible.builtin.stat:
+        path: /root/ccdc_backup/etc_backup.tar.gz
+      register: backup_stat
+      when: ansible_os_family != "Windows"
+    
+    - name: Restore /etc from backup
+      ansible.builtin.unarchive:
+        src: /root/ccdc_backup/etc_backup.tar.gz
+        dest: /
+        remote_src: true
+      when:
+        - ansible_os_family != "Windows"
+        - backup_stat.stat.exists
+    
+    - name: Restore firewall to permissive (Linux)
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - "ufw disable"
+        - "systemctl stop firewalld"
+      ignore_errors: true
+      when: ansible_os_family != "Windows"
+    
+    - name: Disable Windows Firewall (all profiles)
+      community.windows.win_firewall:
+        state: disabled
+        profiles:
+          - Domain
+          - Private
+          - Public
+      when: ansible_os_family == "Windows"

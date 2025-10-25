@@ -1,4 +1,0 @@
----
-ansible_user: "{{ vault_cisco_ftd_user }}"
-ansible_password: "{{ vault_cisco_ftd_pass }}"
-cisco_ftd_pass_new: "{{ vault_cisco_ftd_pass_new }}"

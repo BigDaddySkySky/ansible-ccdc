@@ -1,0 +1,8 @@
+---
+windows_features_to_disable:
+  - TelnetClient
+  - TFTP
+
+windows_features_to_enable:
+  - Windows-Defender
+  - NET-Framework-45-Core

@@ -1,0 +1,28 @@
+---
+- name: Enable Windows Firewall (all profiles)
+  community.windows.win_firewall:
+    state: enabled
+    profiles:
+      - Domain
+      - Private
+      - Public
+
+- name: Allow RDP
+  community.windows.win_firewall_rule:
+    name: "Remote Desktop"
+    localport: "{{ common_ports.rdp }}"
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: true
+
+- name: Allow WinRM
+  community.windows.win_firewall_rule:
+    name: "Windows Remote Management"
+    localport: "{{ common_ports.winrm }}"
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: true

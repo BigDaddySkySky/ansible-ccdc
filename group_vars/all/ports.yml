@@ -1,0 +1,23 @@
+---
+common_ports:
+  ssh: 22
+  rdp: 3389
+  winrm: 5985
+
+web_ports:
+  http: 80
+  https: 443
+
+mail_ports:
+  smtp: 25
+  pop3: 110
+
+ftp_ports:
+  ftp: 21
+
+dns_ports:
+  dns: 53
+
+splunk_ports:
+  web: 8000
+  mgmt: 8089
