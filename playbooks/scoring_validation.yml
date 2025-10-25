@@ -4,18 +4,77 @@
   gather_facts: false
   tasks:
     - name: Check HTTP on Web Servers
-      ansible.button.uri:
+      ansible.builtin.uri:
         url: "http://{{ ansible_host }}"
         status_code: 200
-      when: "'web' in inventory_hostname"
+        validate_certs: no
+      when: inventory_hostname in groups['web_servers']
+      ignore_errors: true
+      register: http_check
+
+    - name: Check HTTPS on Web Servers
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}"
+        status_code: 200
+        validate_certs: no
+      when: inventory_hostname in groups['web_servers']
+      ignore_errors: true
+      register: https_check
 
     - name: Check SMTP
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 25
         timeout: 5
-      when: "'mail' in inventory_hostname"
+      when: inventory_hostname in groups['mail_servers']
+      ignore_errors: true
+      register: smtp_check
+
+    - name: Check POP3
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 110
+        timeout: 5
+      when: inventory_hostname in groups['mail_servers']
+      ignore_errors: true
+      register: pop3_check
 
     - name: Check DNS
-      ansible.bultin.command: "nslookup google.com {{ ansible_host }}"
-      when: "'dns' in inventory_hostname"
+      ansible.builtin.command: "nslookup google.com {{ ansible_host }}"
+      when: inventory_hostname in groups['dns_servers']
+      ignore_errors: true
+      changed_when: false
+      register: dns_check
+
+    - name: Check FTP
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 21
+        timeout: 5
+      when: inventory_hostname in groups['ftp_servers']
+      ignore_errors: true
+      register: ftp_check
+
+    - name: Check SSH
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        timeout: 5
+      when: inventory_hostname in groups['linux']
+      ignore_errors: true
+      register: ssh_check
+      delegate_to: localhost
+
+    - name: Check RDP
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 3389
+        timeout: 5
+      when: inventory_hostname in groups['windows']
+      ignore_errors: true
+      register: rdp_check
+      delegate_to: localhost
+
+    - name: Display results
+      ansible.builtin.debug:
+        msg: "Service checks completed for {{ inventory_hostname }}"

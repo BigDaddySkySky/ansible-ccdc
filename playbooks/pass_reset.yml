@@ -1,4 +1,3 @@
-# playbooks/pass_reset.yml
 ---
 - name: Reset Linux passwords (standard systems)
   hosts: debian,fedora_webmail
@@ -7,12 +6,12 @@
     - name: Reset sysadmin password
       ansible.builtin.user:
         name: sysadmin
-        password: "{{ linux_sysadmin_new | password_hash('sha512') }}"
+        password: "{{ vault_linux_sysadmin_new | password_hash('sha512') }}"
     
     - name: Reset root password
       ansible.builtin.user:
         name: root
-        password: "{{ linux_root_new | password_hash('sha512') }}"
+        password: "{{ vault_linux_root_new | password_hash('sha512') }}"
 
 - name: Reset Splunk passwords
   hosts: splunk
@@ -43,13 +42,13 @@
     - name: Reset Administrator password
       ansible.windows.win_user:
         name: Administrator
-        password: "{{ windows_admin_new }}"
+        password: "{{ vault_windows_admin_new }}"
         password_never_expires: true
     
     - name: Reset UserOne password (Win11 workstation)
       ansible.windows.win_user:
         name: UserOne
-        password: "{{ windows_userone_new }}"
+        password: "{{ vault_windows_userone_new }}"
       when: inventory_hostname == 'windows11_wks'
       ignore_errors: true
 
@@ -67,16 +66,17 @@
           - "Palo Alto Firewall:"
           - "  URL: https://172.20.242.150"
           - "  Current: admin / Changeme123"
-          - "  New: admin / {{ hostvars['paloalto']['paloalto_pass_new'] }}"
+          - "  New: admin / {{ hostvars['paloalto']['paloalto_pass_new'] | default('CompPalo2025!Secure') }}"
           - ""
           - "Cisco FTD Firewall:"
           - "  URL: https://172.20.240.200"
           - "  Current: admin / !Changeme123"
-          - "  New: admin / {{ hostvars['cisco_ftd']['cisco_ftd_pass_new'] }}"
+          - "  New: admin / {{ hostvars['cisco_ftd']['cisco_ftd_pass_new'] | default('CompCisco2025!Secure') }}"
           - ""
           - "VyOS Router:"
           - "  SSH: ssh vyos@172.31.21.2"
           - "  Current: vyos / changeme"
+          - "  New: {{ hostvars['vyos']['vyos_pass_new'] | default('CompVyos2025!Secure') }}"
           - "  Commands:"
           - "    configure"
           - "    set system login user vyos authentication plaintext-password"

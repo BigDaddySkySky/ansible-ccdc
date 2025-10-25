@@ -9,7 +9,7 @@
     
     - name: Verify vault password file exists
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../.vault_pass"
+        path: "~/.vault_pass"
       register: vault_pass_file
       failed_when: not vault_pass_file.stat.exists
     

@@ -1,0 +1,4 @@
+---
+ansible_user: admin
+ansible_password: Changeme123
+paloalto_pass_new: CompPalo2025!Secure
