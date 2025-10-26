@@ -17,7 +17,15 @@
         upgrade: dist
       when: ansible_os_family == "Debian"
       tags: [updates, slow]
-    
+
+    - name: Update packages (Redhat)
+      ansible.builtin.dnf:
+        update_cache: yes
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat"
+      tags: [updates, slow]
+
     - name: Configure firewall
       include_role:
         name: firewall
