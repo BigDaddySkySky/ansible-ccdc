@@ -1,4 +1,7 @@
 ---
+
+# PURPOSE: Entry point for common role
+# Includes backup + update tasks, tagged for selective runs
 - name: Include backup tasks
   include_tasks: backup.yml
   tags: [backup]

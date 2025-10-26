@@ -1,4 +1,12 @@
 ---
+
+# ================== PURPOSE ==================
+# Backup tasks for Linux hosts
+# - Ensures backup_dir exists with secure permissions
+# - Archives critical directories (default: /etc, expandable via backup_paths)
+# - Skips Windows hosts
+# =============================================
+
 - name: Create backup directory
   ansible.builtin.file:
     path: "{{ backup_dir }}"
@@ -6,8 +14,10 @@
     mode: '0700'
   when: ansible_os_family != "Windows"
 
-- name: Backup /etc directory
+- name: Backup critical directory
   ansible.builtin.archive:
-    path: /etc
-    dest: "{{ backup_dir }}/etc_backup_{{ ansible_date_time.epoch }}.tar.gz"
+    path: "{{ item }}"
+    dest: "{{ backup_dir }}/PP item | basename }}{{ ansible_date_time.epoch }}.tar.gz"
+    format: gz
+  loop: "{{ backup_paths }}"
   when: ansible_os_family != "Windows"

@@ -1,2 +1,5 @@
 ---
+
+# PURPOSE: Default vars for common role
+# NOTES: backup_dir can be overriden per host/group
 backup_dir: /root/ccdc_backup

@@ -1,8 +1,16 @@
 ---
+
+# ================== PURPOSE ==================
+# Update tasks for Linux hosts
+# - Debian/Ubuntu: apt upgrade with cache refresh
+# - RedHat/Fedora: dnf update with cache refresh
+# - Runs asynchronously to avoid blocking playbooks
+# =============================================
+
 - name: Update packages (Debian/Ubuntu)
   ansible.builtin.apt:
     update_cache: yes
-    upgrade: dist
+    upgrade: yes
   when: ansible_os_family == "Debian"
   async: 600
   poll: 0
