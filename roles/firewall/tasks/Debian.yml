@@ -1,4 +1,12 @@
 ---
+
+# ================== PURPOSE ==================
+# Configure UFW on Debian/Ubuntu systems
+# - Installs UFW
+# - Sets default deny policy for incoming traffic
+# - Allows SSH via common_ports.ssh
+# =============================================
+
 - name: Install UFW
   ansible.builtin.apt:
     name: ufw
@@ -7,7 +15,7 @@
 - name: Configure UFW default policies
   community.general.ufw:
     state: enabled
-    policy: deny
+    policy: "{{ firewall_default_policy }}"
     direction: incoming
 
 - name: Allow SSH
@@ -15,3 +23,19 @@
     rule: allow
     port: "{{ common_ports.ssh }}"
     proto: tcp
+
+- name: Allow web ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ web_firewall_ports }}"
+  when: web_firewall_ports is defined
+
+- name: Allow mail ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ mail_firewall_ports }}"
+  when: mail_firewall_ports is defined

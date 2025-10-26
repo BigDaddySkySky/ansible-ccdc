@@ -1,2 +1,8 @@
 ---
+
+# ================== PURPOSE ==================
+# Entry point for firewall role
+# - Includes OS-specific firewall configuration tasks
+# =============================================
+
 firewall_default_policy: deny

@@ -1,4 +1,11 @@
 ---
+
+# ================== PURPOSE ==================
+# Configure Windows Defender Firewall
+# - Enables all profiles
+# - Allows RDP and WinRM using common_ports
+# =============================================
+
 - name: Enable Windows Firewall (all profiles)
   community.windows.win_firewall:
     state: enabled
