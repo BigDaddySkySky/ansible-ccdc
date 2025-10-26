@@ -10,14 +10,23 @@
 # 1. Activate virtual environment (if using)
 source .venv/bin/activate
 
-# 2. Ensure vault password is set
+# 2. Install python dependencies
+pip install -r requirements.txt
+
+# 3. Install ansible dependencies
+ansible-galaxy install -r requirements.yml
+
+# 3. Ensure vault password is set
 cat ~/.vault_pass
 # Should contain your vault password
 
-# 3. Test connectivity
+# 4. Test connectivity
 ansible all -m ping
 
-# 4. Run full baseline
+# Safe check command
+ansible-playbook playbooks/run_all.yml --check
+
+# 5. Run full baseline
 ansible-playbook playbooks/run_all.yml
 
 # Or run step-by-step:
@@ -30,6 +39,12 @@ ansible-playbook playbooks/scoring_validation.yml
 ---
 
 ## 📁 Repository Structure
+- Directories have been separated by intent for better organization. 
+- Flat files include `linux.yml` and `windows.yml` to refrence vaults and high-level toggles
+- Nested directories such as `group_vars/linux` and `group_vars/windows` are separated by concern (packages, services, features)
+- `network_devices/` contains device-specific vars and top level `*.yml` are legacy references planned for consolidation.
+    - Optionally migrate fully into `network_devices/` and remove top-level duplicates
+
 
 ```
 .
@@ -108,6 +123,16 @@ ansible-playbook playbooks/run_all.yml
 # - scoring_validation.yml (verify services)
 ```
 
+- **Fallback:** Run `pre_check.yml` -> `baseline.yml` -> `hardening.yml` individually to isolate failures.
+- **Use --step:**
+```bash
+asnible-playbook playbooks/baseline.yml --step
+```
+- **Add async updates reminder (baseline):** Note that package updates may continue after baseline completes. Provide a quick check:
+```bash
+ps aux | grep -E 'apt|dnf|yum'
+```
+
 ### T+00:18: Manual Password Changes (CRITICAL!)
 After automated password reset completes, manually change network device passwords:
 
@@ -135,6 +160,14 @@ set system login user vyos authentication plaintext-password
 commit
 save
 exit
+```
+
+** -- UPDATE VAULTS! -- **
+```bash
+# Updates vaults with new device credentials
+ansible-vault edit group_vars/linux/vault.yml
+ansible-vault edit group_vars/windows/vault.yml
+ansible-vault edit group_vars/network_devices/vault.yml
 ```
 
 ### Ongoing: Monitor & Respond
@@ -280,6 +313,10 @@ ansible-vault rekey group_vars/linux/vault.yml
 
 ## 🛠️ Troubleshooting
 
+- ansible-config verification:
+```bash
+ansible-config dump | grep -E 'DEFAULT_HOST_LIST|DEFAULT_VAULT_PASSWORD_FILE|INTERPRETER_PYTHON'
+
 ### Connection Issues
 ```bash
 # Test specific host
@@ -320,15 +357,20 @@ ansible-playbook playbooks/baseline.yml --skip-tags slow
 
 # Limit to specific host
 ansible-playbook playbooks/baseline.yml --limit ubuntu_ecom
-```
 
+# Sanity check vaulted passwords
+ansible-vault view group_vars/linux/vault.yml
+
+# Combine `limit` and `tags`
+ansible-playbook playbooks/baseline.yml --limit ubuntu_ecom -tags firewall -vvv
+```
 ---
 
 ## 🚫 Competition Rules - Remember!
 
 ### ❌ PROHIBITED
-- No offensive actions against other teams
 - No changing system names or IP addresses (unless inject says so)
+- No offensive actions against other teams
 - No restricting services by source IP (breaks scoring)
 - No USB drives, unauthorized devices in competition area
 - No free trial software (only free/open source)
