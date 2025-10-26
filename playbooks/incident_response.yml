@@ -1,16 +1,36 @@
 ---
+# ================== PURPOSE ==================
+# Incident Response Playbook
+# - Collects key logs for evidence
+# - Scans for suspicious processes
+# - Tagged for selective execution
+# =============================================
+
 - name: Collect Incident Evidence
   hosts: all
   become: true
+  tags: [incident_response, ir, evidence]
+
   tasks:
-    - name: Capture auth logs
+    - name: Capture auth logs (Debian/Ubuntu)
       ansible.builtin.fetch:
         src: /var/log/auth.log
         dest: ./incidents/{{ inventory_hostname }}/
       when: ansible_os_family == "Debian"
 
-    - name: Check for suspicious processes
-      ansible.builtin.shell: "ps aux | grep -E 'nc|ncat|socat|reverse' | grep -v grep"
-      register: suspicious_procs
-      ignore_errors: true
-      
+    - name: Capture secure logs (RedHat)
+      ansible.builtin.fetch:
+        src: /var/log/secure
+        dest: ./incidents/{{ inventory_hostname }}/
+      when: ansible_os_family == "RedHat"
+
+    - name: Capture syslog (Debian/Ubuntu)
+      ansible.builtin.fetch:
+        src: /var/log/syslog
+        dest: ./incidents/{{ inventory_hostname }}/
+      when: ansible_os_family == "Debian"
+
+    - name: Scan for suspicious processes
+      include_role:
+        name: incident_response
+        tasks_from: scan_processes.yml
