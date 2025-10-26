@@ -1,4 +1,12 @@
 ---
+
+# ================== PURPOSE ==================
+# Disable unnecessary services on Linux hosts
+# - Loops through services_to_disable
+# - Stops and disables each service
+# - Ignores errors if service is missing
+# =============================================
+
 - name: Ensure auditd is running
   ansible.builtin.service:
     name: auditd

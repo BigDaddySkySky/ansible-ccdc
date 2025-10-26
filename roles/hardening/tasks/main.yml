@@ -1,4 +1,11 @@
 ---
+
+# ================== PURPOSE ==================
+# Entry point for hardening role
+# - Includes service disabling and logging tasks
+# - Skips Windows hosts for disable_services
+# =============================================
+
 - name: Include disable services tasks
   include_tasks: disable_services.yml
   when: ansible_os_family != "Windows"
