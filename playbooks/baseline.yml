@@ -1,4 +1,12 @@
 ---
+
+# ================== PURPOSE ==================
+# First 15 Minute Baseline (Linux)
+# - Creates /root/ccdc_backup
+# - Updates packages (Debian/Ubuntu)
+# - Configures firewall via role
+# =============================================
+
 - name: First 15 Minute Baseline - Linux
   hosts: linux
   become: true
@@ -17,8 +25,21 @@
         upgrade: dist
       when: ansible_os_family == "Debian"
       tags: [updates, slow]
+
+    - name: Update packages (RedHat)
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat"
+      tags: [updates, slow]
     
     - name: Configure firewall
       include_role:
         name: firewall
       tags: [firewall, security]
+    
+    - name: Baciup /etc directory
+      ansible.builtin.archive:
+        path: /etc
+        dest: /root/ccdc_backup/etc_backup.tar.gz
+      tags: [backup, critical]
