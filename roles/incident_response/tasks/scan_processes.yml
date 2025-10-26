@@ -1,4 +1,11 @@
 ---
+
+# ================== PURPOSE ==================
+# Scan for suspicious processes on Linux hosts
+# - Uses ps + grep to detect reverse shells or netcat activity
+# - Displays results without failing playbook
+# =============================================
+
 - name: Check for suspicious processes
   ansible.builtin.shell: "ps aux | grep -E 'nc|ncat|socat|reverse' | grep -v grep"
   register: suspicious_procs

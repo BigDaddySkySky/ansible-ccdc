@@ -1,4 +1,11 @@
 ---
+
+# ================== PURPOSE ==================
+# Entry point for incident response role
+# - Collects logs and scans for suspicious processes
+# - Tasks are tagged for selective execution
+# =============================================
+
 - name: Collect logs
   include_tasks: collect_logs.yml
   tags: [logs]

@@ -1,4 +1,13 @@
 ---
+
+# ================== PURPOSE ==================
+# Collect authentication logs for incident response
+# - Debian: /var/log/auth.log
+# - RedHat: /var/log/secure
+# - Stores logs under ./incidents/{{ inventory_hostname }}/
+# - Ignores errors if logs are missing
+# =============================================
+
 - name: Capture auth logs (Debian)
   ansible.builtin.fetch:
     src: /var/log/auth.log
