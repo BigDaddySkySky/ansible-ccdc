@@ -1,0 +1,10 @@
+---
+# ================== PURPOSE ==================
+# Web server specific port overrides
+# - Defaults to global web_ports in group_vars/all/ports.yml
+# - Override here if a host/group needs custom ports
+# =============================================
+
+web_server_ports:
+  - "{{ web_ports.http }}"
+  - "{{ web_ports.https }}"

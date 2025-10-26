@@ -1,0 +1,31 @@
+---
+# ================== PURPOSE ==================
+# Configure IIS on Windows systems
+# - Installs IIS feature
+# - Ensures default site is running
+# =============================================
+
+- name: Install IIS
+  ansible.windows.win_feature:
+    name: Web-Server
+    state: present
+
+- name: Ensure IIS service is running
+  ansible.windows.win_service:
+    name: W3SVC
+    state: started
+    start_mode: auto
+
+- name: Verify IIS HTTP service is responding
+  ansible.windows.win_shell: |
+    (Invoke-WebRequest -UseBasicParsing http://localhost).StatusCode
+  register: http_status
+  changed_when: false
+  failed_when: http_status.stdout.strip() -ne "200"
+
+- name: Verify IIS HTTPS service is responding
+  ansible.windows.win_shell: |
+    (Invoke-WebRequest -UseBasicParsing https://localhost -SkipCertificateCheck).StatusCode
+  register: https_status
+  changed_when: false
+  failed_when: https_status.stdout.strip() -ne "200"

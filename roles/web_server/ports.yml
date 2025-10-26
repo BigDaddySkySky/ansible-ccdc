@@ -1,3 +1,0 @@
----
-# Web server specific port overrides (if needed)
-# uses global web_ports from all/ports.yml by default

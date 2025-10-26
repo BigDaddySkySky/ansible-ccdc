@@ -1,0 +1,8 @@
+---
+# ================== PURPOSE ==================
+# Default configuration values for web_server role
+# - Can be overridden in group_vars or host_vars
+# =============================================
+
+web_server_document_root: /var/www/html
+web_server_max_clients: 150

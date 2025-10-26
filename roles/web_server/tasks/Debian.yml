@@ -1,0 +1,39 @@
+---
+# ================== PURPOSE ==================
+# Configure Apache on Debian/Ubuntu systems
+# - Installs Apache
+# - Ensures service is running
+# - Sets document root permissions
+# =============================================
+
+- name: Install Apache
+  ansible.builtin.apt:
+    name: apache2
+    state: present
+    update_cache: yes
+
+- name: Ensure Apache is running
+  ansible.builtin.service:
+    name: apache2
+    state: started
+    enabled: true
+
+- name: Set document root permissions
+  ansible.builtin.file:
+    path: "{{ web_server_document_root }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Verify HTTP service is responding
+  ansible.builtin.command: "curl -s -o /dev/null -w '%{http_code}' http://localhost"
+  register: http_status
+  changed_when: false
+  failed_when: http_status.stdout != "200"
+
+- name: Verify HTTPS service is responding
+  ansible.builtin.command: "curl -sk -o /dev/null -w '%{http_code}' https://localhost"
+  register: https_status
+  changed_when: false
+  failed_when: https_status.stdout != "200"

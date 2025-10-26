@@ -1,3 +1,0 @@
----
-web_server_document_root: /var/www/html
-web_server_max_clients: 150

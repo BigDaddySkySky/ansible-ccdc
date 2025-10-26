@@ -1,4 +1,24 @@
 ---
-- name: Web server tasks placeholder
-  ansible.builtin.debug:
-    msg: "Web server role ready for customization"
+# ================== PURPOSE ==================
+# Entry point for web_server role
+# - Verifies expected web server software
+# - Includes OS-specific tasks
+# - Tagged for selective execution
+# =============================================
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+
+- name: Fail if Nginx is installed
+  ansible.builtin.fail:
+    msg: "Nginx detected — expected Apache/httpd"
+  when: "'nginx' in ansible_facts.packages"
+
+- name: Fail if Apache is missing
+  ansible.builtin.fail:
+    msg: "Apache/httpd not installed — role requires Apache"
+  when: "'apache2' not in ansible_facts.packages and 'httpd' not in ansible_facts.packages"
+
+- name: Include OS-specific web server tasks
+  include_tasks: "{{ ansible_os_family }}.yml"
+  tags: [web_server]
