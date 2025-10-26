@@ -1,4 +1,0 @@
----
-ansible_user: vyos
-ansible_password: changeme
-vyos_pass_new: CompVyos2025!Secure

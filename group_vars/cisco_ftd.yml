@@ -1,4 +1,0 @@
----
-ansible_user: admin
-ansible_password: "!Changeme123"
-cisco_ftd_pass_new: CompCisco2025!Secure

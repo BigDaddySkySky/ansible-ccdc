@@ -1,4 +1,11 @@
 ---
+
+# ================== PURPOSE ==================
+# Defines baseline Linux service state
+# - services_to_disable: unnecessary or insecure daemons
+# - services_to_enable: critical for remote access and security
+# =============================================
+
 services_to_disable:
   - cups
   - avahi-daemon

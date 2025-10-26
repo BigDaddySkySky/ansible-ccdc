@@ -1,4 +1,8 @@
 ---
+
+# PURPOSE: Vyos device credentials and mgmt interface
+# NOTES: ansible_password is the default, vyos_pass_new is rotated
+
 ansible_user: vyos
 ansible_password: "changeme"
 vyos_pass_new: "CompVyos2025!Secure"

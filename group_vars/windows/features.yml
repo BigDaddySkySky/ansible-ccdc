@@ -1,4 +1,11 @@
 ---
+
+# ================== PURPOSE ==================
+# Defines Windows features to enable/disable
+# - windows_features_to_disable: insecure/legacy
+# - windows_features_to_enable: security + app support
+# =============================================
+
 windows_features_to_disable:
   - TelnetClient
   - TFTP

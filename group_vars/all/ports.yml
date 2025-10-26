@@ -1,4 +1,12 @@
 ---
+
+# ================== PURPOSE ==================
+# Defines standard service ports for competition
+# - Common remote access (SSH, RDP, WinRM)
+# - Scoring-critical services (web, mail, ftp, dns)
+# - Monitoring (Splunk)
+# =============================================
+
 common_ports:
   ssh: 22
   rdp: 3389
@@ -19,5 +27,5 @@ dns_ports:
   dns: 53
 
 splunk_ports:
-  web: 8000
-  mgmt: 8089
+  web: 8000  # Splunk Web UI
+  mgmt: 8089 # Splunk Management API

@@ -1,3 +1,12 @@
 ---
+
+# ================== PURPOSE ==================
+# Global variables applied to all hosts.
+# - Sets Python interpreter path
+# - Defines default backup directory
+# =============================================
+
 ansible_python_interpreter: /usr/bin/python3
 backup_dir: /root/ccdc_backup
+log_dir: /var/log/ccdc
+incident_dir: ./incidents

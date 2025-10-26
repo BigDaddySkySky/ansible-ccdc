@@ -1,10 +1,22 @@
 ---
+
+# ================== PURPOSE ==================
+# Defines baseline packages for Linux systems
+# - common_packages: installed on all Linux hosts
+# - debian_packages: installed only on Debian/Ubuntu
+# - redhat_packages: installed only on RHEL/Fedora
+# =============================================
+
 common_packages:
   - vim
   - htop
   - net-tools
   - curl
   - wget
+  - unzip
+  - git
+  - python3-pip
+  - tcpdump
 
 debian_packages:
   - ufw

@@ -1,3 +1,6 @@
 ---
+
+# PURPOSE: Default config values for all web servers
+# NOTES: Document root and max clients; override per host if needed
 web_server_document_root: /var/www/html
 web_server_max_clients: 150
