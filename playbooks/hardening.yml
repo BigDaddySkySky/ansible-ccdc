@@ -7,9 +7,23 @@
 # - Tagged for selective execution
 # =============================================
 
-- name: Quick Hardening
-  hosts: all
+- name: Hardening
+  hosts: linux
   become: true
   roles:
     - role: hardening
-      tags: [hardening, security]
+
+- name: Notify team via Discord
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Post hardening completion
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "🛡️ Hardening completed at {{ lookup('pipe','date') }}"
+        status_code: 204
+      when: discord_webhook_url is defined
+      ignore_errors: true

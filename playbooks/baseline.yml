@@ -43,3 +43,16 @@
         path: /etc
         dest: /root/ccdc_backup/etc_backup.tar.gz
       tags: [backup, critical]
+
+    - name: Notify team via Discord
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "✅ {{ ansible_playbook_name | default('<playbook>.yml') }} completed at {{ lookup('pipe','date') }}"
+        status_code: 204
+      when: discord_webhook_url is defined
+      ignore_errors: true
+      tags: [notify, passive]
+    

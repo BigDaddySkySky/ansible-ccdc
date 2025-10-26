@@ -1,36 +1,67 @@
 ---
-- name: Rollback Configuration Changes
-  hosts: all
+# ================== PURPOSE ==================
+# Rollback Playbook
+# - Restores critical configs and services from backup
+# - Provides a safety net if baseline/hardening breaks access
+# - Posts completion notice to Discord
+# =============================================
+# - Run with: ansible-playbook playbooks/rollback.yml --vault-password-file ~/.vault_pass
+# - Tags:
+#     rollback, linux, windows, firewall, notify
+# - Purpose: Restore critical configs from backup if baseline/hardening breaks access
+# - Notes: Ignores errors so partial restores don’t block execution
+# =============================================
+
+- name: Rollback Linux hosts
+  hosts: linux
   become: true
   tasks:
-    - name: Check if backup exists
-      ansible.builtin.stat:
-        path: /root/ccdc_backup/etc_backup.tar.gz
-      register: backup_stat
-      when: ansible_os_family != "Windows"
-    
-    - name: Restore /etc from backup
-      ansible.builtin.unarchive:
-        src: /root/ccdc_backup/etc_backup.tar.gz
-        dest: /
-        remote_src: true
-      when:
-        - ansible_os_family != "Windows"
-        - backup_stat.stat.exists
-    
-    - name: Restore firewall to permissive (Linux)
-      ansible.builtin.command: "{{ item }}"
-      loop:
-        - "ufw disable"
-        - "systemctl stop firewalld"
+    - name: Restore /etc/passwd from backup if present
+      ansible.builtin.copy:
+        src: /root/ccdc_backup/etc/passwd
+        dest: /etc/passwd
+        owner: root
+        group: root
+        mode: '0644'
+      when: ansible_facts['os_family'] is defined
       ignore_errors: true
-      when: ansible_os_family != "Windows"
-    
-    - name: Disable Windows Firewall (all profiles)
-      community.windows.win_firewall:
-        state: disabled
-        profiles:
-          - Domain
-          - Private
-          - Public
-      when: ansible_os_family == "Windows"
+      tags: [rollback, linux]
+
+    - name: Restore firewall config
+      ansible.builtin.copy:
+        src: /root/ccdc_backup/etc/ufw/ufw.conf
+        dest: /etc/ufw/ufw.conf
+      when: ansible_facts['os_family'] == "Debian"
+      ignore_errors: true
+      tags: [rollback, linux, firewall]
+
+- name: Rollback Windows hosts
+  hosts: windows
+  tasks:
+    - name: Restore registry backup (if available)
+      ansible.windows.win_command: reg import C:\ccdc_backup\registry.reg
+      ignore_errors: true
+      tags: [rollback, windows]
+
+    - name: Restore IIS config
+      ansible.windows.win_copy:
+        src: C:\ccdc_backup\applicationHost.config
+        dest: C:\Windows\System32\inetsrv\config\applicationHost.config
+      ignore_errors: true
+      tags: [rollback, windows, iis]
+
+- name: Notify team via Discord
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Post rollback completion
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "⚠️ rollback.yml executed at {{ lookup('pipe','date') }} — system restored from backup"
+        status_code: 204
+      when: discord_webhook_url is defined
+      ignore_errors: true
+      tags: [notify, passive]

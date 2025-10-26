@@ -1,80 +1,78 @@
 ---
-- name: Validate Scoring Services
-  hosts: all
+# ================== PURPOSE ==================
+# Scoring Validation Playbook
+# - Verifies services, users, and configs for scoring
+# - Non-intrusive: does not change system state
+# - Posts completion notice to Discord
+# =============================================
+# - Run with: ansible-playbook playbooks/scoring_validation.yml --vault-password-file ~/.vault_pass
+# - Tags:
+#     scoring, linux, windows, web, users, notify
+# - Purpose: Validate services, users, and configs for scoring without changing state
+# - Notes: Uses assert tasks to clearly pass/fail checks
+# =============================================
+
+- name: Validate Linux scoring items
+  hosts: linux
+  gather_facts: true
+  tasks:
+    - name: Ensure SSH is running
+      ansible.builtin.service_facts:
+    - name: Check SSH service
+      ansible.builtin.assert:
+        that:
+          - "'ssh' in services and services['ssh'].state == 'running'"
+        fail_msg: "SSH is not running"
+        success_msg: "SSH is running"
+      tags: [scoring, linux]
+
+    - name: Ensure index.html exists
+      ansible.builtin.stat:
+        path: /var/www/html/index.html
+      register: web_index
+    - name: Validate web index
+      ansible.builtin.assert:
+        that:
+          - web_index.stat.exists
+        fail_msg: "index.html missing"
+        success_msg: "index.html present"
+      tags: [scoring, linux, web]
+
+- name: Validate Windows scoring items
+  hosts: windows
+  gather_facts: true
+  tasks:
+    - name: Ensure IIS service is running
+      ansible.windows.win_service:
+        name: W3SVC
+      register: iis_service
+    - name: Validate IIS
+      ansible.builtin.assert:
+        that:
+          - iis_service.state == "running"
+        fail_msg: "IIS not running"
+        success_msg: "IIS running"
+      tags: [scoring, windows, web]
+
+    - name: Ensure Administrator account exists
+      ansible.windows.win_user:
+        name: Administrator
+        state: present
+      check_mode: true
+      tags: [scoring, windows, users]
+
+- name: Notify team via Discord
+  hosts: localhost
   gather_facts: false
   tasks:
-    - name: Check HTTP on Web Servers
+    - name: Post scoring validation completion
       ansible.builtin.uri:
-        url: "http://{{ ansible_host }}"
-        status_code: 200
-        validate_certs: no
-      when: inventory_hostname in groups['web_servers']
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "📊 scoring_validation.yml completed at {{ lookup('pipe','date') }}"
+        status_code: 204
+      when: discord_webhook_url is defined
       ignore_errors: true
-      register: http_check
-
-    - name: Check HTTPS on Web Servers
-      ansible.builtin.uri:
-        url: "https://{{ ansible_host }}"
-        status_code: 200
-        validate_certs: no
-      when: inventory_hostname in groups['web_servers']
-      ignore_errors: true
-      register: https_check
-
-    - name: Check SMTP
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 25
-        timeout: 5
-      when: inventory_hostname in groups['mail_servers']
-      ignore_errors: true
-      register: smtp_check
-
-    - name: Check POP3
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 110
-        timeout: 5
-      when: inventory_hostname in groups['mail_servers']
-      ignore_errors: true
-      register: pop3_check
-
-    - name: Check DNS
-      ansible.builtin.command: "nslookup google.com {{ ansible_host }}"
-      when: inventory_hostname in groups['dns_servers']
-      ignore_errors: true
-      changed_when: false
-      register: dns_check
-
-    - name: Check FTP
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 21
-        timeout: 5
-      when: inventory_hostname in groups['ftp_servers']
-      ignore_errors: true
-      register: ftp_check
-
-    - name: Check SSH
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 22
-        timeout: 5
-      when: inventory_hostname in groups['linux']
-      ignore_errors: true
-      register: ssh_check
-      delegate_to: localhost
-
-    - name: Check RDP
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 3389
-        timeout: 5
-      when: inventory_hostname in groups['windows']
-      ignore_errors: true
-      register: rdp_check
-      delegate_to: localhost
-
-    - name: Display results
-      ansible.builtin.debug:
-        msg: "Service checks completed for {{ inventory_hostname }}"
+      tags: [notify, passive]

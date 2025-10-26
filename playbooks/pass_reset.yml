@@ -1,86 +1,65 @@
 ---
-- name: Reset Linux passwords (standard systems)
-  hosts: debian,fedora_webmail
+
+# ================== PURPOSE ==================
+# Password Reset Playbook
+# - Rotates admin/root passwords across hosts
+# - Stores new passwords in Ansible Vault
+# - Logs changes without exposing secrets
+# =============================================
+# - Edit vault with: ansible-vault edit group_vars/all/vault.yml
+# - Run with: ansible-playbook playbooks/pass_reset.yml --vault-password-file ~/.vault_pass
+# - Tags:
+#     pass_reset, linux, windows, network, notify
+# - Output: Logs reset completion, but never prints passwords
+
+
+- name: Reset passwords on Linux
+  hosts: linux
   become: true
+  vars:
+    new_pass: "{{ vault_linux_admin_pass }}"
   tasks:
-    - name: Reset sysadmin password
-      ansible.builtin.user:
-        name: sysadmin
-        password: "{{ vault_linux_sysadmin_new | password_hash('sha512') }}"
-    
     - name: Reset root password
       ansible.builtin.user:
         name: root
-        password: "{{ vault_linux_root_new | password_hash('sha512') }}"
+        password: "{{ new_pass | password_hash('sha512') }}"
+      tags: [pass_reset, linux]
 
-- name: Reset Splunk passwords
-  hosts: splunk
-  become: true
-  tasks:
-    - name: Reset sysadmin password
-      ansible.builtin.user:
-        name: sysadmin
-        password: "{{ splunk_sysadmin_new | password_hash('sha512') }}"
-    
-    - name: Reset root password
-      ansible.builtin.user:
-        name: root
-        password: "{{ splunk_root_new | password_hash('sha512') }}"
-    
-    - name: Reset Splunk admin password (web interface)
-      ansible.builtin.shell: |
-        /opt/splunk/bin/splunk edit user admin \
-          -password '{{ splunk_admin_new }}' \
-          -auth admin:{{ splunk_admin_default }}
-      register: splunk_pass_change
-      failed_when: false
-      changed_when: splunk_pass_change.rc == 0
-
-- name: Reset Windows passwords
+- name: Reset passwords on Windows
   hosts: windows
+  vars:
+    new_pass: "{{ vault_windows_admin_pass }}"
   tasks:
     - name: Reset Administrator password
       ansible.windows.win_user:
         name: Administrator
-        password: "{{ vault_windows_admin_new }}"
-        password_never_expires: true
-    
-    - name: Reset UserOne password (Win11 workstation)
-      ansible.windows.win_user:
-        name: UserOne
-        password: "{{ vault_windows_userone_new }}"
-      when: inventory_hostname == 'windows11_wks'
-      ignore_errors: true
+        password: "{{ new_pass }}"
+      tags: [pass_reset, windows]
 
-- name: Display network device password reset instructions
+- name: Reset passwords on network devices
+  hosts: network
+  vars:
+    new_pass: "{{ vault_network_admin_pass }}"
+  tasks:
+    - name: Reset device admin password
+      cisco.ios.ios_user:
+        name: admin
+        configured_password: "{{ new_pass }}"
+        update_password: always
+      tags: [pass_reset, network]
+
+- name: Notify team via Discord
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Manual password changes required
-      ansible.builtin.debug:
-        msg:
-          - "=============================================="
-          - "MANUAL PASSWORD CHANGES REQUIRED"
-          - "=============================================="
-          - ""
-          - "Palo Alto Firewall:"
-          - "  URL: https://172.20.242.150"
-          - "  Current: admin / Changeme123"
-          - "  New: admin / {{ hostvars['paloalto']['paloalto_pass_new'] | default('CompPalo2025!Secure') }}"
-          - ""
-          - "Cisco FTD Firewall:"
-          - "  URL: https://172.20.240.200"
-          - "  Current: admin / !Changeme123"
-          - "  New: admin / {{ hostvars['cisco_ftd']['cisco_ftd_pass_new'] | default('CompCisco2025!Secure') }}"
-          - ""
-          - "VyOS Router:"
-          - "  SSH: ssh vyos@172.31.21.2"
-          - "  Current: vyos / changeme"
-          - "  New: {{ hostvars['vyos']['vyos_pass_new'] | default('CompVyos2025!Secure') }}"
-          - "  Commands:"
-          - "    configure"
-          - "    set system login user vyos authentication plaintext-password"
-          - "    (enter new password when prompted)"
-          - "    commit"
-          - "    save"
-          - "=============================================="
+    - name: Post reset completion
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "🔑 pass_reset.yml completed at {{ lookup('pipe','date') }}"
+        status_code: 204
+      when: discord_webhook_url is defined
+      ignore_errors: true
+      tags: [notify, passive]

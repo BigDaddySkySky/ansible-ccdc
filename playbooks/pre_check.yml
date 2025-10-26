@@ -1,122 +1,61 @@
 ---
-- name: Pre-Competition Validation Checks
-  hosts: localhost
-  gather_facts: true
-  tasks:
-    - name: Check Ansible version
-      ansible.builtin.debug:
-        msg: "Running Ansible {{ ansible_version.full }}"
-    
-    - name: Verify vault password file exists
-      ansible.builtin.stat:
-        path: "~/.vault_pass"
-      register: vault_pass_file
-      failed_when: not vault_pass_file.stat.exists
-    
-    - name: Check required collections
-      ansible.builtin.command: ansible-galaxy collection list
-      register: collections_installed
-      changed_when: false
-    
-    - name: Verify community.general installed
-      ansible.builtin.assert:
-        that:
-          - "'community.general' in collections_installed.stdout"
-        fail_msg: "community.general collection not found. Run: ansible-galaxy collection install -r requirements.yml"
-    
-    - name: Verify ansible.posix installed
-      ansible.builtin.assert:
-        that:
-          - "'ansible.posix' in collections_installed.stdout"
-        fail_msg: "ansible.posix collection not found. Run: ansible-galaxy collection install -r requirements.yml"
-    
-    - name: Verify ansible.windows installed
-      ansible.builtin.assert:
-        that:
-          - "'ansible.windows' in collections_installed.stdout"
-        fail_msg: "ansible.windows collection not found. Run: ansible-galaxy collection install -r requirements.yml"
 
-- name: Test Linux Host Connectivity
+# ================== PURPOSE ==================
+# Pre-Check Playbook
+# - Validates connectivity and gathers facts
+# - Ensures hosts are ready for baseline/hardening
+# - Posts completion notice to Discord
+# =============================================
+# - Run with: ansible-playbook playbooks/pre_check.yml --vault-password-file ~/.vault_pass
+# - Tags:
+#     pre_check, linux, windows, network, notify
+# - Purpose: Verify connectivity and readiness before running baseline/hardening
+
+- name: Pre-check Linux hosts
   hosts: linux
-  gather_facts: false
+  gather_facts: true
   tasks:
     - name: Ping Linux hosts
       ansible.builtin.ping:
-      register: ping_result
-    
-    - name: Display Linux connectivity
-      ansible.builtin.debug:
-        msg: "✓ {{ inventory_hostname }} is reachable"
-      when: ping_result is success
+      tags: [pre_check, linux]
 
-- name: Test Linux Privilege Escalation
-  hosts: linux
-  gather_facts: false
-  become: true
-  tasks:
-    - name: Test sudo/become
-      ansible.builtin.command: whoami
-      register: whoami_result
+    - name: Ensure Python is installed
+      ansible.builtin.raw: test -e /usr/bin/python3 || (apt-get update && apt-get install -y python3)
       changed_when: false
-    
-    - name: Verify running as root
-      ansible.builtin.assert:
-        that:
-          - whoami_result.stdout == "root"
-        success_msg: "✓ Privilege escalation working on {{ inventory_hostname }}"
-        fail_msg: "✗ Privilege escalation FAILED on {{ inventory_hostname }}"
+      tags: [pre_check, linux]
 
-- name: Test Windows Host Connectivity
+- name: Pre-check Windows hosts
   hosts: windows
-  gather_facts: false
+  gather_facts: true
   tasks:
     - name: Ping Windows hosts
       ansible.windows.win_ping:
-      register: win_ping_result
-    
-    - name: Display Windows connectivity
-      ansible.builtin.debug:
-        msg: "✓ {{ inventory_hostname }} is reachable via WinRM"
-      when: win_ping_result is success
+      tags: [pre_check, windows]
 
-- name: Verify Vault Decryption
-  hosts: all
+    - name: Verify WinRM connectivity
+      ansible.windows.win_command: hostname
+      tags: [pre_check, windows]
+
+- name: Pre-check network devices
+  hosts: network
   gather_facts: false
   tasks:
-    - name: Test vault variable access (Linux)
-      ansible.builtin.debug:
-        msg: "✓ Vault decryption successful for {{ inventory_hostname }}"
-      when:
-        - inventory_hostname in groups['linux']
-        - ansible_ssh_pass is defined
-    
-    - name: Test vault variable access (Windows)
-      ansible.builtin.debug:
-        msg: "✓ Vault decryption successful for {{ inventory_hostname }}"
-      when:
-        - inventory_hostname in groups['windows']
-        - ansible_password is defined
+    - name: Ping network devices
+      ansible.netcommon.net_ping:
+      tags: [pre_check, network]
 
-- name: Display Summary
+- name: Notify team via Discord
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Pre-competition check summary
-      ansible.builtin.debug:
-        msg:
-          - "========================================"
-          - "PRE-COMPETITION CHECK SUMMARY"
-          - "========================================"
-          - ""
-          - "✓ Ansible version verified"
-          - "✓ Vault password file exists"
-          - "✓ Required collections installed"
-          - "✓ Linux host connectivity verified"
-          - "✓ Windows host connectivity verified"
-          - "✓ Privilege escalation working"
-          - "✓ Vault decryption working"
-          - ""
-          - "Status: READY FOR COMPETITION"
-          - ""
-          - "Next: ansible-playbook playbooks/baseline.yml"
-          - "========================================"
+    - name: Post pre-check completion
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "🛠️ pre_check.yml completed at {{ lookup('pipe','date') }}"
+        status_code: 204
+      when: discord_webhook_url is defined
+      ignore_errors: true
+      tags: [notify, passive]

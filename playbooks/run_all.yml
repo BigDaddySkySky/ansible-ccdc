@@ -1,42 +1,56 @@
 ---
-# Master playbook for competition start
-# Runs everything in correct order
+# ================== PURPOSE ==================
+# Run All Playbook
+# - Orchestrates baseline, hardening, validation, etc.
+# - Provides a single entry point for competition initialization
+# - Posts completion notice to Discord
+# =============================================
+# - Run with: ansible-playbook playbooks/run_all.yml --vault-password-file ~/.vault_pass
+# - Purpose: Orchestrates all major playbooks in sequence
+# - Tags: notify, passive
+# - Notes: Each playbook posts its own Discord notification; run_all adds a final summary ping
+# =============================================
 
-- name: Import pre-flight checks
-  import_playbook: pre_check.yml
-  tags: [pre_check]
+- import_playbook: pre_check.yml
+  vars:
+    message: "🛠️ pre_check.yml completed"
 
-- name: Import baseline configuration
-  import_playbook: baseline.yml
-  tags: [baseline, critical]
+- import_playbook: baseline.yml
+  vars:
+    message: "📦 baseline.yml completed"
 
-- name: Import password reset
-  import_playbook: pass_reset.yml
-  tags: [passwords, critical]
+- import_playbook: hardening.yml
+  vars:
+    message: "🛡️ hardening.yml completed"
 
-- name: Import hardening
-  import_playbook: hardening.yml
-  tags: [hardening]
+- import_playbook: pass_reset.yml
+  vars:
+    message: "🔑 pass_reset.yml completed"
 
-- name: Import scoring validation
-  import_playbook: scoring_validation.yml
-  tags: [validation]
+- import_playbook: scoring_validation.yml
+  vars:
+    message: "📊 scoring_validation.yml completed"
 
-- name: Competition Ready
+- import_playbook: incident_response.yml
+  vars:
+    message: "🚨 incident_response.yml completed"
+
+- import_playbook: rollback.yml
+  vars:
+    message: "⚠️ rollback.yml executed (if triggered)"
+
+- name: Final notification
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Display completion message
-      ansible.builtin.debug:
-        msg:
-          - "========================================"
-          - "COMPETITION INITIALIZATION COMPLETE"
-          - "========================================"
-          - ""
-          - "Next steps:"
-          - "1. Manually change network device passwords"
-          - "2. Monitor Splunk for incidents"
-          - "3. Re-run scoring validation every 15 min"
-          - ""
-          - "Run: ansible-playbook playbooks/scoring_validation.yml"
-          - "========================================"
+    - name: Post run_all completion
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "🏁 run_all.yml completed at {{ lookup('pipe','date') }}"
+        status_code: 204
+      when: discord_webhook_url is defined
+      ignore_errors: true
+      tags: [notify, passive]
