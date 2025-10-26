@@ -1,26 +1,15 @@
 ---
+# ================== PURPOSE ==================
+# Quick Hardening Playbook
+# - Applies the hardening role across all hosts
+# - Disables unnecessary Linux services
+# - Ensures audit logging is enabled (RedHat/Debian)
+# - Tagged for selective execution
+# =============================================
+
 - name: Quick Hardening
   hosts: all
   become: true
-  tasks:
-    # Disable unnecessary services (Linux)
-    - name: Stop unnecessary services (Linux)
-      ansible.builtin.service:
-        name: "{{ item }}"
-        state: stopped
-        enabled: false
-      loop:
-        - cups
-        - avahi-daemon
-        - bluetooth
-      ignore_errors: true
-      when: ansible_os_family != "Windows"
-
-    # Enable logging
-    - name: Ensure auditd is running (Linux)
-      ansible.builtin.service:
-        name: auditd
-        state: started
-        enabled: true
-      when: ansible_os_family == "RedHat"
-      
+  roles:
+    - role: hardening
+      tags: [hardening, security]
