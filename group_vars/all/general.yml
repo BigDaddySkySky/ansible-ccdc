@@ -6,6 +6,7 @@
 # - Defines default backup directory
 # =============================================
 
+discord_webhook_url: "{{ vault_discord_webhook_url }}"
 ansible_python_interpreter: /usr/bin/python3
 backup_dir: /root/ccdc_backup
 log_dir: /var/log/ccdc
