@@ -23,15 +23,15 @@
     permanent: true
     state: enabled
     immediate: true
-  
+
 - name: Allow web ports
   ansible.posix.firewalld:
     port: "{{ item }}/tcp"
     permanent: true
     state: enabled
     immediate: true
-  loop: "{{ web_firewall_ports }}"
-  when: web_firewall_ports is defined
+  loop: "{{ firewall_web_ports }}"
+  when: firewall_web_ports is defined
 
 - name: Allow mail ports
   ansible.posix.firewalld:
@@ -39,8 +39,8 @@
     permanent: true
     state: enabled
     immediate: true
-  loop: "{{ mail_firewall_ports }}"
-  when: mail_firewall_ports is defined
+  loop: "{{ firewall_mail_ports }}"
+  when: firewall_mail_ports is defined
 
 - name: Allow FTP ports
   ansible.posix.firewalld:
@@ -48,5 +48,5 @@
     permanent: true
     state: enabled
     immediate: true
-  loop: "{{ ftp_firewall_ports }}"
-  when: ftp_firewall_ports is defined
+  loop: "{{ firewall_ftp_ports }}"
+  when: firewall_ftp_ports is defined

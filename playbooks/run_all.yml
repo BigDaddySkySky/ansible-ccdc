@@ -6,26 +6,31 @@
 # - Posts completion notice to Discord
 # =============================================
 # USAGE:
-#   ansible-playbook playbooks/run_all_with_detection.yml
-#   ansible-playbook playbooks/run_all_with_detection.yml --skip-tags detection
+#   ansible-playbook playbooks/run_all.yml
+#   ansible-playbook playbooks/run_all.yml --skip-tags detection
 
-- import_playbook: pre_check.yml
+- name: Pre-Competition Checks
+  import_playbook: pre_check.yml
   tags: [pre_check]
 
-- import_playbook: baseline.yml
+- name: Baseline Configuration
+  import_playbook: baseline.yml
   tags: [baseline]
 
-- import_playbook: hardening.yml
+- name: System Hardening
+  import_playbook: hardening.yml
   tags: [hardening]
 
-- import_playbook: pass_reset.yml
+- name: Password Reset
+  import_playbook: pass_reset.yml
   tags: [pass_reset]
 
-# NEW: Deploy intrusion detection
-- import_playbook: deploy_detection.yml
+- name: Deploy Intrusion Detection
+  import_playbook: deploy_detection.yml
   tags: [detection]
 
-- import_playbook: scoring_validation.yml
+- name: Scoring Validation
+  import_playbook: scoring_validation.yml
   tags: [scoring]
 
 - name: Final notification
@@ -38,8 +43,15 @@
         method: POST
         body_format: json
         body:
-          content: "🏁 **Full Deployment Complete**\n✅ Baseline configured\n✅ Systems hardened\n✅ Passwords reset\n✅ Intrusion detection active\n✅ Services validated\n**Time:** {{ lookup('pipe','date') }}"
+          content: >-
+            🏁 **Full Deployment Complete**
+            ✅ Baseline configured
+            ✅ Systems hardened
+            ✅ Passwords reset
+            ✅ Intrusion detection active
+            ✅ Services validated
+            **Time:** {{ lookup('pipe', 'date') }}
         status_code: [200, 204]
       when: discord_webhook_url is defined
-      ignore_errors: true
+      failed_when: false
       tags: [notify, passive]

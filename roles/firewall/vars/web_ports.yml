@@ -1,4 +1,4 @@
 ---
-web_firewall_ports:
+firewall_web_ports:
   - "{{ web_ports.http }}"
   - "{{ web_ports.https }}"

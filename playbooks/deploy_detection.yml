@@ -61,8 +61,8 @@
         body_format: json
         body:
           content: >
-            "🛡️ **Intrusion Detection Deployed Successfully**\n✅ Log watchers active\n✅ Honeypots configured\n✅ Audit rules enabled\n
-            **Time:** {{ lookup('pipe','date') }}"
+           "🛡️ **Intrusion Detection Deployed Successfully**\n✅ Log watchers active\n✅ Honeypots configured\n
+           ✅ Audit rules enabled\n**Time:** {{ lookup('pipe', 'date') }}"
         status_code: [200, 204]
       when: discord_webhook_url is defined
-      failed_when: true
+      failed_when: false

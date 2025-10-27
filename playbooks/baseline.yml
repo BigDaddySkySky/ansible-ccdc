@@ -1,5 +1,4 @@
 ---
-
 # ================== PURPOSE ==================
 # First 15 Minute Baseline (Linux)
 # - Creates /root/ccdc_backup
@@ -11,17 +10,18 @@
   hosts: linux
   become: true
   tags: [baseline, linux, critical]
-  
+
   tasks:
     - name: Create backup directory
       ansible.builtin.file:
         path: /root/ccdc_backup
         state: directory
+        mode: '0700'
       tags: [backup, always]
-    
+
     - name: Update packages (Debian/Ubuntu)
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         upgrade: dist
       when: ansible_os_family == "Debian"
       tags: [updates, slow]
@@ -29,19 +29,20 @@
     - name: Update packages (RedHat)
       ansible.builtin.dnf:
         name: "*"
-        state: latest
+        state: present
       when: ansible_os_family == "RedHat"
       tags: [updates, slow]
-    
+
     - name: Configure firewall
-      include_role:
+      ansible.builtin.include_role:
         name: firewall
       tags: [firewall, security]
-    
-    - name: Baciup /etc directory
-      ansible.builtin.archive:
+
+    - name: Backup /etc directory
+      community.general.archive:
         path: /etc
         dest: /root/ccdc_backup/etc_backup.tar.gz
+        mode: '0644'
       tags: [backup, critical]
 
     - name: Notify team via Discord
@@ -50,9 +51,8 @@
         method: POST
         body_format: json
         body:
-          content: "✅ {{ ansible_playbook_name | default('<playbook>.yml') }} completed at {{ lookup('pipe','date') }}"
+          content: "✅ {{ ansible_playbook_name | default('<playbook>.yml') }} completed at {{ lookup('pipe', 'date') }}"
         status_code: 204
       when: discord_webhook_url is defined
-      ignore_errors: true
+      failed_when: false
       tags: [notify, passive]
-    

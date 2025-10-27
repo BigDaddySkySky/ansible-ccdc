@@ -7,7 +7,7 @@
 # =============================================
 
 - name: Enable Windows Firewall (all profiles)
-  community.windows.win_firewall:
+  ansible.windows.win_firewall:
     state: enabled
     profiles:
       - Domain

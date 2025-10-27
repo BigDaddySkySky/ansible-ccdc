@@ -54,8 +54,8 @@
         method: POST
         body_format: json
         body:
-          content: "🛠️ pre_check.yml completed at {{ lookup('pipe','date') }}"
+          content: "🛠️ pre_check.yml completed at {{ lookup('pipe', 'date') }}"
         status_code: 204
       when: discord_webhook_url is defined
-      ignore_errors: true
+      failed_when: false
       tags: [notify, passive]
