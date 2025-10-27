@@ -1,0 +1,57 @@
+---
+# ================== PURPOSE ==================
+# Entry point for intrusion_detection role
+# - Orchestrates all detection components
+# - Tagged for selective execution
+# - Skips Windows hosts where applicable
+# =============================================
+
+- name: Create alert cache directory
+  ansible.builtin.file:
+    path: /var/cache/ccdc_alerts
+    state: directory
+    mode: '0755'
+  when: ansible_os_family != "Windows"
+  tags: [always]
+
+- name: Deploy reusable alert script
+  ansible.builtin.copy:
+    src: discord_alert.py
+    dest: /usr/local/bin/ccdc_alert.py
+    mode: '0755'
+  when: ansible_os_family != "Windows"
+  tags: [always, detection]
+
+- name: Install detection dependencies
+  ansible.builtin.package:
+    name:
+      - python3
+      - inotify-tools
+      - auditd
+    state: present
+  when: ansible_os_family != "Windows"
+  tags: [detection, dependencies]
+
+- name: Configure enhanced auditd rules
+  ansible.builtin.include_tasks: configure_auditd.yml
+  when: ansible_os_family == "RedHat"
+  tags: [detection, auditd]
+
+- name: Setup honeypots
+  ansible.builtin.include_tasks: setup_honeypots.yml
+  when: 
+    - honeypot_enabled | default(true)
+    - ansible_os_family != "Windows"
+  tags: [detection, honeypots]
+
+- name: Deploy log watcher service
+  ansible.builtin.include_tasks: install_watchers.yml
+  when:
+    - log_watch_enabled | default(true)
+    - ansible_os_family != "Windows"
+  tags: [detection, log_watcher]
+
+- name: Configure detection cron jobs
+  ansible.builtin.include_tasks: deploy_cron.yml
+  when: ansible_os_family != "Windows"
+  

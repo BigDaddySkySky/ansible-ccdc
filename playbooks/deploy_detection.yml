@@ -1,0 +1,68 @@
+---
+# ================== PURPOSE ==================
+# Deploy Intrusion Detection System
+# - Sets up honeypots, log watchers, and alert system
+# - Configures auditd rules for enhanced monitoring
+# - Schedules periodic detection scans
+# =============================================
+# USAGE:
+#   ansible-playbook playbooks/deploy_detection.yml
+#   ansible-playbook playbooks/deploy_detection.yml --tags honeypots
+#   ansible-playbook playbooks/deploy_detection.yml --skip-tags cron
+
+- name: Deploy Intrusion Detection on Linux
+  hosts: linux
+  become: true
+  tags: [detection, linux]
+
+  tasks:
+    - name: Include intrusion_detection role
+      ansible.builtin.include_role:
+        name: intrusion_detection
+      tags: [always]
+
+- name: Verify detection services are running
+  hosts: linux
+  become: true
+  tags: [detection, verify]
+
+  tasks:
+    - name: Check log watcher service status
+      ansible.builtin.systemd:
+        name: ccdc-log-watcher
+      register: log_watcher_status
+      failed_when: log_watcher_status.status.ActiveState != "active"
+      when: log_watch_enabled | default(true)
+
+    - name: Check honeypot watcher service status
+      ansible.builtin.systemd:
+        name: ccdc-honeypot-watcher
+      register: honeypot_status
+      failed_when: honeypot_status.status.ActiveState != "active"
+      when: honeypot_enabled | default(true)
+
+    - name: Verify auditd is running
+      ansible.builtin.service:
+        name: auditd
+      register: auditd_status
+      failed_when: auditd_status.state != "started"
+      when: ansible_os_family == "RedHat"
+
+- name: Send deployment completion notification
+  hosts: localhost
+  gather_facts: false
+  tags: [notify]
+
+  tasks:
+    - name: Post deployment success to Discord
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: >
+            "🛡️ **Intrusion Detection Deployed Successfully**\n✅ Log watchers active\n✅ Honeypots configured\n✅ Audit rules enabled\n
+            **Time:** {{ lookup('pipe','date') }}"
+        status_code: [200, 204]
+      when: discord_webhook_url is defined
+      failed_when: true

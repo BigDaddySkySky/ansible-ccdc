@@ -1,0 +1,108 @@
+---
+# ================== PURPOSE ==================
+# Honeypot Setup Tasks
+# - Creates fake users, files, and directories
+# - Configures inotify watches for access detection
+# - Triggers alerts on honeypot interaction
+# =============================================
+
+- name: Install inotify-tools for file watches
+  ansible.builtin.package:
+    name: inotify-tools
+    state: present
+  when: ansible_os_family != "Windows"
+
+- name: Create honeypot users (disabled login)
+  ansible.builtin.user:
+    name: "{{ item }}"
+    shell: /bin/false
+    create_home: false
+    state: present
+  loop: "{{ honeypot_users }}"
+  when: honeypot_enabled | default(true)
+  notify: Alert critical intrusion
+
+- name: Create honeypot directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ honeypot_directories }}"
+  when: honeypot_enabled | default(true)
+
+- name: Create honeypot files (fake sensitive data)
+  ansible.builtin.copy:
+    dest: "{{ item }}"
+    content: |
+      # HONEYPOT FILE - DO NOT MODIFY
+      # This file is monitored for intrusion detection
+      # Last modified: {{ ansible_date_time.iso8601 }}
+    mode: '0644'
+  loop: "{{ honeypot_files }}"
+  when: honeypot_enabled | default(true)
+
+- name: Deploy honeypot alert script
+  ansible.builtin.template:
+    src: honeypot_alert.sh.j2
+    dest: /usr/local/bin/honeypot_alert.sh
+    mode: '0755'
+  when: honeypot_enabled | default(true)
+
+- name: Deploy honeypot watcher systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/ccdc-honeypot-watcher.service
+    content: |
+      [Unit]
+      Description=CCDC Honeypot File Watcher
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/local/bin/honeypot_watcher.sh
+      Restart=always
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  when: honeypot_enabled | default(true)
+  notify: Restart honeypot watcher
+
+- name: Deploy honeypot watcher script
+  ansible.builtin.template:
+    src: honeypot_watcher.sh.j2
+    dest: /usr/local/bin/honeypot_watcher.sh
+    mode: '0755'
+  when: honeypot_enabled | default(true)
+
+- name: Enable and start honeypot watcher
+  ansible.builtin.systemd:
+    name: ccdc-honeypot-watcher
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: honeypot_enabled | default(true)
+
+- name: Add audit rules for honeypot files
+  ansible.builtin.lineinfile:
+    path: /etc/audit/rules.d/ccdc-honeypots.rules
+    line: "-w {{ item }} -p wa -k honeypot_access"
+    create: true
+    mode: '0640'
+  loop: "{{ honeypot_files }}"
+  when: 
+    - honeypot_enabled | default(true)
+    - ansible_os_family == "RedHat"
+  notify: Restart auditd
+
+- name: Add audit rules for honeypot directories
+  ansible.builtin.lineinfile:
+    path: /etc/audit/rules.d/ccdc-honeypots.rules
+    line: "-w {{ item }} -p wa -k honeypot_dir_access"
+    create: true
+    mode: '0640'
+  loop: "{{ honeypot_directories }}"
+  when:
+    - honeypot_enabled | default(true)
+    - ansible_os_family == "RedHat"
+  notify: Restart auditd

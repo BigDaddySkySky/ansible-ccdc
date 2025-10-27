@@ -1,0 +1,60 @@
+---
+# ================== PURPOSE ==================
+# Default configuration for intrusion detection
+# - Alert thresholds and cooldown periods
+# - Detection patterns and honeypot locations
+# - Tuneable for competition environment
+# =============================================
+
+# Alert configuration
+alert_cooldown_seconds: 300  # 5 min between duplicate alerts
+alert_severity_levels:
+  critical: "🚨"
+  warning: "⚠️"
+  info: "ℹ️"
+
+# Detection thresholds
+failed_login_threshold: 5     # Failed logins before alert
+failed_login_window: 300      # Time window in seconds
+suspicious_command_alert: true
+
+# Honeypot configuration
+honeypot_enabled: true
+honeypot_users:
+  - redteam
+  - hacker
+  - test
+honeypot_files:
+  - /root/.ssh/authorized_keys_backup
+  - /etc/shadow.bak
+  - /var/www/html/admin.php
+honeypot_directories:
+  - /opt/backup
+  - /root/secrets
+
+# Log monitoring
+log_watch_enabled: true
+log_watch_interval: 60  # Check every 60 seconds
+monitored_logs:
+  debian:
+    - /var/log/auth.log
+    - /var/log/syslog
+  redhat:
+    - /var/log/secure
+    - /var/log/messages
+
+# Suspicious patterns (regex)
+suspicious_patterns:
+  - 'nc -[el].*[0-9]+'           # Netcat listeners
+  - 'bash -i.*dev/tcp'           # Reverse shell
+  - 'python.*socket.*connect'    # Python reverse shell
+  - 'perl.*socket.*connect'      # Perl reverse shell
+  - 'wget.*\|.*sh'               # Download and execute
+  - 'curl.*\|.*bash'             # Download and execute
+  - 'chmod \+s'                  # SUID bit manipulation
+  - '/etc/passwd'                # Password file access (in commands)
+  - '/etc/shadow'                # Shadow file access
+
+# Evidence collection
+evidence_dir: "{{ incident_dir }}/{{ inventory_hostname }}"
+auto_collect_evidence: true

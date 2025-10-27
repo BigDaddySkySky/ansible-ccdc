@@ -1,0 +1,66 @@
+---
+# ================== PURPOSE ==================
+# Test Alert System
+# - Validates Discord webhook connectivity
+# - Tests alert script functionality
+# - Verifies rate limiting behavior
+# =============================================
+# USAGE:
+#   ansible-playbook playbooks/test_alerts.yml
+#   ansible-playbook playbooks/test_alerts.yml --tags critical
+
+- name: Test Alert Infrastructure
+  hosts: localhost
+  gather_facts: false
+  
+  tasks:
+    - name: Test critical alert
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "🚨 **TEST ALERT - CRITICAL**\nThis is a test of the critical alert system\n**Time:** {{ lookup('pipe','date') }}"
+        status_code: [200, 204]
+      when: discord_webhook_url is defined
+      tags: [critical, test]
+    
+    - name: Test warning alert
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "⚠️ **TEST ALERT - WARNING**\nThis is a test of the warning alert system\n**Time:** {{ lookup('pipe','date') }}"
+        status_code: [200, 204]
+      when: discord_webhook_url is defined
+      tags: [warning, test]
+    
+    - name: Test info alert
+      ansible.builtin.uri:
+        url: "{{ discord_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          content: "ℹ️ **TEST ALERT - INFO**\nThis is a test of the info alert system\n**Time:** {{ lookup('pipe','date') }}"
+        status_code: [200, 204]
+      when: discord_webhook_url is defined
+      tags: [info, test]
+
+- name: Test Alert Script on Linux Hosts
+  hosts: linux
+  become: true
+  gather_facts: true
+  tags: [script_test]
+  
+  tasks:
+    - name: Test alert script - critical
+      ansible.builtin.command:
+        cmd: >
+          python3 /usr/local/bin/ccdc_alert.py
+          --webhook "{{ discord_webhook_url }}"
+          --severity critical
+          --message "Test critical alert from {{ inventory_hostname }}"
+          --host "{{ inventory_hostname }}"
+          --force
+      when: discord_webhook_

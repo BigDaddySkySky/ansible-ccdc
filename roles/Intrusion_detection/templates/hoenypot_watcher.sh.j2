@@ -1,0 +1,110 @@
+#!/bin/bash
+# ================== PURPOSE ==================
+# Honeypot Watcher Script
+# - Uses inotifywait to monitor honeypot files/dirs
+# - Triggers immediate alerts on access/modification
+# - Runs as systemd service
+# =============================================
+
+set -euo pipefail
+
+WEBHOOK_URL="{{ discord_webhook_url }}"
+HOSTNAME="{{ inventory_hostname }}"
+ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
+
+# Honeypot paths (space-separated)
+HONEYPOT_FILES=(
+{% for file in honeypot_files %}
+  "{{ file }}"
+{% endfor %}
+)
+
+HONEYPOT_DIRS=(
+{% for dir in honeypot_directories %}
+  "{{ dir }}"
+{% endfor %}
+)
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
+}
+
+send_alert() {
+    local severity="$1"
+    local message="$2"
+    local details="${3:-}"
+    
+    python3 "$ALERT_SCRIPT" \
+        --webhook "$WEBHOOK_URL" \
+        --severity "$severity" \
+        --message "$message" \
+        --host "$HOSTNAME" \
+        ${details:+--details "$details"} \
+        --force  # Bypass rate limiting for honeypots
+}
+
+# Collect evidence immediately on honeypot trigger
+collect_evidence() {
+    local triggered_path="$1"
+    
+    log "Collecting evidence for honeypot trigger: $triggered_path"
+    
+    # Capture process list
+    ps auxww > "/tmp/honeypot_evidence_ps_$$.txt"
+    
+    # Capture network connections
+    ss -tunapl > "/tmp/honeypot_evidence_net_$$.txt" 2>/dev/null || netstat -tunapl > "/tmp/honeypot_evidence_net_$$.txt"
+    
+    # Capture recent auth logs
+    tail -100 /var/log/auth.log > "/tmp/honeypot_evidence_auth_$$.txt" 2>/dev/null || \
+    tail -100 /var/log/secure > "/tmp/honeypot_evidence_auth_$$.txt" 2>/dev/null || true
+    
+    # Capture who's logged in
+    w > "/tmp/honeypot_evidence_users_$$.txt"
+    
+    log "Evidence collected in /tmp/honeypot_evidence_*_$$.txt"
+}
+
+# Build watch list
+WATCH_PATHS=()
+for file in "${HONEYPOT_FILES[@]}"; do
+    if [[ -e "$file" ]]; then
+        WATCH_PATHS+=("$file")
+    fi
+done
+
+for dir in "${HONEYPOT_DIRS[@]}"; do
+    if [[ -d "$dir" ]]; then
+        WATCH_PATHS+=("$dir")
+    fi
+done
+
+if [[ ${#WATCH_PATHS[@]} -eq 0 ]]; then
+    log "ERROR: No valid honeypot paths to watch!"
+    exit 1
+fi
+
+log "Starting honeypot watcher for ${#WATCH_PATHS[@]} paths"
+log "Monitoring: ${WATCH_PATHS[*]}"
+
+# Monitor with inotifywait (recursive for directories)
+inotifywait -m -r -e access,modify,open,close_write,move,create,delete "${WATCH_PATHS[@]}" | \
+while read -r path events filename; do
+    triggered_path="${path}${filename}"
+    log "HONEYPOT TRIGGERED! Path: $triggered_path | Events: $events"
+    
+    # Collect evidence immediately
+    collect_evidence "$triggered_path"
+    
+    # Send critical alert
+    alert_msg="HONEYPOT ACCESS DETECTED: $triggered_path (events: $events)"
+    details="Path: $triggered_path
+Events: $events
+Time: $(date)
+Evidence: /tmp/honeypot_evidence_*_$$.txt"
+    
+    send_alert "critical" "$alert_msg" "$details"
+    
+    # Optional: Run incident response playbook
+    # ansible-playbook /opt/ccdc/playbooks/incident_response.yml --limit "$HOSTNAME" &
+done

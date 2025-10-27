@@ -1,43 +1,32 @@
 ---
 # ================== PURPOSE ==================
-# Run All Playbook
-# - Orchestrates baseline, hardening, validation, etc.
+# Run All Playbook (with Intrusion Detection)
+# - Orchestrates baseline, hardening, detection, etc.
 # - Provides a single entry point for competition initialization
 # - Posts completion notice to Discord
 # =============================================
-# - Run with: ansible-playbook playbooks/run_all.yml --vault-password-file ~/.vault_pass
-# - Purpose: Orchestrates all major playbooks in sequence
-# - Tags: notify, passive
-# - Notes: Each playbook posts its own Discord notification; run_all adds a final summary ping
-# =============================================
+# USAGE:
+#   ansible-playbook playbooks/run_all_with_detection.yml
+#   ansible-playbook playbooks/run_all_with_detection.yml --skip-tags detection
 
 - import_playbook: pre_check.yml
-  vars:
-    message: "🛠️ pre_check.yml completed"
+  tags: [pre_check]
 
 - import_playbook: baseline.yml
-  vars:
-    message: "📦 baseline.yml completed"
+  tags: [baseline]
 
 - import_playbook: hardening.yml
-  vars:
-    message: "🛡️ hardening.yml completed"
+  tags: [hardening]
 
 - import_playbook: pass_reset.yml
-  vars:
-    message: "🔑 pass_reset.yml completed"
+  tags: [pass_reset]
+
+# NEW: Deploy intrusion detection
+- import_playbook: deploy_detection.yml
+  tags: [detection]
 
 - import_playbook: scoring_validation.yml
-  vars:
-    message: "📊 scoring_validation.yml completed"
-
-- import_playbook: incident_response.yml
-  vars:
-    message: "🚨 incident_response.yml completed"
-
-- import_playbook: rollback.yml
-  vars:
-    message: "⚠️ rollback.yml executed (if triggered)"
+  tags: [scoring]
 
 - name: Final notification
   hosts: localhost
@@ -49,8 +38,8 @@
         method: POST
         body_format: json
         body:
-          content: "🏁 run_all.yml completed at {{ lookup('pipe','date') }}"
-        status_code: 204
+          content: "🏁 **Full Deployment Complete**\n✅ Baseline configured\n✅ Systems hardened\n✅ Passwords reset\n✅ Intrusion detection active\n✅ Services validated\n**Time:** {{ lookup('pipe','date') }}"
+        status_code: [200, 204]
       when: discord_webhook_url is defined
       ignore_errors: true
       tags: [notify, passive]

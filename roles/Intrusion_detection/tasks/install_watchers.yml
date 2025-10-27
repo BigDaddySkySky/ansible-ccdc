@@ -1,0 +1,42 @@
+---
+# ================== PURPOSE ==================
+# Install Log Watcher Service
+# - Deploys Python log monitoring script
+# - Configures systemd service
+# - Starts monitoring automatically
+# =============================================
+
+- name: Deploy log watcher script
+  ansible.builtin.template:
+    src: log_watcher.py.j2
+    dest: /usr/local/bin/ccdc_log_watcher.py
+    mode: '0755'
+  notify: Restart log watcher
+
+- name: Deploy log watcher systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/ccdc-log-watcher.service
+    content: |
+      [Unit]
+      Description=CCDC Log Watcher for Intrusion Detection
+      After=network.target rsyslog.service
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/python3 /usr/local/bin/ccdc_log_watcher.py
+      Restart=always
+      RestartSec=10
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  notify: Restart log watcher
+
+- name: Enable and start log watcher service
+  ansible.builtin.systemd:
+    name: ccdc-log-watcher
+    enabled: true
+    state: started
+    daemon_reload: true

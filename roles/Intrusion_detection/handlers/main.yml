@@ -1,0 +1,68 @@
+---
+# ================== PURPOSE ==================
+# Handlers for intrusion detection alerts
+# - Reusable notification handlers
+# - Evidence collection triggers
+# - Rate-limited to prevent alert fatigue
+# =============================================
+
+- name: Alert critical intrusion
+  ansible.builtin.uri:
+    url: "{{ discord_webhook_url }}"
+    method: POST
+    body_format: json
+    body:
+      content: "{{ alert_severity_levels.critical }} **CRITICAL INTRUSION DETECTED**\n**Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+    status_code: [200, 204]
+  when: discord_webhook_url is defined
+  throttle: 1  # Only one handler execution per batch
+  ignore_errors: true
+
+- name: Alert warning intrusion
+  ansible.builtin.uri:
+    url: "{{ discord_webhook_url }}"
+    method: POST
+    body_format: json
+    body:
+      content: "{{ alert_severity_levels.warning }} **Warning: Suspicious Activity**\n**Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+    status_code: [200, 204]
+  when: discord_webhook_url is defined
+  throttle: 1
+  ignore_errors: true
+
+- name: Alert info intrusion
+  ansible.builtin.uri:
+    url: "{{ discord_webhook_url }}"
+    method: POST
+    body_format: json
+    body:
+      content: "{{ alert_severity_levels.info }} **Info: Detection Event**\n**Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+    status_code: [200, 204]
+  when: discord_webhook_url is defined
+  throttle: 1
+  ignore_errors: true
+
+- name: Collect evidence
+  ansible.builtin.include_role:
+    name: incident_response
+    tasks_from: collect_logs.yml
+  when: auto_collect_evidence | default(true)
+
+- name: Restart log watcher
+  ansible.builtin.systemd:
+    name: ccdc-log-watcher
+    state: restarted
+  when: ansible_os_family != "Windows"
+
+- name: Restart honeypot watcher
+  ansible.builtin.systemd:
+    name: ccdc-honeypot-watcher
+    state: restarted
+  when: ansible_os_family != "Windows"
+
+- name: Restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+  when: ansible_os_family == "RedHat"
+  
