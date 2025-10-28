@@ -1,9 +1,9 @@
 ---
 # ================== PURPOSE ==================
-# Handlers for intrusion detection alerts
-# - Reusable notification handlers
-# - Evidence collection triggers
-# - Rate-limited to prevent alert fatigue
+# Handlers for intrusion detection - Hardened Edition
+# - Proper auditd restart handling
+# - Audit rule rebuilding
+# - Service restart with validation
 # =============================================
 
 - name: Alert critical intrusion
@@ -12,12 +12,17 @@
     method: POST
     body_format: json
     body:
-      content: >
-        "{{ intrusion_detection_alert_severity_levels.critical }} **CRITICAL INTRUSION DETECTED**\n
-        **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+      content: >-
+        {{ intrusion_detection_alert_severity_levels.critical }} **CRITICAL INTRUSION DETECTED**
+
+        **Host:** {{ inventory_hostname }}
+
+        **Event:** {{ alert_message }}
+
+        **Time:** {{ ansible_date_time.iso8601 }}
     status_code: [200, 204]
   when: discord_webhook_url is defined
-  throttle: 1  # Only one handler execution per batch
+  throttle: 1
   failed_when: false
 
 - name: Alert warning intrusion
@@ -26,9 +31,14 @@
     method: POST
     body_format: json
     body:
-      content: >
-        "{{ intrusion_detection_alert_severity_levels.warning }} **Warning: Suspicious Activity**\n
-        **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+      content: >-
+        {{ intrusion_detection_alert_severity_levels.warning }} **Warning: Suspicious Activity**
+
+        **Host:** {{ inventory_hostname }}
+
+        **Event:** {{ alert_message }}
+
+        **Time:** {{ ansible_date_time.iso8601 }}
     status_code: [200, 204]
   when: discord_webhook_url is defined
   throttle: 1
@@ -40,9 +50,14 @@
     method: POST
     body_format: json
     body:
-      content: >
-        "{{ intrusion_detection_alert_severity_levels.info }} **Info: Detection Event**\n
-        **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+      content: >-
+        {{ intrusion_detection_alert_severity_levels.info }} **Info: Detection Event**
+
+        **Host:** {{ inventory_hostname }}
+
+        **Event:** {{ alert_message }}
+
+        **Time:** {{ ansible_date_time.iso8601 }}
     status_code: [200, 204]
   when: discord_webhook_url is defined
   throttle: 1
@@ -58,16 +73,65 @@
   ansible.builtin.systemd:
     name: ccdc-log-watcher
     state: restarted
+    daemon_reload: true
   when: ansible_os_family != "Windows"
 
 - name: Restart honeypot watcher
   ansible.builtin.systemd:
     name: ccdc-honeypot-watcher
     state: restarted
+    daemon_reload: true
   when: ansible_os_family != "Windows"
 
-- name: Restart auditd
-  ansible.builtin.service:
-    name: auditd
+- name: Restart alert retry daemon
+  ansible.builtin.systemd:
+    name: ccdc-alert-retry
     state: restarted
+    daemon_reload: true
+  when: ansible_os_family != "Windows"
+
+- name: Rebuild audit rules
+  block:
+    - name: Remove immutable flag
+      ansible.builtin.command: auditctl -e 1
+      changed_when: false
+      failed_when: false
+
+    - name: Rebuild rules with augenrules
+      ansible.builtin.command: augenrules --load
+      register: augenrules_result
+      changed_when: false
+      failed_when: false
+
+    - name: Verify rules loaded
+      ansible.builtin.command: auditctl -l
+      register: rule_check
+      changed_when: false
+      failed_when: rule_check.stdout_lines | length < 5
+
+    - name: Log rule count
+      ansible.builtin.debug:
+        msg: "Audit rules reloaded: {{ rule_check.stdout_lines | length }} rules active"
+  when: ansible_os_family == "RedHat"
+
+- name: Restart auditd
+  block:
+    - name: Stop auditd
+      ansible.builtin.command: service auditd stop
+      changed_when: false
+      failed_when: false
+
+    - name: Start auditd
+      ansible.builtin.command: service auditd start
+      changed_when: false
+      register: auditd_start
+
+    - name: Verify auditd started
+      ansible.builtin.service_facts:
+      register: services
+
+    - name: Fail if auditd didn't start
+      ansible.builtin.fail:
+        msg: "Auditd failed to start"
+      when: "'auditd' not in services.ansible_facts.services or services.ansible_facts.services['auditd'].state != 'running'"
   when: ansible_os_family == "RedHat"

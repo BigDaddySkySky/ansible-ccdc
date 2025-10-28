@@ -1,9 +1,11 @@
 ---
 # ================== PURPOSE ==================
-# Deploy Detection Cron Jobs
-# - Periodic scans for persistence mechanisms
-# - Checks for unauthorized users/groups
-# - Validates critical file integrity
+# Deploy Detection Cron Jobs - Streamlined Edition
+# - File integrity checks
+# - Persistence mechanism detection
+# - Network connection monitoring
+# - Removed: Process scanning (now in log_watcher)
+# - All jobs use flock to prevent overlap
 # =============================================
 
 - name: Deploy persistence check script
@@ -12,6 +14,7 @@
     content: |
       #!/bin/bash
       # Check for common persistence mechanisms
+      # Uses flock to prevent concurrent runs
 
       WEBHOOK_URL="{{ discord_webhook_url }}"
       HOSTNAME="{{ inventory_hostname }}"
@@ -54,11 +57,11 @@
       fi
     mode: '0755'
 
-- name: Schedule persistence checks (every 15 minutes)
+- name: Schedule persistence checks (every 15 minutes with flock)
   ansible.builtin.cron:
     name: "CCDC persistence check"
     minute: "*/15"
-    job: "/usr/local/bin/ccdc_check_persistence.sh"
+    job: "flock -n /var/lock/ccdc_persistence.lock /usr/local/bin/ccdc_check_persistence.sh >> /var/log/ccdc/persistence_check.log 2>&1"
     user: root
     state: present
 
@@ -74,7 +77,7 @@
       ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
 
       # Check for connections to unusual ports
-      UNUSUAL_CONNS=$(ss -tunap | grep -E ':(4444|5555|6666|7777|8888|9999|31337)' | grep ESTAB)
+      UNUSUAL_CONNS=$(ss -tunap 2>/dev/null | grep -E ':(4444|5555|6666|7777|8888|9999|31337)' | grep ESTAB)
       if [[ -n "$UNUSUAL_CONNS" ]]; then
           python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity warning \
               --message "Connection to commonly exploited port detected" --host "$HOSTNAME" \
@@ -82,7 +85,7 @@
       fi
 
       # Check for listening ports on suspicious interfaces
-      SUSPICIOUS_LISTENERS=$(ss -tulnp | grep -E '0\.0\.0\.0:(1234|4444|5555|8080)' | grep LISTEN)
+      SUSPICIOUS_LISTENERS=$(ss -tulnp 2>/dev/null | grep -E '0\.0\.0\.0:(1234|4444|5555|8080)' | grep LISTEN)
       if [[ -n "$SUSPICIOUS_LISTENERS" ]]; then
           python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity critical \
               --message "Suspicious listening port detected" --host "$HOSTNAME" \
@@ -90,11 +93,11 @@
       fi
     mode: '0755'
 
-- name: Schedule network connection checks (every 5 minutes)
+- name: Schedule network connection checks (every 5 minutes with flock)
   ansible.builtin.cron:
     name: "CCDC network connection check"
     minute: "*/5"
-    job: "/usr/local/bin/ccdc_check_connections.sh"
+    job: "flock -n /var/lock/ccdc_connections.lock /usr/local/bin/ccdc_check_connections.sh >> /var/log/ccdc/connection_check.log 2>&1"
     user: root
     state: present
 
@@ -147,10 +150,77 @@
       done
     mode: '0755'
 
-- name: Schedule file integrity checks (every 10 minutes)
+- name: Schedule file integrity checks (every 10 minutes with flock)
   ansible.builtin.cron:
     name: "CCDC file integrity check"
     minute: "*/10"
-    job: "/usr/local/bin/ccdc_check_integrity.sh"
+    job: "flock -n /var/lock/ccdc_integrity.lock /usr/local/bin/ccdc_check_integrity.sh >> /var/log/ccdc/integrity_check.log 2>&1"
     user: root
     state: present
+
+- name: Deploy cron health check script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/ccdc_check_cron_health.sh
+    content: |
+      #!/bin/bash
+      # Alert if cron jobs haven't run recently (dead man's switch)
+
+      WEBHOOK_URL="{{ discord_webhook_url }}"
+      HOSTNAME="{{ inventory_hostname }}"
+      ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
+
+      check_log_freshness() {
+          local log_file="$1"
+          local max_age="$2"
+          local job_name="$3"
+
+          if [[ ! -f "$log_file" ]]; then
+              python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity critical \
+                  --message "$job_name cron never ran (log missing)" --host "$HOSTNAME"
+              return 1
+          fi
+
+          LAST_RUN=$(stat -c %Y "$log_file")
+          NOW=$(date +%s)
+          ELAPSED=$((NOW - LAST_RUN))
+
+          if [[ $ELAPSED -gt $max_age ]]; then
+              python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity critical \
+                  --message "$job_name cron stalled (${ELAPSED}s since last run)" \
+                  --host "$HOSTNAME"
+              return 1
+          fi
+
+          return 0
+      }
+
+      # Check each cron job (allow 2x the interval as grace period)
+      check_log_freshness "/var/log/ccdc/persistence_check.log" 1800 "Persistence check"
+      check_log_freshness "/var/log/ccdc/connection_check.log" 600 "Connection check"
+      check_log_freshness "/var/log/ccdc/integrity_check.log" 1200 "Integrity check"
+    mode: '0755'
+
+- name: Schedule cron health check (every 30 minutes)
+  ansible.builtin.cron:
+    name: "CCDC cron health check"
+    minute: "*/30"
+    job: "/usr/local/bin/ccdc_check_cron_health.sh >> /var/log/ccdc/cron_health.log 2>&1"
+    user: root
+    state: present
+
+- name: Ensure cron log directory exists
+  ansible.builtin.file:
+    path: /var/log/ccdc
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Display cron job summary
+  ansible.builtin.debug:
+    msg:
+      - "Persistence checks: Every 15 minutes"
+      - "Connection checks: Every 5 minutes"
+      - "Integrity checks: Every 10 minutes"
+      - "Health checks: Every 30 minutes"
+      - "All jobs use flock to prevent overlap"

@@ -12,7 +12,7 @@
   ansible.builtin.fetch:
     src: /var/log/auth.log
     dest: ./incidents/{{ inventory_hostname }}/
-    flat: no
+    flat: false
   when: ansible_os_family == "Debian"
   ignore_errors: true
 
@@ -20,6 +20,6 @@
   ansible.builtin.fetch:
     src: /var/log/secure
     dest: ./incidents/{{ inventory_hostname }}/
-    flat: no
+    flat: false
   when: ansible_os_family == "RedHat"
   ignore_errors: true

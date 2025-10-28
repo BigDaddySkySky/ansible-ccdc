@@ -1,21 +1,51 @@
 ---
 # ================== PURPOSE ==================
-# Configure Enhanced Auditd Rules
+# Configure Enhanced Auditd Rules - Hardened Edition
 # - Monitors sensitive file access
 # - Tracks privilege escalation attempts
 # - Logs suspicious system calls
+# - Ensures rules persist across reboots
 # =============================================
 
 - name: Ensure auditd is installed
   ansible.builtin.package:
     name: auditd
     state: present
+  when: ansible_os_family == "RedHat"
 
 - name: Create CCDC audit rules directory
   ansible.builtin.file:
     path: /etc/audit/rules.d
     state: directory
     mode: '0750'
+  when: ansible_os_family == "RedHat"
+
+- name: Increase auditd buffer size (prevent overflow during attacks)
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: '^num_logs\s*='
+    line: 'num_logs = 10'
+    backup: true
+  when: ansible_os_family == "RedHat"
+  notify: Restart auditd
+
+- name: Increase auditd log file size
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: '^max_log_file\s*='
+    line: 'max_log_file = 100'
+    backup: true
+  when: ansible_os_family == "RedHat"
+  notify: Restart auditd
+
+- name: Set auditd log rotation policy
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: '^max_log_file_action\s*='
+    line: 'max_log_file_action = ROTATE'
+    backup: true
+  when: ansible_os_family == "RedHat"
+  notify: Restart auditd
 
 - name: Deploy CCDC audit rules
   ansible.builtin.copy:
@@ -27,10 +57,13 @@
       ## Monitor authentication files
       -w /etc/passwd -p wa -k passwd_changes
       -w /etc/shadow -p wa -k shadow_changes
+      -w /etc/group -p wa -k group_changes
+      -w /etc/gshadow -p wa -k gshadow_changes
       -w /etc/sudoers -p wa -k sudoers_changes
+      -w /etc/sudoers.d/ -p wa -k sudoers_changes
       -w /etc/ssh/sshd_config -p wa -k sshd_config_changes
 
-      ## Monitor privileged commands
+      ## Monitor privileged commands (potential privilege escalation)
       -a always,exit -F arch=b64 -S execve -F euid=0 -k root_commands
       -a always,exit -F arch=b32 -S execve -F euid=0 -k root_commands
 
@@ -38,20 +71,21 @@
       -a always,exit -F arch=b64 -S socket -S connect -k network_connections
       -a always,exit -F arch=b32 -S socket -S connect -k network_connections
 
-      ## Monitor file deletion
+      ## Monitor file deletion (evidence destruction)
       -a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -k file_deletion
       -a always,exit -F arch=b32 -S unlink -S unlinkat -S rename -S renameat -k file_deletion
 
-      ## Monitor privilege escalation
+      ## Monitor privilege escalation syscalls
       -a always,exit -F arch=b64 -S setuid -S setgid -S setreuid -S setregid -k privilege_escalation
       -a always,exit -F arch=b32 -S setuid -S setgid -S setreuid -S setregid -k privilege_escalation
 
-      ## Monitor kernel module loading
+      ## Monitor kernel module loading (rootkits)
       -w /sbin/insmod -p x -k kernel_modules
       -w /sbin/rmmod -p x -k kernel_modules
       -w /sbin/modprobe -p x -k kernel_modules
+      -a always,exit -F arch=b64 -S init_module -S delete_module -k kernel_modules
 
-      ## Monitor cron jobs
+      ## Monitor cron jobs (persistence mechanism)
       -w /etc/cron.allow -p wa -k cron_changes
       -w /etc/cron.deny -p wa -k cron_changes
       -w /etc/cron.d/ -p wa -k cron_changes
@@ -60,16 +94,76 @@
       -w /etc/cron.monthly/ -p wa -k cron_changes
       -w /etc/cron.weekly/ -p wa -k cron_changes
       -w /var/spool/cron/ -p wa -k cron_changes
+
+      ## Monitor systemd service files (persistence)
+      -w /etc/systemd/system/ -p wa -k systemd_changes
+      -w /usr/lib/systemd/system/ -p wa -k systemd_changes
+
+      ## Monitor user home directory SSH keys
+      -w /root/.ssh -p wa -k root_ssh_changes
+      -w /home/ -p wa -k home_ssh_changes
+
+      ## Make audit configuration immutable (prevent Red Team tampering)
+      # NOTE: This must be the LAST rule
+      # To modify rules after this, reboot or: auditctl -e 0
+      -e 2
     mode: '0640'
-  notify: Restart auditd
+  when: ansible_os_family == "RedHat"
+  notify: Rebuild audit rules
+
+- name: Remove immutable flag temporarily for rule reload
+  ansible.builtin.command: auditctl -e 1
+  when: ansible_os_family == "RedHat"
+  changed_when: false
+  failed_when: false
+
+- name: Rebuild audit rules (ensures persistence across reboot)
+  ansible.builtin.command: augenrules --load
+  when: ansible_os_family == "RedHat"
+  register: augenrules_result
+  changed_when: false
+  failed_when: false
+
+- name: Verify audit rules loaded successfully
+  ansible.builtin.command: auditctl -l
+  register: auditctl_verify
+  changed_when: false
+  when: ansible_os_family == "RedHat"
+
+- name: Check audit rule count
+  ansible.builtin.shell: auditctl -l | grep -v "No rules" | wc -l
+  register: audit_rule_count
+  changed_when: false
+  failed_when: false
+  when: ansible_os_family == "RedHat"
+
+- name: Fail if audit rules failed to load
+  ansible.builtin.fail:
+    msg: "Auditd rules failed to load (only {{ audit_rule_count.stdout }} rules loaded)"
+  when:
+    - ansible_os_family == "RedHat"
+    - audit_rule_count.stdout | int < 10
+
+- name: Display audit rule count
+  ansible.builtin.debug:
+    msg: "Successfully loaded {{ audit_rule_count.stdout }} audit rules"
+  when: ansible_os_family == "RedHat"
 
 - name: Enable auditd service
   ansible.builtin.service:
     name: auditd
     enabled: true
     state: started
+  when: ansible_os_family == "RedHat"
 
-- name: Load audit rules immediately
-  ansible.builtin.command: auditctl -R /etc/audit/rules.d/ccdc-detection.rules
-  changed_when: false
-  failed_when: false
+- name: Verify auditd is running
+  ansible.builtin.service_facts:
+  register: services
+
+- name: Alert if auditd failed to start
+  ansible.builtin.set_fact:
+    alert_message: "Auditd failed to start on {{ inventory_hostname }}"
+  when:
+    - ansible_os_family == "RedHat"
+    - "'auditd' not in services.ansible_facts.services or services.ansible_facts.services['auditd'].state != 'running'"
+  notify: Alert critical intrusion

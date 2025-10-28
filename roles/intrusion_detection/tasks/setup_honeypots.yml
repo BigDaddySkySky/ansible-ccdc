@@ -1,9 +1,10 @@
 ---
 # ================== PURPOSE ==================
-# Honeypot Setup Tasks
+# Honeypot Setup Tasks - Hardened Edition
 # - Creates fake users, files, and directories
-# - Configures inotify watches for access detection
-# - Triggers alerts on honeypot interaction
+# - Configures inotify watches with proper error handling
+# - Coordinates with auditd to prevent duplicate alerts
+# - Temporarily disables auditd during setup to avoid false alerts
 # =============================================
 
 - name: Install inotify-tools for file watches
@@ -11,6 +12,16 @@
     name: inotify-tools
     state: present
   when: ansible_os_family != "Windows"
+
+- name: Temporarily disable auditd during honeypot setup (RedHat only)
+  ansible.builtin.service:
+    name: auditd
+    state: stopped
+  when:
+    - ansible_os_family == "RedHat"
+    - intrusion_detection_honeypot_enabled | default(true)
+  register: auditd_stopped
+  tags: [honeypot_setup]
 
 - name: Create honeypot users (disabled login)
   ansible.builtin.user:
@@ -37,14 +48,40 @@
       # HONEYPOT FILE - DO NOT MODIFY
       # This file is monitored for intrusion detection
       # Last modified: {{ ansible_date_time.iso8601 }}
+
+      # Fake credentials to attract attackers
+      admin:$6$rounds=656000$YqPj8vTXrVZL2jKp$8J4cXqXyVjJx4lZLvK9R3JqZd8sT2rP5wK6hN7vM8jL4kR5tY9pL3mN6zQ2rV8sT4jK6pL9rV3mN8sT5jK7pL
+      root:$6$rounds=656000$aB3dE5fG7hI9jK1l$3mN5oP7qR9sT1uV3wX5yZ7aB9cD1eF3gH5iJ7kL9mN1oP3qR5sT7uV9wX1yZ3aB5cD7eF9gH1iJ3kL5mN7oP9qR
+
+      # API keys
+      PROD_API_KEY=sk_live_51Hq8F2K9xYz7PqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNo
+      AWS_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE
+      AWS_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     mode: '0644'
   loop: "{{ intrusion_detection_honeypot_files }}"
   when: intrusion_detection_honeypot_enabled | default(true)
+
+- name: Re-enable auditd after honeypot setup (RedHat only)
+  ansible.builtin.service:
+    name: auditd
+    state: started
+  when:
+    - ansible_os_family == "RedHat"
+    - intrusion_detection_honeypot_enabled | default(true)
+    - auditd_stopped is changed
+  tags: [honeypot_setup]
 
 - name: Deploy honeypot alert script
   ansible.builtin.template:
     src: honeypot_alert.sh.j2
     dest: /usr/local/bin/honeypot_alert.sh
+    mode: '0755'
+  when: intrusion_detection_honeypot_enabled | default(true)
+
+- name: Deploy honeypot watcher script (hardened)
+  ansible.builtin.template:
+    src: honeypot_watcher.sh.j2
+    dest: /usr/local/bin/honeypot_watcher.sh
     mode: '0755'
   when: intrusion_detection_honeypot_enabled | default(true)
 
@@ -54,13 +91,31 @@
     content: |
       [Unit]
       Description=CCDC Honeypot File Watcher
-      After=network.target
+      Documentation=https://github.com/your-team/ccdc-ansible
+      After=network.target auditd.service
+      Wants=auditd.service
+      StartLimitIntervalSec=300
+      StartLimitBurst=5
 
       [Service]
       Type=simple
       ExecStart=/usr/local/bin/honeypot_watcher.sh
+
+      # Restart on any failure
       Restart=always
       RestartSec=10
+
+      # Resource limits
+      MemoryMax=128M
+      CPUQuota=25%
+
+      # Logging
+      StandardOutput=journal
+      StandardError=journal
+      SyslogIdentifier=ccdc-honeypot
+
+      # Security hardening
+      NoNewPrivileges=true
 
       [Install]
       WantedBy=multi-user.target
@@ -68,20 +123,23 @@
   when: intrusion_detection_honeypot_enabled | default(true)
   notify: Restart honeypot watcher
 
-- name: Deploy honeypot watcher script
-  ansible.builtin.template:
-    src: honeypot_watcher.sh.j2
-    dest: /usr/local/bin/honeypot_watcher.sh
-    mode: '0755'
+- name: Increase inotify queue size (prevent dropped events)
+  ansible.posix.sysctl:
+    name: fs.inotify.max_queued_events
+    value: '524288'
+    state: present
+    sysctl_set: true
+    reload: true
   when: intrusion_detection_honeypot_enabled | default(true)
 
-- name: Optionally notify that honeypot users were created (only if enabled)
-  ansible.builtin.debug:
-    msg: "Honeypot users created during setup"
-  when:
-    - intrusion_detection_send_honeypot_setup_alerts | default(false)
-    - intrusion_detection_honeypot_user_create is defined and (intrusion_detection_honeypot_user_create.results | selectattr('changed') | list | length) > 0
-  notify: Alert critical intrusion
+- name: Increase inotify watch limit
+  ansible.posix.sysctl:
+    name: fs.inotify.max_user_watches
+    value: '524288'
+    state: present
+    sysctl_set: true
+    reload: true
+  when: intrusion_detection_honeypot_enabled | default(true)
 
 - name: Enable and start honeypot watcher
   ansible.builtin.systemd:
@@ -91,26 +149,42 @@
     daemon_reload: true
   when: intrusion_detection_honeypot_enabled | default(true)
 
-- name: Add audit rules for honeypot files
+- name: Add audit rules for honeypot files (RedHat only)
   ansible.builtin.lineinfile:
     path: /etc/audit/rules.d/ccdc-honeypots.rules
-    line: "-w {{ item }} -p wa -k honeypot_access"
+    line: "-w {{ item }} -p rwa -k honeypot_access"
     create: true
     mode: '0640'
   loop: "{{ intrusion_detection_honeypot_files }}"
   when:
     - intrusion_detection_honeypot_enabled | default(true)
     - ansible_os_family == "RedHat"
-  notify: Restart auditd
+  notify: Rebuild audit rules
 
-- name: Add audit rules for honeypot directories
+- name: Add audit rules for honeypot directories (RedHat only)
   ansible.builtin.lineinfile:
     path: /etc/audit/rules.d/ccdc-honeypots.rules
-    line: "-w {{ item }} -p wa -k honeypot_dir_access"
+    line: "-w {{ item }} -p rwa -k honeypot_dir_access"
     create: true
     mode: '0640'
   loop: "{{ intrusion_detection_honeypot_directories }}"
   when:
     - intrusion_detection_honeypot_enabled | default(true)
     - ansible_os_family == "RedHat"
-  notify: Restart auditd
+  notify: Rebuild audit rules
+
+- name: Verify honeypot watcher is running
+  ansible.builtin.systemd:
+    name: ccdc-honeypot-watcher
+  register: honeypot_status
+  failed_when: honeypot_status.status.ActiveState != "active"
+  when: intrusion_detection_honeypot_enabled | default(true)
+
+- name: Display honeypot status
+  ansible.builtin.debug:
+    msg:
+      - "Honeypot Users: {{ intrusion_detection_honeypot_users | length }}"
+      - "Honeypot Files: {{ intrusion_detection_honeypot_files | length }}"
+      - "Honeypot Dirs: {{ intrusion_detection_honeypot_directories | length }}"
+      - "Watcher Status: {{ honeypot_status.status.ActiveState | default('disabled') }}"
+  when: intrusion_detection_honeypot_enabled | default(true)

@@ -46,4 +46,3 @@
       when: discord_webhook_url is defined
       ignore_errors: true
       tags: [notify, passive]
-    

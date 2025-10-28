@@ -1,20 +1,25 @@
 #!/bin/bash
-# Honeypot alert wrapper
-# Calls the alert script with provided message and optional details
+# Honeypot alert wrapper - simplified
+# Calls the main alert script with forced delivery
 
 WEBHOOK_URL="{{ discord_webhook_url }}"
 HOSTNAME="{{ inventory_hostname }}"
 ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
 
 if [[ -z "$1" ]]; then
-	echo "Usage: $0 <message> [details]" >&2
-	exit 2
+    echo "Usage: $0 <message> [details]" >&2
+    exit 2
 fi
 
 MESSAGE="$1"
 DETAILS="${2:-}"
 
-python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" \
-	--severity critical --message "$MESSAGE" --host "$HOSTNAME" ${DETAILS:+--details "$DETAILS"} --force
+python3 "$ALERT_SCRIPT" \
+    --webhook "$WEBHOOK_URL" \
+    --severity critical \
+    --message "$MESSAGE" \
+    --host "$HOSTNAME" \
+    ${DETAILS:+--details "$DETAILS"} \
+    --force
 
 exit $?

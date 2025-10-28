@@ -1,9 +1,10 @@
 #!/bin/bash
 # ================== PURPOSE ==================
-# Honeypot Watcher Script
+# Honeypot Watcher Script - Hardened Edition
 # - Uses inotifywait to monitor honeypot files/dirs
-# - Triggers immediate alerts on access/modification
-# - Runs as systemd service
+# - Collects evidence BEFORE alerting
+# - Correlation with auditd to prevent duplicates
+# - Resilient to missing files/directories
 # =============================================
 
 set -euo pipefail
@@ -11,6 +12,8 @@ set -euo pipefail
 WEBHOOK_URL="{{ discord_webhook_url }}"
 HOSTNAME="{{ inventory_hostname }}"
 ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
+EVIDENCE_DIR="/var/log/ccdc/honeypot_evidence"
+LOG_FILE="/var/log/ccdc/honeypot_watcher.log"
 
 # Honeypot paths (space-separated)
 HONEYPOT_FILES=(
@@ -25,86 +28,188 @@ HONEYPOT_DIRS=(
 {% endfor %}
 )
 
+# Create evidence directory
+mkdir -p "$EVIDENCE_DIR"
+
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
+    local correlation_id="HP-$(date +%s)-$$"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$correlation_id] $*" | tee -a "$LOG_FILE" >&2
 }
 
 send_alert() {
     local severity="$1"
     local message="$2"
     local details="${3:-}"
+    local correlation_id="HP-$(date +%s)-$$"
+    
+    # Check if auditd already reported this event (past 5 seconds)
+    # Only check on RedHat systems where auditd is used
+    if command -v ausearch &> /dev/null; then
+        if ausearch -ts recent -k honeypot_access 2>/dev/null | grep -q "$triggered_path"; then
+            log "Skipping alert - auditd already reported this event"
+            return
+        fi
+    fi
     
     python3 "$ALERT_SCRIPT" \
         --webhook "$WEBHOOK_URL" \
         --severity "$severity" \
-        --message "$message" \
+        --message "[$correlation_id] $message" \
         --host "$HOSTNAME" \
         ${details:+--details "$details"} \
         --force  # Bypass rate limiting for honeypots
+    
+    local exit_code=$?
+    if [[ $exit_code -eq 0 ]]; then
+        log "Alert sent successfully"
+    else
+        log "Alert send failed (exit code: $exit_code)"
+    fi
 }
 
-# Collect evidence immediately on honeypot trigger
-collect_evidence() {
+collect_evidence_to_archive() {
     local triggered_path="$1"
+    local evidence_file="$2"
+    local temp_dir=$(mktemp -d)
     
     log "Collecting evidence for honeypot trigger: $triggered_path"
     
     # Capture process list
-    ps auxww > "/tmp/honeypot_evidence_ps_$$.txt"
+    ps auxww > "$temp_dir/processes.txt" 2>&1 || echo "ps failed" > "$temp_dir/processes.txt"
     
     # Capture network connections
-    ss -tunapl > "/tmp/honeypot_evidence_net_$$.txt" 2>/dev/null || netstat -tunapl > "/tmp/honeypot_evidence_net_$$.txt"
+    ss -tunapl > "$temp_dir/network.txt" 2>/dev/null || \
+        netstat -tunapl > "$temp_dir/network.txt" 2>/dev/null || \
+        echo "network capture failed" > "$temp_dir/network.txt"
     
     # Capture recent auth logs
-    tail -100 /var/log/auth.log > "/tmp/honeypot_evidence_auth_$$.txt" 2>/dev/null || \
-    tail -100 /var/log/secure > "/tmp/honeypot_evidence_auth_$$.txt" 2>/dev/null || true
+    tail -100 /var/log/auth.log > "$temp_dir/auth.log" 2>/dev/null || \
+        tail -100 /var/log/secure > "$temp_dir/secure.log" 2>/dev/null || \
+        echo "auth log capture failed" > "$temp_dir/auth.log"
     
     # Capture who's logged in
-    w > "/tmp/honeypot_evidence_users_$$.txt"
+    w > "$temp_dir/users.txt" 2>&1 || echo "w failed" > "$temp_dir/users.txt"
     
-    log "Evidence collected in /tmp/honeypot_evidence_*_$$.txt"
+    # Capture last logins
+    last -20 > "$temp_dir/last.txt" 2>&1 || echo "last failed" > "$temp_dir/last.txt"
+    
+    # Capture listening processes
+    lsof -i -P -n 2>/dev/null > "$temp_dir/lsof.txt" || echo "lsof failed" > "$temp_dir/lsof.txt"
+    
+    # Capture recent commands (if history available)
+    if [[ -f /root/.bash_history ]]; then
+        tail -50 /root/.bash_history > "$temp_dir/bash_history.txt" 2>&1 || true
+    fi
+    
+    # Create archive
+    tar -czf "$evidence_file" -C "$temp_dir" . 2>&1 | tee -a "$LOG_FILE"
+    rm -rf "$temp_dir"
+    
+    log "Evidence collected: $evidence_file ($(du -h "$evidence_file" | cut -f1))"
 }
 
-# Build watch list
+monitor_honeypot_existence() {
+    # Background task to detect honeypot deletion (Red Team cleanup)
+    while true; do
+        for file in "${HONEYPOT_FILES[@]}"; do
+            if [[ ! -e "$file" ]]; then
+                log "CRITICAL: Honeypot file deleted: $file"
+                send_alert "critical" "HONEYPOT FILE DELETED: $file (possible Red Team cleanup)" \
+                    "This indicates Red Team is aware of honeypots and cleaning up.\nFile: $file"
+            fi
+        done
+        
+        for dir in "${HONEYPOT_DIRS[@]}"; do
+            if [[ ! -d "$dir" ]]; then
+                log "CRITICAL: Honeypot directory deleted: $dir"
+                send_alert "critical" "HONEYPOT DIRECTORY DELETED: $dir (possible Red Team cleanup)" \
+                    "This indicates Red Team is aware of honeypots and cleaning up.\nDirectory: $dir"
+            fi
+        done
+        
+        sleep 60
+    done
+}
+
+# Build watch list (only include existing paths)
 WATCH_PATHS=()
+MISSING_PATHS=()
+
 for file in "${HONEYPOT_FILES[@]}"; do
     if [[ -e "$file" ]]; then
         WATCH_PATHS+=("$file")
+    else
+        MISSING_PATHS+=("$file")
+        log "WARNING: Honeypot file not found: $file"
     fi
 done
 
 for dir in "${HONEYPOT_DIRS[@]}"; do
     if [[ -d "$dir" ]]; then
         WATCH_PATHS+=("$dir")
+    else
+        MISSING_PATHS+=("$dir")
+        log "WARNING: Honeypot directory not found: $dir"
     fi
 done
 
+# If no paths exist, wait and retry (don't exit)
 if [[ ${#WATCH_PATHS[@]} -eq 0 ]]; then
-    log "ERROR: No valid honeypot paths to watch!"
-    exit 1
+    log "ERROR: No honeypot paths found to watch, retrying in 30s..."
+    log "Missing paths: ${MISSING_PATHS[*]}"
+    sleep 30
+    exec "$0"  # Restart self
 fi
 
 log "Starting honeypot watcher for ${#WATCH_PATHS[@]} paths"
 log "Monitoring: ${WATCH_PATHS[*]}"
 
+if [[ ${#MISSING_PATHS[@]} -gt 0 ]]; then
+    log "WARNING: ${#MISSING_PATHS[@]} honeypot paths not found: ${MISSING_PATHS[*]}"
+fi
+
+# Start existence monitor in background
+monitor_honeypot_existence &
+MONITOR_PID=$!
+log "Honeypot existence monitor started (PID: $MONITOR_PID)"
+
+# Trap to clean up background process
+trap "kill $MONITOR_PID 2>/dev/null || true; log 'Honeypot watcher stopped'" EXIT INT TERM
+
 # Monitor with inotifywait (recursive for directories)
-inotifywait -m -r -e access,modify,open,close_write,move,create,delete "${WATCH_PATHS[@]}" | \
+# Note: inotifywait will exit if it can't watch any paths
+inotifywait -m -r -e access,modify,open,close_write,move,create,delete "${WATCH_PATHS[@]}" 2>&1 | \
 while read -r path events filename; do
     triggered_path="${path}${filename}"
-    log "HONEYPOT TRIGGERED! Path: $triggered_path | Events: $events"
+    log "🚨 HONEYPOT TRIGGERED! Path: $triggered_path | Events: $events"
     
-    # Collect evidence immediately
-    collect_evidence "$triggered_path"
+    # Generate evidence filename
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    evidence_file="${EVIDENCE_DIR}/${timestamp}_${RANDOM}.tar.gz"
     
-    # Send critical alert
-    alert_msg="HONEYPOT ACCESS DETECTED: $triggered_path (events: $events)"
+    # Collect evidence FIRST (before alerting)
+    collect_evidence_to_archive "$triggered_path" "$evidence_file"
+    
+    # Then send alert (may be rate-limited, but evidence is preserved)
+    alert_msg="🚨 HONEYPOT ACCESS DETECTED: $triggered_path (events: $events)"
     details="Path: $triggered_path
 Events: $events
 Time: $(date)
-Evidence: /tmp/honeypot_evidence_*_$$.txt"
+Evidence: $evidence_file
+Size: $(du -h "$evidence_file" | cut -f1)
+
+Recent Processes (first 10 lines):
+$(tar -xzOf "$evidence_file" processes.txt 2>/dev/null | head -10 || echo 'unavailable')"
     
     send_alert "critical" "$alert_msg" "$details"
     
-    # Optional: Run incident response playbook
+    # Optional: Trigger incident response playbook
+    # (Commented out to avoid automation loops during testing)
+    # log "Triggering incident response playbook..."
     # ansible-playbook /opt/ccdc/playbooks/incident_response.yml --limit "$HOSTNAME" &
 done
+
+# If inotifywait exits, log and restart
+log "ERROR: inotifywait exited unexpectedly, restarting in 10s..."
+sleep 10
+exec "$0"  # Restart self
