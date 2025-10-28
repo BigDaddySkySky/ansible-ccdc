@@ -90,7 +90,7 @@
     create: true
     mode: '0640'
   loop: "{{ honeypot_files }}"
-  when: 
+  when:
     - honeypot_enabled | default(true)
     - ansible_os_family == "RedHat"
   notify: Restart auditd

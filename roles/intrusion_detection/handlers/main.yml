@@ -12,11 +12,13 @@
     method: POST
     body_format: json
     body:
-      content: "{{ alert_severity_levels.critical }} **CRITICAL INTRUSION DETECTED**\n**Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+      content: >
+        "{{ alert_severity_levels.critical }} **CRITICAL INTRUSION DETECTED**\n
+        **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
     status_code: [200, 204]
   when: discord_webhook_url is defined
   throttle: 1  # Only one handler execution per batch
-  ignore_errors: true
+  failed_when: false
 
 - name: Alert warning intrusion
   ansible.builtin.uri:
@@ -24,11 +26,13 @@
     method: POST
     body_format: json
     body:
-      content: "{{ alert_severity_levels.warning }} **Warning: Suspicious Activity**\n**Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+      content: >
+        "{{ alert_severity_levels.warning }} **Warning: Suspicious Activity**\n
+        **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
     status_code: [200, 204]
   when: discord_webhook_url is defined
   throttle: 1
-  ignore_errors: true
+  failed_when: false
 
 - name: Alert info intrusion
   ansible.builtin.uri:
@@ -36,11 +40,13 @@
     method: POST
     body_format: json
     body:
-      content: "{{ alert_severity_levels.info }} **Info: Detection Event**\n**Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
+      content: >
+        "{{ alert_severity_levels.info }} **Info: Detection Event**\n
+        **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
     status_code: [200, 204]
   when: discord_webhook_url is defined
   throttle: 1
-  ignore_errors: true
+  failed_when: false
 
 - name: Collect evidence
   ansible.builtin.include_role:
@@ -65,4 +71,3 @@
     name: auditd
     state: restarted
   when: ansible_os_family == "RedHat"
-  

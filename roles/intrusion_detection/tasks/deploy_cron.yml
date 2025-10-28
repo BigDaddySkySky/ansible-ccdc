@@ -1,0 +1,156 @@
+---
+# ================== PURPOSE ==================
+# Deploy Detection Cron Jobs
+# - Periodic scans for persistence mechanisms
+# - Checks for unauthorized users/groups
+# - Validates critical file integrity
+# =============================================
+
+- name: Deploy persistence check script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/ccdc_check_persistence.sh
+    content: |
+      #!/bin/bash
+      # Check for common persistence mechanisms
+
+      WEBHOOK_URL="{{ discord_webhook_url }}"
+      HOSTNAME="{{ inventory_hostname }}"
+      ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
+
+      # Check for suspicious cron jobs
+      SUSPICIOUS_CRONS=$(grep -rE '(nc|bash -i|python.*socket|curl.*\|.*sh)' /etc/cron* /var/spool/cron 2>/dev/null)
+      if [[ -n "$SUSPICIOUS_CRONS" ]]; then
+          python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity warning \
+              --message "Suspicious cron job detected" --host "$HOSTNAME" \
+              --details "$SUSPICIOUS_CRONS"
+      fi
+
+      # Check for unauthorized SSH keys
+      for homedir in /home/* /root; do
+          if [[ -f "$homedir/.ssh/authorized_keys" ]]; then
+              KEY_COUNT=$(wc -l < "$homedir/.ssh/authorized_keys")
+              if [[ $KEY_COUNT -gt 2 ]]; then
+                  python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity warning \
+                      --message "Unusual number of SSH keys in $homedir/.ssh/authorized_keys ($KEY_COUNT keys)" \
+                      --host "$HOSTNAME"
+              fi
+          fi
+      done
+
+      # Check for SUID binaries in unusual locations
+      SUSPICIOUS_SUID=$(find /tmp /var/tmp /dev/shm -type f -perm -4000 2>/dev/null)
+      if [[ -n "$SUSPICIOUS_SUID" ]]; then
+          python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity critical \
+              --message "SUID binary found in suspicious location" --host "$HOSTNAME" \
+              --details "$SUSPICIOUS_SUID"
+      fi
+
+      # Check for unexpected users with UID 0
+      ROOT_USERS=$(awk -F: '$3 == 0 && $1 != "root" {print $1}' /etc/passwd)
+      if [[ -n "$ROOT_USERS" ]]; then
+          python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity critical \
+              --message "Unauthorized UID 0 user detected" --host "$HOSTNAME" \
+              --details "$ROOT_USERS"
+      fi
+    mode: '0755'
+
+- name: Schedule persistence checks (every 15 minutes)
+  ansible.builtin.cron:
+    name: "CCDC persistence check"
+    minute: "*/15"
+    job: "/usr/local/bin/ccdc_check_persistence.sh"
+    user: root
+    state: present
+
+- name: Deploy network connection monitor script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/ccdc_check_connections.sh
+    content: |
+      #!/bin/bash
+      # Monitor for suspicious network connections
+
+      WEBHOOK_URL="{{ discord_webhook_url }}"
+      HOSTNAME="{{ inventory_hostname }}"
+      ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
+
+      # Check for connections to unusual ports
+      UNUSUAL_CONNS=$(ss -tunap | grep -E ':(4444|5555|6666|7777|8888|9999|31337)' | grep ESTAB)
+      if [[ -n "$UNUSUAL_CONNS" ]]; then
+          python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity warning \
+              --message "Connection to commonly exploited port detected" --host "$HOSTNAME" \
+              --details "$UNUSUAL_CONNS"
+      fi
+
+      # Check for listening ports on suspicious interfaces
+      SUSPICIOUS_LISTENERS=$(ss -tulnp | grep -E '0\.0\.0\.0:(1234|4444|5555|8080)' | grep LISTEN)
+      if [[ -n "$SUSPICIOUS_LISTENERS" ]]; then
+          python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity critical \
+              --message "Suspicious listening port detected" --host "$HOSTNAME" \
+              --details "$SUSPICIOUS_LISTENERS"
+      fi
+    mode: '0755'
+
+- name: Schedule network connection checks (every 5 minutes)
+  ansible.builtin.cron:
+    name: "CCDC network connection check"
+    minute: "*/5"
+    job: "/usr/local/bin/ccdc_check_connections.sh"
+    user: root
+    state: present
+
+- name: Deploy file integrity check script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/ccdc_check_integrity.sh
+    content: |
+      #!/bin/bash
+      # Check critical file integrity
+
+      WEBHOOK_URL="{{ discord_webhook_url }}"
+      HOSTNAME="{{ inventory_hostname }}"
+      ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
+      BASELINE_DIR="/var/cache/ccdc_baselines"
+
+      mkdir -p "$BASELINE_DIR"
+
+      # Critical files to monitor
+      CRITICAL_FILES=(
+          "/etc/passwd"
+          "/etc/shadow"
+          "/etc/sudoers"
+          "/etc/ssh/sshd_config"
+      )
+
+      for file in "${CRITICAL_FILES[@]}"; do
+          if [[ ! -f "$file" ]]; then
+              continue
+          fi
+
+          BASELINE_FILE="$BASELINE_DIR/$(echo "$file" | tr '/' '_').sha256"
+          CURRENT_HASH=$(sha256sum "$file" | awk '{print $1}')
+
+          if [[ ! -f "$BASELINE_FILE" ]]; then
+              # Create baseline on first run
+              echo "$CURRENT_HASH" > "$BASELINE_FILE"
+              continue
+          fi
+
+          BASELINE_HASH=$(cat "$BASELINE_FILE")
+
+          if [[ "$CURRENT_HASH" != "$BASELINE_HASH" ]]; then
+              python3 "$ALERT_SCRIPT" --webhook "$WEBHOOK_URL" --severity critical \
+                  --message "Critical file modified: $file" --host "$HOSTNAME" \
+                  --details "Expected: $BASELINE_HASH
+      Current: $CURRENT_HASH"
+              # Update baseline after alerting
+              echo "$CURRENT_HASH" > "$BASELINE_FILE"
+          fi
+      done
+    mode: '0755'
+
+- name: Schedule file integrity checks (every 10 minutes)
+  ansible.builtin.cron:
+    name: "CCDC file integrity check"
+    minute: "*/10"
+    job: "/usr/local/bin/ccdc_check_integrity.sh"
+    user: root
+    state: present
