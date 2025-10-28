@@ -254,6 +254,14 @@ ansible-vault rekey group_vars/linux/vault.yml
 - Referenced in: `ansible.cfg`
 - **NEVER commit `.vault_pass` to git!**
 
+> Note: This repository's `ansible.cfg` has been updated to reference a user-local vault password file at `~/.vault_pass`.
+> Each team member should create their own local file before running playbooks:
+> ```bash
+> echo "YOUR_VAULT_PASSWORD" > ~/.vault_pass
+> chmod 600 ~/.vault_pass
+> ```
+> Do not add `~/.vault_pass` to git; keep it local and secret.
+
 ---
 
 ## 🎓 Playbook Details
