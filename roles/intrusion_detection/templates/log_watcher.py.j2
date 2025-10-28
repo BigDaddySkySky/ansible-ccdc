@@ -17,20 +17,20 @@ from pathlib import Path
 WEBHOOK_URL = "{{ discord_webhook_url }}"
 HOSTNAME = "{{ inventory_hostname }}"
 ALERT_SCRIPT = "/usr/local/bin/ccdc_alert.py"
-FAILED_LOGIN_THRESHOLD = {{ failed_login_threshold }}
-FAILED_LOGIN_WINDOW = {{ failed_login_window }}
-CHECK_INTERVAL = {{ log_watch_interval }}
+FAILED_LOGIN_THRESHOLD = {{ intrusion_detection_failed_login_threshold }}
+FAILED_LOGIN_WINDOW = {{ intrusion_detection_failed_login_window }}
+CHECK_INTERVAL = {{ intrusion_detection_log_watch_interval }}
 
 # Log files to monitor
 LOG_FILES = [
-{% for log in monitored_logs[ansible_os_family | lower] %}
+{% for log in intrusion_detection_monitored_logs[ansible_os_family | lower] %}
     "{{ log }}",
 {% endfor %}
 ]
 
 # Suspicious patterns
 SUSPICIOUS_PATTERNS = [
-{% for pattern in suspicious_patterns %}
+{% for pattern in intrusion_detection_suspicious_patterns %}
     re.compile(r"{{ pattern }}"),
 {% endfor %}
 ]

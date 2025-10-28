@@ -18,17 +18,17 @@
     shell: /bin/false
     create_home: false
     state: present
-  loop: "{{ honeypot_users }}"
-  when: honeypot_enabled | default(true)
-  notify: Alert critical intrusion
+  loop: "{{ intrusion_detection_honeypot_users }}"
+  when: intrusion_detection_honeypot_enabled | default(true)
+  register: intrusion_detection_honeypot_user_create
 
 - name: Create honeypot directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
-  loop: "{{ honeypot_directories }}"
-  when: honeypot_enabled | default(true)
+  loop: "{{ intrusion_detection_honeypot_directories }}"
+  when: intrusion_detection_honeypot_enabled | default(true)
 
 - name: Create honeypot files (fake sensitive data)
   ansible.builtin.copy:
@@ -38,15 +38,15 @@
       # This file is monitored for intrusion detection
       # Last modified: {{ ansible_date_time.iso8601 }}
     mode: '0644'
-  loop: "{{ honeypot_files }}"
-  when: honeypot_enabled | default(true)
+  loop: "{{ intrusion_detection_honeypot_files }}"
+  when: intrusion_detection_honeypot_enabled | default(true)
 
 - name: Deploy honeypot alert script
   ansible.builtin.template:
     src: honeypot_alert.sh.j2
     dest: /usr/local/bin/honeypot_alert.sh
     mode: '0755'
-  when: honeypot_enabled | default(true)
+  when: intrusion_detection_honeypot_enabled | default(true)
 
 - name: Deploy honeypot watcher systemd service
   ansible.builtin.copy:
@@ -65,7 +65,7 @@
       [Install]
       WantedBy=multi-user.target
     mode: '0644'
-  when: honeypot_enabled | default(true)
+  when: intrusion_detection_honeypot_enabled | default(true)
   notify: Restart honeypot watcher
 
 - name: Deploy honeypot watcher script
@@ -73,7 +73,15 @@
     src: honeypot_watcher.sh.j2
     dest: /usr/local/bin/honeypot_watcher.sh
     mode: '0755'
-  when: honeypot_enabled | default(true)
+  when: intrusion_detection_honeypot_enabled | default(true)
+
+- name: Optionally notify that honeypot users were created (only if enabled)
+  ansible.builtin.debug:
+    msg: "Honeypot users created during setup"
+  when:
+    - intrusion_detection_send_honeypot_setup_alerts | default(false)
+    - intrusion_detection_honeypot_user_create is defined and (intrusion_detection_honeypot_user_create.results | selectattr('changed') | list | length) > 0
+  notify: Alert critical intrusion
 
 - name: Enable and start honeypot watcher
   ansible.builtin.systemd:
@@ -81,7 +89,7 @@
     enabled: true
     state: started
     daemon_reload: true
-  when: honeypot_enabled | default(true)
+  when: intrusion_detection_honeypot_enabled | default(true)
 
 - name: Add audit rules for honeypot files
   ansible.builtin.lineinfile:
@@ -89,9 +97,9 @@
     line: "-w {{ item }} -p wa -k honeypot_access"
     create: true
     mode: '0640'
-  loop: "{{ honeypot_files }}"
+  loop: "{{ intrusion_detection_honeypot_files }}"
   when:
-    - honeypot_enabled | default(true)
+    - intrusion_detection_honeypot_enabled | default(true)
     - ansible_os_family == "RedHat"
   notify: Restart auditd
 
@@ -101,8 +109,8 @@
     line: "-w {{ item }} -p wa -k honeypot_dir_access"
     create: true
     mode: '0640'
-  loop: "{{ honeypot_directories }}"
+  loop: "{{ intrusion_detection_honeypot_directories }}"
   when:
-    - honeypot_enabled | default(true)
+    - intrusion_detection_honeypot_enabled | default(true)
     - ansible_os_family == "RedHat"
   notify: Restart auditd

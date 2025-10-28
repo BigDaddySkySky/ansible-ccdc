@@ -13,7 +13,7 @@
     body_format: json
     body:
       content: >
-        "{{ alert_severity_levels.critical }} **CRITICAL INTRUSION DETECTED**\n
+        "{{ intrusion_detection_alert_severity_levels.critical }} **CRITICAL INTRUSION DETECTED**\n
         **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
     status_code: [200, 204]
   when: discord_webhook_url is defined
@@ -27,7 +27,7 @@
     body_format: json
     body:
       content: >
-        "{{ alert_severity_levels.warning }} **Warning: Suspicious Activity**\n
+        "{{ intrusion_detection_alert_severity_levels.warning }} **Warning: Suspicious Activity**\n
         **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
     status_code: [200, 204]
   when: discord_webhook_url is defined
@@ -41,7 +41,7 @@
     body_format: json
     body:
       content: >
-        "{{ alert_severity_levels.info }} **Info: Detection Event**\n
+        "{{ intrusion_detection_alert_severity_levels.info }} **Info: Detection Event**\n
         **Host:** {{ inventory_hostname }}\n**Event:** {{ alert_message }}\n**Time:** {{ ansible_date_time.iso8601 }}"
     status_code: [200, 204]
   when: discord_webhook_url is defined
@@ -52,7 +52,7 @@
   ansible.builtin.include_role:
     name: incident_response
     tasks_from: collect_logs.yml
-  when: auto_collect_evidence | default(true)
+  when: intrusion_detection_auto_collect_evidence | default(true)
 
 - name: Restart log watcher
   ansible.builtin.systemd:

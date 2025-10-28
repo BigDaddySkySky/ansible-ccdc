@@ -1,0 +1,10 @@
+---
+# Generated detection rules from Ansible variables
+# Each entry maps to a simple pattern rule that can be adapted for the target detection engine
+rules:
+{% for pattern in intrusion_detection_suspicious_patterns %}
+	- id: ccdc_suspicious_{{ loop.index }}
+		description: "Detect suspicious pattern {{ loop.index }}"
+		pattern: "{{ pattern }}"
+		severity: "warning"
+{% endfor %}

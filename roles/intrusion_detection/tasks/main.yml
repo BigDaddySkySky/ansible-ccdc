@@ -3,7 +3,14 @@
 # WIP Task Entry Point for Intrusion Detection Role
 # =============================================
 
-- import_tasks: configure_auditd.yml
-- import_tasks: install_watchers.yml
-- import_tasks: deploy_cron.yml
-- import_tasks: setup_honeypots.yml
+- name: Import auditd configuration tasks
+  ansible.builtin.import_tasks: configure_auditd.yml
+
+- name: Import watcher installation tasks
+  ansible.builtin.import_tasks: install_watchers.yml
+
+- name: Import cron deployment tasks
+  ansible.builtin.import_tasks: deploy_cron.yml
+
+- name: Import honeypot setup tasks
+  ansible.builtin.import_tasks: setup_honeypots.yml

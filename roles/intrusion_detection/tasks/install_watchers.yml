@@ -13,6 +13,22 @@
     mode: '0755'
   notify: Restart log watcher
 
+- name: Install discord alert script to /usr/local/bin
+  ansible.builtin.copy:
+    src: discord_alert.py
+    dest: /usr/local/bin/ccdc_alert.py
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Ensure alert cache directory exists
+  ansible.builtin.file:
+    path: /var/cache/ccdc_alerts
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
 - name: Deploy log watcher systemd service
   ansible.builtin.copy:
     dest: /etc/systemd/system/ccdc-log-watcher.service

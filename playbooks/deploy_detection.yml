@@ -32,14 +32,14 @@
         name: ccdc-log-watcher
       register: log_watcher_status
       failed_when: log_watcher_status.status.ActiveState != "active"
-      when: log_watch_enabled | default(true)
+      when: intrusion_detection_log_watch_enabled | default(true)
 
     - name: Check honeypot watcher service status
       ansible.builtin.systemd:
         name: ccdc-honeypot-watcher
       register: honeypot_status
       failed_when: honeypot_status.status.ActiveState != "active"
-      when: honeypot_enabled | default(true)
+      when: intrusion_detection_honeypot_enabled | default(true)
 
     - name: Verify auditd is running
       ansible.builtin.service:

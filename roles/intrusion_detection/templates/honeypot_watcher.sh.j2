@@ -14,14 +14,14 @@ ALERT_SCRIPT="/usr/local/bin/ccdc_alert.py"
 
 # Honeypot paths (space-separated)
 HONEYPOT_FILES=(
-{% for file in honeypot_files %}
-  "{{ file }}"
+{% for file in intrusion_detection_honeypot_files %}
+    "{{ file }}"
 {% endfor %}
 )
 
 HONEYPOT_DIRS=(
-{% for dir in honeypot_directories %}
-  "{{ dir }}"
+{% for dir in intrusion_detection_honeypot_directories %}
+    "{{ dir }}"
 {% endfor %}
 )
 

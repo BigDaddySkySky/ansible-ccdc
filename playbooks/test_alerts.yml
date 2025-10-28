@@ -110,8 +110,8 @@
   tasks:
     - name: Simulate honeypot file access
       ansible.builtin.stat:
-        path: "{{ honeypot_files[0] | default('/root/.ssh/authorized_keys_backup') }}"
-      when: honeypot_enabled | default(true)
+        path: "{{ intrusion_detection_honeypot_files[0] | default('/root/.ssh/authorized_keys_backup') }}"
+      when: intrusion_detection_honeypot_enabled | default(true)
       register: honeypot_test
 
     - name: Wait for honeypot alert

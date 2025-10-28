@@ -7,35 +7,35 @@
 # =============================================
 
 # Alert configuration
-alert_cooldown_seconds: 300  # 5 min between duplicate alerts
-alert_severity_levels:
+intrusion_detection_alert_cooldown_seconds: 300  # 5 min between duplicate alerts
+intrusion_detection_alert_severity_levels:
   critical: "🚨"
   warning: "⚠️"
   info: "ℹ️"
 
 # Detection thresholds
-failed_login_threshold: 5     # Failed logins before alert
-failed_login_window: 300      # Time window in seconds
-suspicious_command_alert: true
+intrusion_detection_failed_login_threshold: 5     # Failed logins before alert
+intrusion_detection_failed_login_window: 300      # Time window in seconds
+intrusion_detection_suspicious_command_alert: true
 
 # Honeypot configuration
-honeypot_enabled: true
-honeypot_users:
+intrusion_detection_honeypot_enabled: true
+intrusion_detection_honeypot_users:
   - redteam
   - hacker
   - test
-honeypot_files:
+intrusion_detection_honeypot_files:
   - /root/.ssh/authorized_keys_backup
   - /etc/shadow.bak
   - /var/www/html/admin.php
-honeypot_directories:
+intrusion_detection_honeypot_directories:
   - /opt/backup
   - /root/secrets
 
 # Log monitoring
-log_watch_enabled: true
-log_watch_interval: 60  # Check every 60 seconds
-monitored_logs:
+intrusion_detection_log_watch_enabled: true
+intrusion_detection_log_watch_interval: 60  # Check every 60 seconds
+intrusion_detection_monitored_logs:
   debian:
     - /var/log/auth.log
     - /var/log/syslog
@@ -44,7 +44,7 @@ monitored_logs:
     - /var/log/messages
 
 # Suspicious patterns (regex)
-suspicious_patterns:
+intrusion_detection_suspicious_patterns:
   - 'nc -[el].*[0-9]+'           # Netcat listeners
   - 'bash -i.*dev/tcp'           # Reverse shell
   - 'python.*socket.*connect'    # Python reverse shell
@@ -56,5 +56,9 @@ suspicious_patterns:
   - '/etc/shadow'                # Shadow file access
 
 # Evidence collection
-evidence_dir: "{{ incident_dir }}/{{ inventory_hostname }}"
-auto_collect_evidence: true
+intrusion_detection_evidence_dir: "{{ incident_dir }}/{{ inventory_hostname }}"
+intrusion_detection_auto_collect_evidence: true
+
+# Suppress alerts that would be triggered during honeypot setup by default.
+# Set to true to allow sending alerts when honeypot users are created.
+intrusion_detection_send_honeypot_setup_alerts: false

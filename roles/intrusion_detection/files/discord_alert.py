@@ -109,11 +109,18 @@ def send_discord_alert(webhook_url: str, severity: str, message: str,
         )
         
         with urlopen(req, timeout=10) as response:
-            if response.status in [200, 204]:
-                print(f"Alert sent successfully (status: {response.status})")
+            # Some HTTPResponse implementations expose getcode(), others expose status.
+            status = None
+            try:
+                status = response.getcode()
+            except Exception:
+                status = getattr(response, 'status', None)
+
+            if status in [200, 204]:
+                print(f"Alert sent successfully (status: {status})")
                 return True
             else:
-                print(f"Alert failed (status: {response.status})", file=sys.stderr)
+                print(f"Alert failed (status: {status})", file=sys.stderr)
                 return False
                 
     except URLError as e:
