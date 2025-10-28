@@ -1,0 +1,5 @@
+---
+vault_linux_ssh_pass: "changeme"
+vault_linux_become_pass: "changeme"
+vault_linux_sysadmin_new: "CompLinux2025!Secure"
+vault_linux_root_new: "CompRoot2025!Secure"

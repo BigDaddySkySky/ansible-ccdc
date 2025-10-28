@@ -1,0 +1,4 @@
+---
+vault_windows_admin_pass: "!Password123"
+vault_windows_admin_new: "CompWin2025!Secure"
+vault_windows_userone_new: "CompUser2025!Secure"
