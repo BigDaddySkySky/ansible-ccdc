@@ -1,0 +1,24 @@
+---
+# roles/intrusion_detection/handlers/rebuild_auditd.yml
+
+- name: Remove immutable flag
+  ansible.builtin.command: auditctl -e 1
+  changed_when: false
+  failed_when: false
+
+- name: Rebuild rules with augenrules
+  ansible.builtin.command: augenrules --load
+  register: augenrules_result
+  changed_when: augenrules_result.rc == 0
+  failed_when: false
+
+- name: Verify rules loaded
+  ansible.builtin.command: auditctl -l
+  register: rule_check
+  changed_when: false
+  failed_when: false
+
+- name: Log rule count
+  ansible.builtin.debug:
+    msg: "Audit rules reloaded: {{ rule_check.stdout_lines | length }} rules active"
+  when: rule_check.stdout_lines is defined

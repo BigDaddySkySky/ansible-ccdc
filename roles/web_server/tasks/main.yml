@@ -20,5 +20,6 @@
   when: "'apache2' not in ansible_facts.packages and 'httpd' not in ansible_facts.packages"
 
 - name: Include OS-specific web server tasks
-  include_tasks: "{{ ansible_os_family }}.yml"
+  ansible.builtin.include_tasks:
+    file: "{{ ansible_os_family }}.yml"
   tags: [web_server]

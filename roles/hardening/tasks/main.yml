@@ -7,9 +7,11 @@
 # =============================================
 
 - name: Include disable services tasks
-  include_tasks: disable_services.yml
+  ansible.builtin.include_tasks:
+    file: disable_services.yml
   when: ansible_os_family != "Windows"
 
 - name: Include enable logging tasks
-  include_tasks: enable_logging.yml
+  ansible.builtin.include_tasks:
+    file: enable_logging.yml
   when: ansible_os_family == "RedHat"

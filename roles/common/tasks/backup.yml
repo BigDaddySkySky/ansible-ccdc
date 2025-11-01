@@ -15,9 +15,9 @@
   when: ansible_os_family != "Windows"
 
 - name: Backup critical directory
-  ansible.builtin.archive:
+  community.general.archive:
     path: "{{ item }}"
-    dest: "{{ backup_dir }}/PP item | basename }}{{ ansible_date_time.epoch }}.tar.gz"
+    dest: "{{ backup_dir }}/{{ item | basename }}{{ ansible_date_time.epoch }}.tar.gz"
     format: gz
   loop: "{{ backup_paths }}"
   when: ansible_os_family != "Windows"

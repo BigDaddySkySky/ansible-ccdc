@@ -7,9 +7,11 @@
 # =============================================
 
 - name: Collect logs
-  include_tasks: collect_logs.yml
+  ansible.builtin.include_tasks:
+    file: collect_logs.yml
   tags: [logs]
 
 - name: Scan for suspicious processes
-  include_tasks: scan_processes.yml
+  ansible.builtin.include_tasks:
+    file: scan_processes.yml
   tags: [processes]

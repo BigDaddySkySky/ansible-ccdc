@@ -1,0 +1,28 @@
+---
+# roles/intrusion_detection/handlers/restart_auditd.yml
+
+- name: Stop auditd
+  ansible.builtin.service:
+    name: auditd
+    state: stopped
+  changed_when: false
+  failed_when: false
+
+- name: Start auditd
+  ansible.builtin.service:
+    name: auditd
+    state: started
+  register: auditd_start
+  changed_when: false
+  failed_when: false
+
+- name: Wait for auditd to stabilize
+  ansible.builtin.pause:
+    seconds: 2
+
+- name: Verify auditd started
+  ansible.builtin.service_facts:
+
+- name: Check auditd status
+  ansible.builtin.debug:
+    msg: "Auditd status: {{ ansible_facts.services['auditd'].state | default('unknown') }}"

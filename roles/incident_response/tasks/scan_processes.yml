@@ -7,7 +7,7 @@
 # =============================================
 
 - name: Check for suspicious processes
-  ansible.builtin.shell: "ps aux | grep -E 'nc|ncat|socat|reverse' | grep -v grep"
+  ansible.builtin.shell: "set -o pipefail; ps aux | grep -E 'nc|ncat|socat|reverse' | grep -v grep"
   register: suspicious_procs
   changed_when: false
   failed_when: false

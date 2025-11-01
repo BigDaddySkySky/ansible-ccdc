@@ -22,4 +22,4 @@
           content: "{{ message }}"
         status_code: 204   # Discord returns 204 No Content on success
       when: discord_webhook_url is defined
-      ignore_errors: true
+      failed_when: false

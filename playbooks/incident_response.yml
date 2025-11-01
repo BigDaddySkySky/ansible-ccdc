@@ -31,7 +31,7 @@
       when: ansible_os_family == "Debian"
 
     - name: Scan for suspicious processes
-      include_role:
+      ansible.builtin.include_role:
         name: incident_response
         tasks_from: scan_processes.yml
 
@@ -44,5 +44,5 @@
           content: "✅ {{ ansible_playbook_name | default('<playbook>.yml') }} completed at {{ lookup('pipe','date') }}"
         status_code: 204
       when: discord_webhook_url is defined
-      ignore_errors: true
+      failed_when: false
       tags: [notify, passive]

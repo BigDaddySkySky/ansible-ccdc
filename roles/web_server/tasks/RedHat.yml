@@ -26,13 +26,18 @@
     mode: '0755'
 
 - name: Verify HTTP service is responding
-  ansible.builtin.command: "curl -s -o /dev/null -w '%{http_code}' http://localhost"
+  ansible.builtin.uri:
+    url: http://localhost
+    status_code: 200
+    return_content: false
   register: http_status
   changed_when: false
-  failed_when: http_status.stdout != "200"
 
 - name: Verify HTTPS service is responding
-  ansible.builtin.command: "curl -sk -o /dev/null -w '%{http_code}' https://localhost"
+  ansible.builtin.uri:
+    url: https://localhost
+    status_code: 200
+    return_content: false
+    validate_certs: false
   register: https_status
   changed_when: false
-  failed_when: https_status.stdout != "200"

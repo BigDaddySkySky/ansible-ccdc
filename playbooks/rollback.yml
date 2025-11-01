@@ -24,7 +24,7 @@
         group: root
         mode: '0644'
       when: ansible_facts['os_family'] is defined
-      ignore_errors: true
+      failed_when: false
       tags: [rollback, linux]
 
     - name: Restore firewall config
@@ -32,7 +32,7 @@
         src: /root/ccdc_backup/etc/ufw/ufw.conf
         dest: /etc/ufw/ufw.conf
       when: ansible_facts['os_family'] == "Debian"
-      ignore_errors: true
+      failed_when: false
       tags: [rollback, linux, firewall]
 
 - name: Rollback Windows hosts
@@ -40,14 +40,14 @@
   tasks:
     - name: Restore registry backup (if available)
       ansible.windows.win_command: reg import C:\ccdc_backup\registry.reg
-      ignore_errors: true
+      failed_when: false
       tags: [rollback, windows]
 
     - name: Restore IIS config
       ansible.windows.win_copy:
         src: C:\ccdc_backup\applicationHost.config
         dest: C:\Windows\System32\inetsrv\config\applicationHost.config
-      ignore_errors: true
+      failed_when: false
       tags: [rollback, windows, iis]
 
 - name: Notify team via Discord
@@ -63,5 +63,5 @@
           content: "⚠️ rollback.yml executed at {{ lookup('pipe','date') }} — system restored from backup"
         status_code: 204
       when: discord_webhook_url is defined
-      ignore_errors: true
+      failed_when: false
       tags: [notify, passive]

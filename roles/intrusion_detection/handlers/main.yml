@@ -91,47 +91,11 @@
   when: ansible_os_family != "Windows"
 
 - name: Rebuild audit rules
-  block:
-    - name: Remove immutable flag
-      ansible.builtin.command: auditctl -e 1
-      changed_when: false
-      failed_when: false
-
-    - name: Rebuild rules with augenrules
-      ansible.builtin.command: augenrules --load
-      register: augenrules_result
-      changed_when: false
-      failed_when: false
-
-    - name: Verify rules loaded
-      ansible.builtin.command: auditctl -l
-      register: rule_check
-      changed_when: false
-      failed_when: rule_check.stdout_lines | length < 5
-
-    - name: Log rule count
-      ansible.builtin.debug:
-        msg: "Audit rules reloaded: {{ rule_check.stdout_lines | length }} rules active"
+  ansible.builtin.include_tasks:
+    file: handlers/rebuild_auditd.yml
   when: ansible_os_family == "RedHat"
 
 - name: Restart auditd
-  block:
-    - name: Stop auditd
-      ansible.builtin.command: service auditd stop
-      changed_when: false
-      failed_when: false
-
-    - name: Start auditd
-      ansible.builtin.command: service auditd start
-      changed_when: false
-      register: auditd_start
-
-    - name: Verify auditd started
-      ansible.builtin.service_facts:
-      register: services
-
-    - name: Fail if auditd didn't start
-      ansible.builtin.fail:
-        msg: "Auditd failed to start"
-      when: "'auditd' not in services.ansible_facts.services or services.ansible_facts.services['auditd'].state != 'running'"
+  ansible.builtin.include_tasks:
+    file: handlers/restart_auditd.yml
   when: ansible_os_family == "RedHat"

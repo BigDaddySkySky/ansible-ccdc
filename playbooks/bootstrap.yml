@@ -1,0 +1,90 @@
+---
+# playbooks/bootstrap.yml
+
+- name: Bootstrap Ansible Environment
+  hosts: localhost
+  gather_facts: true
+  become: false
+
+  vars:
+    required_packages:
+      - python3
+      - python3-pip
+      - python3-apt
+      - sshpass
+
+  tasks:
+    - name: Check SSH password authentication
+      ansible.builtin.command: grep -E '^PasswordAuthentication|^#PasswordAuthentication' /etc/ssh/sshd_config
+      register: ssh_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display SSH auth status
+      ansible.builtin.debug:
+        msg: "{{ ssh_check.stdout_lines }}"
+
+    - name: Install required packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: "{{ required_packages }}"
+        state: present
+        update_cache: true
+      become: true
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages (RedHat/Fedora)
+      ansible.builtin.dnf:
+        name:
+          - python3
+          - python3-pip
+          - sshpass
+        state: present
+      become: true
+      when: ansible_os_family == "RedHat"
+
+    - name: Upgrade Ansible to core 2.15+
+      ansible.builtin.pip:
+        name: ansible-core
+        # Use 'present' (idempotent). Pin a specific version if you want stricter control.
+        state: present
+        extra_args: --user
+
+    - name: Ensure ~/.local/bin in PATH
+      ansible.builtin.lineinfile:
+        path: ~/.bashrc
+        line: 'export PATH="$HOME/.local/bin:$PATH"'
+        state: present
+        create: true
+        mode: '0644'
+
+    - name: Check Ansible version
+      ansible.builtin.command: ansible --version
+      register: ansible_version_check
+      changed_when: false
+      environment:
+        PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+
+    - name: Display Ansible version
+      ansible.builtin.debug:
+        msg: "{{ ansible_version_check.stdout_lines[0] }}"
+
+    - name: Check for vault password file
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: vault_check
+      loop:
+        - ~/.vault_pass
+        - .vault_pass
+
+    - name: Display vault password status
+      ansible.builtin.debug:
+        msg: "Vault password file found at {{ item.item }}"
+      when: item.stat.exists
+      loop: "{{ vault_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Warn if no vault file found
+      ansible.builtin.debug:
+        msg: "WARNING: No vault password file found. Create ~/.vault_pass or .vault_pass"
+      when: vault_check.results | selectattr('stat.exists', 'equalto', true) | list | length == 0

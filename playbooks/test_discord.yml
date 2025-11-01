@@ -21,4 +21,4 @@
           - 200
           - 204
       when: discord_webhook_url is defined
-      ignore_errors: true
+      failed_when: false

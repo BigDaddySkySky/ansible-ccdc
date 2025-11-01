@@ -14,7 +14,7 @@
     dest: ./incidents/{{ inventory_hostname }}/
     flat: false
   when: ansible_os_family == "Debian"
-  ignore_errors: true
+  failed_when: false
 
 - name: Capture secure logs (RedHat)
   ansible.builtin.fetch:
@@ -22,4 +22,4 @@
     dest: ./incidents/{{ inventory_hostname }}/
     flat: false
   when: ansible_os_family == "RedHat"
-  ignore_errors: true
+  failed_when: false
