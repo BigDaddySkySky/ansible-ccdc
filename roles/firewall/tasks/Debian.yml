@@ -29,8 +29,8 @@
     rule: allow
     port: "{{ item }}"
     proto: tcp
-  loop: "{{ web_firewall_ports }}"
-  when: web_firewall_ports is defined
+  loop: "{{ firewall_web_ports | default([]) }}"
+  when: firewall_web_ports is defined
 
 - name: Allow mail ports
   community.general.ufw:

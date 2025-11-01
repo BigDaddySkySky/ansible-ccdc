@@ -30,7 +30,7 @@
     permanent: true
     state: enabled
     immediate: true
-  loop: "{{ firewall_web_ports }}"
+  loop: "{{ firewall_web_ports | default([]) }}"
   when: firewall_web_ports is defined
 
 - name: Allow mail ports

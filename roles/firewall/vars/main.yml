@@ -1,0 +1,16 @@
+---
+# Service-to-port mapping for automatic firewall rules
+firewall_service_ports:
+  web_servers:
+    - "{{ web_ports.http }}"
+    - "{{ web_ports.https }}"
+  mail_servers:
+    - "{{ mail_ports.smtp }}"
+    - "{{ mail_ports.pop3 }}"
+  dns_servers:
+    - "{{ dns_ports.dns }}"
+  ftp_servers:
+    - "{{ ftp_ports.ftp }}"
+  monitoring:
+    - "{{ splunk_ports.web }}"
+    - "{{ splunk_ports.mgmt }}"
