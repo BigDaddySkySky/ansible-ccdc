@@ -1,6 +1,6 @@
 #!/bin/vbash
-# VyOS CCDC Hardening Script - Modern VyOS 1.4+ Syntax
-# Configures firewall, NAT, and security while maintaining service availability
+# VyOS CCDC Hardening Script - Minimal Working Version
+# Focuses on firewall and NAT only (critical for competition)
 
 source /opt/vyatta/etc/functions/script-template
 
@@ -43,35 +43,6 @@ echo ""
 
 # Enter configuration mode
 configure
-
-# ==========================================
-# Basic System Hardening
-# ==========================================
-echo ">>> Applying basic system hardening..."
-
-set system host-name ccdc-vyos
-set service ssh port 22
-set service ssh protocol-version v2
-delete service telnet 2>/dev/null || true
-delete service ftp 2>/dev/null || true
-set system time-zone America/Chicago
-set system ntp server time.google.com
-set system ntp server time.cloudflare.com
-
-echo "✓ System hardening complete"
-sleep 2
-
-# ==========================================
-# Logging Configuration
-# ==========================================
-echo ">>> Configuring logging..."
-
-set system syslog global facility all level info
-set system syslog global facility protocols level debug
-set system syslog host ${CORE_IP} facility all level info
-
-echo "✓ Logging configured"
-sleep 2
 
 # ==========================================
 # Interface Configuration
@@ -170,9 +141,13 @@ set firewall ipv4 name LOCAL-WAN rule 41 protocol tcp
 set firewall ipv4 name LOCAL-WAN rule 41 destination port 443
 set firewall ipv4 name LOCAL-WAN rule 41 description "Allow HTTPS"
 
+echo "✓ LOCAL-WAN rules configured"
+sleep 2
+
 # ==========================================
 # Firewall Rules - WAN to LOCAL
 # ==========================================
+echo ">>> Configuring WAN to LOCAL firewall rules..."
 
 set firewall ipv4 name WAN-LOCAL default-action drop
 set firewall ipv4 name WAN-LOCAL description "Traffic from WAN to router"
@@ -190,12 +165,9 @@ set firewall ipv4 name WAN-LOCAL rule 20 description "Allow ICMP ping"
 set firewall ipv4 name WAN-LOCAL rule 30 action accept
 set firewall ipv4 name WAN-LOCAL rule 30 protocol tcp
 set firewall ipv4 name WAN-LOCAL rule 30 destination port 22
-set firewall ipv4 name WAN-LOCAL rule 30 state new
-set firewall ipv4 name WAN-LOCAL rule 30 recent count 3
-set firewall ipv4 name WAN-LOCAL rule 30 recent time minute 1
-set firewall ipv4 name WAN-LOCAL rule 30 description "Rate-limited SSH"
+set firewall ipv4 name WAN-LOCAL rule 30 description "Allow SSH"
 
-echo "✓ Router firewall rules configured"
+echo "✓ WAN-LOCAL rules configured"
 sleep 2
 
 # ==========================================
@@ -212,18 +184,6 @@ set firewall ipv4 name LAN-WAN rule 10 protocol tcp
 set firewall ipv4 name LAN-WAN rule 10 destination port 22
 set firewall ipv4 name LAN-WAN rule 10 description "Log outbound SSH"
 
-set firewall ipv4 name LAN-WAN rule 11 action accept
-set firewall ipv4 name LAN-WAN rule 11 log
-set firewall ipv4 name LAN-WAN rule 11 protocol tcp
-set firewall ipv4 name LAN-WAN rule 11 destination port 23
-set firewall ipv4 name LAN-WAN rule 11 description "Log outbound Telnet"
-
-set firewall ipv4 name LAN-WAN rule 12 action accept
-set firewall ipv4 name LAN-WAN rule 12 log
-set firewall ipv4 name LAN-WAN rule 12 protocol tcp
-set firewall ipv4 name LAN-WAN rule 12 destination port 3389
-set firewall ipv4 name LAN-WAN rule 12 description "Log outbound RDP"
-
 set firewall ipv4 name LAN-WAN rule 100 action drop
 set firewall ipv4 name LAN-WAN rule 100 destination address 10.0.0.0/8
 set firewall ipv4 name LAN-WAN rule 100 log
@@ -239,7 +199,7 @@ set firewall ipv4 name LAN-WAN rule 120 destination address 192.168.0.0/16
 set firewall ipv4 name LAN-WAN rule 120 log
 set firewall ipv4 name LAN-WAN rule 120 description "Block RFC1918 192.168.0.0/16"
 
-echo "✓ LAN to WAN rules configured"
+echo "✓ LAN-WAN rules configured"
 sleep 2
 
 # ==========================================
@@ -300,7 +260,7 @@ set firewall ipv4 name WAN-LAN rule 141 protocol tcp
 set firewall ipv4 name WAN-LAN rule 141 destination port 53
 set firewall ipv4 name WAN-LAN rule 141 description "Allow DNS TCP"
 
-echo "✓ WAN to LAN rules configured (services should score)"
+echo "✓ WAN-LAN rules configured (services should score)"
 sleep 2
 
 # ==========================================
@@ -326,16 +286,24 @@ set firewall ipv4 name LAN-LOCAL rule 40 action accept
 set firewall ipv4 name LAN-LOCAL rule 40 protocol udp
 set firewall ipv4 name LAN-LOCAL rule 40 destination port 53
 
+echo "✓ LAN-LOCAL rules configured"
+sleep 2
+
 # ==========================================
 # Firewall Rules - LOCAL to LAN
 # ==========================================
+echo ">>> Configuring LOCAL to LAN firewall rules..."
 
 set firewall ipv4 name LOCAL-LAN default-action accept
 set firewall ipv4 name LOCAL-LAN description "Router to LAN"
 
+echo "✓ LOCAL-LAN rules configured"
+sleep 2
+
 # ==========================================
 # Inter-LAN Traffic (LAN1 to LAN2)
 # ==========================================
+echo ">>> Configuring inter-LAN firewall rules..."
 
 set firewall ipv4 name LAN-LAN default-action accept
 set firewall ipv4 name LAN-LAN description "Inter-LAN traffic"
@@ -344,7 +312,7 @@ set firewall ipv4 name LAN-LAN rule 10 action accept
 set firewall ipv4 name LAN-LAN rule 10 state established
 set firewall ipv4 name LAN-LAN rule 10 state related
 
-echo "✓ LAN and inter-LAN rules configured"
+echo "✓ LAN-LAN rules configured"
 sleep 2
 
 # ==========================================
@@ -366,34 +334,6 @@ set firewall zone LAN1 from LAN2 firewall name LAN-LAN
 set firewall zone LAN2 from LAN1 firewall name LAN-LAN
 
 echo "✓ Zone policies applied"
-sleep 2
-
-# ==========================================
-# Connection Tracking
-# ==========================================
-echo ">>> Enabling connection tracking modules..."
-
-set system conntrack modules ftp
-set system conntrack modules h323
-set system conntrack modules nfs
-set system conntrack modules pptp
-set system conntrack modules sip
-set system conntrack modules sqlnet
-set system conntrack modules tftp
-
-echo "✓ Connection tracking modules enabled"
-sleep 2
-
-# ==========================================
-# Rate Limiting and DoS Protection
-# ==========================================
-echo ">>> Enabling DoS protection features..."
-
-set firewall global-options syn-cookies
-set firewall global-options all-ping
-set firewall global-options broadcast-ping disable
-
-echo "✓ DoS protection enabled"
 sleep 2
 
 # ==========================================
@@ -434,25 +374,25 @@ echo "VyOS Configuration Complete!"
 echo "=========================================="
 echo ""
 echo "Configuration Summary:"
+echo "  - Interfaces configured"
+echo "  - Default route set"
 echo "  - NAT configured for both internal networks"
-echo "  - Zone-based firewall enabled"
+echo "  - Zone-based firewall enabled (4 zones)"
 echo "  - Required services allowed (HTTP, HTTPS, SMTP, POP3, FTP, DNS)"
-echo "  - SSH rate limiting enabled"
-echo "  - Connection tracking modules loaded"
-echo "  - Logging enabled"
 echo ""
 echo "Next Steps:"
 echo "  1. Verify connectivity: ping ${CORE_IP}"
 echo "  2. Test NAT: ping 8.8.8.8 from internal hosts"
 echo "  3. Check firewall: show firewall ipv4 name WAN-LAN"
-echo "  4. Monitor zones: show firewall zone"
+echo "  4. Check zones: show firewall zone"
+echo "  5. Check NAT: show nat source rules"
 echo ""
-echo "IMPORTANT: Change default credentials immediately!"
-echo "  configure"
-echo "  set system login user vyos authentication plaintext-password <new-password>"
-echo "  commit"
-echo "  save"
-echo "  exit"
+echo "Additional hardening (configure manually if time permits):"
+echo "  - Change router password"
+echo "  - Enable logging to syslog server"
+echo "  - Configure NTP"
+echo "  - Enable connection tracking modules"
+echo "  - Add SSH rate limiting"
 echo ""
 
 exit 0
