@@ -101,6 +101,15 @@ ansible-vault view group_vars/all/vault.yml
 
 ### Step 4: Start Automation (T+0 - First 2 minutes)
 
+```bash
+sudo apt update
+sudo apt install -y git
+
+git clone https://www.github.com/BigDaddySkySky/ansible-ccdc.git
+cd ansible-ccdc
+./scripts/bootstrap.sh
+```
+
 **Ansible Operator executes:**
 
 ```bash
