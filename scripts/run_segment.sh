@@ -23,6 +23,6 @@ EXTRA_ARGS="$EXTRA_ARGS:-}"
 
 echo "Running pre_check -> baseline -> hardening -> scoring_validation"
 ansible-playbook -i "$INVENTORY" playbooks/pre_check.yml -f "$FORKS" $EXTRA_ARGS
-ansible-playbook -i "$INVENTORY" playbooks/baseline.yml-f "$FORKS" $EXTRA_ARGS
-ansible-playbook -i "$INVENTORY" playbooks/hardening.yml-f "$FORKS" $EXTRA_ARGS
-ansible-playbook -i "$INVENTORY" playbooks/scoring_validation.yml-f "$FORKS" $EXTRA_ARGS
+ansible-playbook -i "$INVENTORY" playbooks/baseline.yml -f "$FORKS" $EXTRA_ARGS
+ansible-playbook -i "$INVENTORY" playbooks/hardening.yml -f "$FORKS" $EXTRA_ARGS
+ansible-playbook -i "$INVENTORY" playbooks/scoring_validation.yml -f "$FORKS" $EXTRA_ARGS

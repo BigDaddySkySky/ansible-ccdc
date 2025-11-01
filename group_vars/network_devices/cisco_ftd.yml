@@ -4,6 +4,6 @@
 # NOTES: ansible_password is the default, cisco_ftd_pass_new is rotated
 
 ansible_user: admin
-ansible_password: "!Changeme123"
-cisco_ftd_pass_new: "CompCisco2025!Secure"
+ansible_password: {{ vault_cisco_ftd_password}}
+cisco_ftd_pass_new: {{ vault_cisco_ftd_new }}
 cisco_ftd_mgmt_interface: "172.20.240.200"

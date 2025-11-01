@@ -1,65 +1,88 @@
 ---
-
 # ================== PURPOSE ==================
-# Password Reset Playbook
-# - Rotates admin/root passwords across hosts
-# - Stores new passwords in Ansible Vault
-# - Logs changes without exposing secrets
+# Password Reset Playbook - Host-Specific Version
+# - Uses individual host_vars for unique passwords
+# - Supports multiple accounts per host
 # =============================================
-# - Edit vault with: ansible-vault edit group_vars/all/vault.yml
-# - Run with: ansible-playbook playbooks/pass_reset.yml --vault-password-file ~/.vault_pass
-# - Tags:
-#     pass_reset, linux, windows, network, notify
-# - Output: Logs reset completion, but never prints passwords
 
-
-- name: Reset passwords on Linux
+- name: Reset Linux Passwords
   hosts: linux
   become: true
-  vars:
-    new_pass: "{{ vault_linux_admin_pass }}"
   tasks:
+    - name: Reset sysadmin password
+      ansible.builtin.user:
+        name: sysadmin
+        password: "{{ new_sysadmin_password | password_hash('sha512') }}"
+      when: new_sysadmin_password is defined
+
     - name: Reset root password
       ansible.builtin.user:
         name: root
-        password: "{{ new_pass | password_hash('sha512') }}"
-      tags: [pass_reset, linux]
+        password: "{{ new_root_password | password_hash('sha512') }}"
+      when: new_root_password is defined
 
-- name: Reset passwords on Windows
+- name: Reset Splunk Admin Password
+  hosts: splunk
+  become: true
+  tasks:
+    - name: Reset Splunk web admin password
+      ansible.builtin.shell: |
+        /opt/splunk/bin/splunk edit user admin -password '{{ new_admin_password }}' -auth admin:changemenow
+      when: new_admin_password is defined
+      no_log: true
+
+- name: Reset Windows Passwords
   hosts: windows
-  vars:
-    new_pass: "{{ vault_windows_admin_pass }}"
   tasks:
     - name: Reset Administrator password
       ansible.windows.win_user:
         name: Administrator
-        password: "{{ new_pass }}"
-      tags: [pass_reset, windows]
+        password: "{{ new_administrator_password }}"
+      when: new_administrator_password is defined
 
-- name: Reset passwords on network devices
-  hosts: network
-  vars:
-    new_pass: "{{ vault_network_admin_pass }}"
+- name: Reset Windows 11 UserOne Password
+  hosts: windows11_wks
   tasks:
-    - name: Reset device admin password
-      cisco.ios.ios_user:
-        name: admin
-        configured_password: "{{ new_pass }}"
-        update_password: always
-      tags: [pass_reset, network]
+    - name: Reset UserOne password
+      ansible.windows.win_user:
+        name: UserOne
+        password: "{{ new_userone_password }}"
+      when: new_userone_password is defined
 
-- name: Notify team via Discord
+- name: Display Manual Password Change Instructions
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Post reset completion
+    - name: Show manual steps for network devices
+      ansible.builtin.debug:
+        msg:
+          - ""
+          - "⚠️  MANUAL PASSWORD CHANGES REQUIRED:"
+          - ""
+          - "Palo Alto (172.20.242.150):"
+          - "  Current: admin / Changeme123"
+          - "  New: admin / Zoroark@571!"
+          - ""
+          - "Cisco FTD (172.20.240.200):"
+          - "  Current: admin / !Changeme123"
+          - "  New: admin / Mewtwo%150X"
+          - ""
+          - "VyOS (172.31.21.2):"
+          - "  Current: vyos / changeme"
+          - "  New: vyos / Taskmast^41X"
+          - ""
+
+- name: Send completion notification
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Post to Discord
       ansible.builtin.uri:
         url: "{{ discord_webhook_url }}"
         method: POST
         body_format: json
         body:
-          content: "🔑 pass_reset.yml completed at {{ lookup('pipe', 'date') }}"
-        status_code: 204
+          content: "🔑 Password reset completed at {{ lookup('pipe', 'date') }}"
+        status_code: [200, 204]
       when: discord_webhook_url is defined
       failed_when: false
-      tags: [notify, passive]

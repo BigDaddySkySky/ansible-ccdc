@@ -1,8 +1,3 @@
 ---
-# Reference encrypted variables from vault.yml
-ansible_ssh_pass: "{{ vault_linux_ssh_pass }}"
-ansible_become_pass: "{{ vault_linux_become_pass }}"
-
-# New passwords for reset playbook
-linux_sysadmin_new: "{{ vault_linux_sysadmin_new }}"
-linux_root_new: "{{ vault_linux_root_new }}"
+ansible_user: sysadmin
+ansible_python_interpreter: /usr/bin/python3

@@ -4,6 +4,6 @@
 # NOTES: ansible_password is the default, vyos_pass_new is rotated
 
 ansible_user: vyos
-ansible_password: "changeme"
-vyos_pass_new: "CompVyos2025!Secure"
+ansible_password: {{ vault_vyos_password }}
+vyos_pass_new: {{ vault_vyos_new }}
 vyos_mgmt_interface: "172.31.21.2"

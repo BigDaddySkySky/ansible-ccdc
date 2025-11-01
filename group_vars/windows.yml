@@ -1,18 +1,6 @@
 ---
-# Reference encrypted variables from vault.yml
-ansible_password: "{{ vault_windows_admin_pass }}"
-
-# New passwords for reset playbook
-windows_admin_new: "{{ vault_windows_admin_new }}"
-windows_userone_new: "{{ vault_windows_userone_new }}"
-
-# CRITICAL: Disable become for Windows
-ansible_become: false
-ansible_become_method: runas
-ansible_become_user: Administrator
-
-# Connection settings (should already be in inventory, but ensure they're here)
 ansible_connection: winrm
 ansible_winrm_transport: ntlm
 ansible_winrm_server_cert_validation: ignore
 ansible_port: 5985
+ansible_become: false
