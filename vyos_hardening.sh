@@ -1,5 +1,5 @@
 #!/bin/vbash
-# VyOS CCDC Hardening Script - Proper VyOS Syntax
+# VyOS CCDC Hardening Script - Modern VyOS 1.4+ Syntax
 # Configures firewall, NAT, and security while maintaining service availability
 
 source /opt/vyatta/etc/functions/script-template
@@ -105,11 +105,11 @@ sleep 2
 # ==========================================
 echo ">>> Configuring NAT (Source NAT for internal networks)..."
 
-set nat source rule 10 outbound-interface eth0
+set nat source rule 10 outbound-interface name eth0
 set nat source rule 10 source address 172.16.101.0/24
 set nat source rule 10 translation address ${PUBLIC_NET}
 
-set nat source rule 20 outbound-interface eth0
+set nat source rule 20 outbound-interface name eth0
 set nat source rule 20 source address 172.16.102.0/24
 set nat source rule 20 translation address ${PUBLIC_NET}
 
@@ -121,17 +121,17 @@ sleep 2
 # ==========================================
 echo ">>> Configuring firewall zones..."
 
-set zone-policy zone WAN description "External WAN zone"
-set zone-policy zone WAN interface eth0
+set firewall zone WAN description "External WAN zone"
+set firewall zone WAN interface eth0
 
-set zone-policy zone LAN1 description "Internal LAN - Palo Alto"
-set zone-policy zone LAN1 interface eth1
+set firewall zone LAN1 description "Internal LAN - Palo Alto"
+set firewall zone LAN1 interface eth1
 
-set zone-policy zone LAN2 description "Internal LAN - Cisco FTD"
-set zone-policy zone LAN2 interface eth2
+set firewall zone LAN2 description "Internal LAN - Cisco FTD"
+set firewall zone LAN2 interface eth2
 
-set zone-policy zone LOCAL description "Router itself"
-set zone-policy zone LOCAL local-zone
+set firewall zone LOCAL description "Router itself"
+set firewall zone LOCAL local-zone
 
 echo "✓ Firewall zones configured"
 sleep 2
@@ -141,54 +141,59 @@ sleep 2
 # ==========================================
 echo ">>> Configuring firewall rules for router (LOCAL zone)..."
 
-set firewall name LOCAL-WAN default-action drop
-set firewall name LOCAL-WAN description "Traffic from router to WAN"
-set firewall name LOCAL-WAN enable-default-log
+set firewall ipv4 name LOCAL-WAN default-action drop
+set firewall ipv4 name LOCAL-WAN description "Traffic from router to WAN"
+set firewall ipv4 name LOCAL-WAN default-log
 
-set firewall name LOCAL-WAN rule 10 action accept
-set firewall name LOCAL-WAN rule 10 state established enable
-set firewall name LOCAL-WAN rule 10 state related enable
-set firewall name LOCAL-WAN rule 10 description "Allow established/related"
+set firewall ipv4 name LOCAL-WAN rule 10 action accept
+set firewall ipv4 name LOCAL-WAN rule 10 state established
+set firewall ipv4 name LOCAL-WAN rule 10 state related
+set firewall ipv4 name LOCAL-WAN rule 10 description "Allow established/related"
 
-set firewall name LOCAL-WAN rule 20 action accept
-set firewall name LOCAL-WAN rule 20 protocol udp
-set firewall name LOCAL-WAN rule 20 destination port 53
-set firewall name LOCAL-WAN rule 20 description "Allow DNS queries"
+set firewall ipv4 name LOCAL-WAN rule 20 action accept
+set firewall ipv4 name LOCAL-WAN rule 20 protocol udp
+set firewall ipv4 name LOCAL-WAN rule 20 destination port 53
+set firewall ipv4 name LOCAL-WAN rule 20 description "Allow DNS queries"
 
-set firewall name LOCAL-WAN rule 30 action accept
-set firewall name LOCAL-WAN rule 30 protocol udp
-set firewall name LOCAL-WAN rule 30 destination port 123
-set firewall name LOCAL-WAN rule 30 description "Allow NTP"
+set firewall ipv4 name LOCAL-WAN rule 30 action accept
+set firewall ipv4 name LOCAL-WAN rule 30 protocol udp
+set firewall ipv4 name LOCAL-WAN rule 30 destination port 123
+set firewall ipv4 name LOCAL-WAN rule 30 description "Allow NTP"
 
-set firewall name LOCAL-WAN rule 40 action accept
-set firewall name LOCAL-WAN rule 40 protocol tcp
-set firewall name LOCAL-WAN rule 40 destination port 80,443
-set firewall name LOCAL-WAN rule 40 description "Allow HTTP/HTTPS"
+set firewall ipv4 name LOCAL-WAN rule 40 action accept
+set firewall ipv4 name LOCAL-WAN rule 40 protocol tcp
+set firewall ipv4 name LOCAL-WAN rule 40 destination port 80
+set firewall ipv4 name LOCAL-WAN rule 40 description "Allow HTTP"
+
+set firewall ipv4 name LOCAL-WAN rule 41 action accept
+set firewall ipv4 name LOCAL-WAN rule 41 protocol tcp
+set firewall ipv4 name LOCAL-WAN rule 41 destination port 443
+set firewall ipv4 name LOCAL-WAN rule 41 description "Allow HTTPS"
 
 # ==========================================
 # Firewall Rules - WAN to LOCAL
 # ==========================================
 
-set firewall name WAN-LOCAL default-action drop
-set firewall name WAN-LOCAL description "Traffic from WAN to router"
-set firewall name WAN-LOCAL enable-default-log
+set firewall ipv4 name WAN-LOCAL default-action drop
+set firewall ipv4 name WAN-LOCAL description "Traffic from WAN to router"
+set firewall ipv4 name WAN-LOCAL default-log
 
-set firewall name WAN-LOCAL rule 10 action accept
-set firewall name WAN-LOCAL rule 10 state established enable
-set firewall name WAN-LOCAL rule 10 state related enable
-set firewall name WAN-LOCAL rule 10 description "Allow established/related"
+set firewall ipv4 name WAN-LOCAL rule 10 action accept
+set firewall ipv4 name WAN-LOCAL rule 10 state established
+set firewall ipv4 name WAN-LOCAL rule 10 state related
+set firewall ipv4 name WAN-LOCAL rule 10 description "Allow established/related"
 
-set firewall name WAN-LOCAL rule 20 action accept
-set firewall name WAN-LOCAL rule 20 protocol icmp
-set firewall name WAN-LOCAL rule 20 description "Allow ICMP ping"
+set firewall ipv4 name WAN-LOCAL rule 20 action accept
+set firewall ipv4 name WAN-LOCAL rule 20 protocol icmp
+set firewall ipv4 name WAN-LOCAL rule 20 description "Allow ICMP ping"
 
-set firewall name WAN-LOCAL rule 30 action accept
-set firewall name WAN-LOCAL rule 30 protocol tcp
-set firewall name WAN-LOCAL rule 30 destination port 22
-set firewall name WAN-LOCAL rule 30 state new enable
-set firewall name WAN-LOCAL rule 30 recent count 3
-set firewall name WAN-LOCAL rule 30 recent time 60
-set firewall name WAN-LOCAL rule 30 description "Rate-limited SSH"
+set firewall ipv4 name WAN-LOCAL rule 30 action accept
+set firewall ipv4 name WAN-LOCAL rule 30 protocol tcp
+set firewall ipv4 name WAN-LOCAL rule 30 destination port 22
+set firewall ipv4 name WAN-LOCAL rule 30 state new
+set firewall ipv4 name WAN-LOCAL rule 30 recent count 3
+set firewall ipv4 name WAN-LOCAL rule 30 recent time minute 1
+set firewall ipv4 name WAN-LOCAL rule 30 description "Rate-limited SSH"
 
 echo "✓ Router firewall rules configured"
 sleep 2
@@ -198,29 +203,41 @@ sleep 2
 # ==========================================
 echo ">>> Configuring LAN to WAN firewall rules (outbound Internet access)..."
 
-set firewall name LAN-WAN default-action accept
-set firewall name LAN-WAN description "LAN to Internet"
+set firewall ipv4 name LAN-WAN default-action accept
+set firewall ipv4 name LAN-WAN description "LAN to Internet"
 
-set firewall name LAN-WAN rule 10 action accept
-set firewall name LAN-WAN rule 10 log enable
-set firewall name LAN-WAN rule 10 protocol tcp
-set firewall name LAN-WAN rule 10 destination port 22,23,3389
-set firewall name LAN-WAN rule 10 description "Log outbound management protocols"
+set firewall ipv4 name LAN-WAN rule 10 action accept
+set firewall ipv4 name LAN-WAN rule 10 log
+set firewall ipv4 name LAN-WAN rule 10 protocol tcp
+set firewall ipv4 name LAN-WAN rule 10 destination port 22
+set firewall ipv4 name LAN-WAN rule 10 description "Log outbound SSH"
 
-set firewall name LAN-WAN rule 100 action drop
-set firewall name LAN-WAN rule 100 destination address 10.0.0.0/8
-set firewall name LAN-WAN rule 100 log enable
-set firewall name LAN-WAN rule 100 description "Block RFC1918 10.0.0.0/8"
+set firewall ipv4 name LAN-WAN rule 11 action accept
+set firewall ipv4 name LAN-WAN rule 11 log
+set firewall ipv4 name LAN-WAN rule 11 protocol tcp
+set firewall ipv4 name LAN-WAN rule 11 destination port 23
+set firewall ipv4 name LAN-WAN rule 11 description "Log outbound Telnet"
 
-set firewall name LAN-WAN rule 110 action drop
-set firewall name LAN-WAN rule 110 destination address 172.16.0.0/12
-set firewall name LAN-WAN rule 110 log enable
-set firewall name LAN-WAN rule 110 description "Block RFC1918 172.16.0.0/12"
+set firewall ipv4 name LAN-WAN rule 12 action accept
+set firewall ipv4 name LAN-WAN rule 12 log
+set firewall ipv4 name LAN-WAN rule 12 protocol tcp
+set firewall ipv4 name LAN-WAN rule 12 destination port 3389
+set firewall ipv4 name LAN-WAN rule 12 description "Log outbound RDP"
 
-set firewall name LAN-WAN rule 120 action drop
-set firewall name LAN-WAN rule 120 destination address 192.168.0.0/16
-set firewall name LAN-WAN rule 120 log enable
-set firewall name LAN-WAN rule 120 description "Block RFC1918 192.168.0.0/16"
+set firewall ipv4 name LAN-WAN rule 100 action drop
+set firewall ipv4 name LAN-WAN rule 100 destination address 10.0.0.0/8
+set firewall ipv4 name LAN-WAN rule 100 log
+set firewall ipv4 name LAN-WAN rule 100 description "Block RFC1918 10.0.0.0/8"
+
+set firewall ipv4 name LAN-WAN rule 110 action drop
+set firewall ipv4 name LAN-WAN rule 110 destination address 172.16.0.0/12
+set firewall ipv4 name LAN-WAN rule 110 log
+set firewall ipv4 name LAN-WAN rule 110 description "Block RFC1918 172.16.0.0/12"
+
+set firewall ipv4 name LAN-WAN rule 120 action drop
+set firewall ipv4 name LAN-WAN rule 120 destination address 192.168.0.0/16
+set firewall ipv4 name LAN-WAN rule 120 log
+set firewall ipv4 name LAN-WAN rule 120 description "Block RFC1918 192.168.0.0/16"
 
 echo "✓ LAN to WAN rules configured"
 sleep 2
@@ -230,48 +247,58 @@ sleep 2
 # ==========================================
 echo ">>> Configuring WAN to LAN firewall rules (CRITICAL for service scoring)..."
 
-set firewall name WAN-LAN default-action drop
-set firewall name WAN-LAN description "WAN to Internal LANs"
-set firewall name WAN-LAN enable-default-log
+set firewall ipv4 name WAN-LAN default-action drop
+set firewall ipv4 name WAN-LAN description "WAN to Internal LANs"
+set firewall ipv4 name WAN-LAN default-log
 
-set firewall name WAN-LAN rule 10 action accept
-set firewall name WAN-LAN rule 10 state established enable
-set firewall name WAN-LAN rule 10 state related enable
-set firewall name WAN-LAN rule 10 description "Allow established/related"
+set firewall ipv4 name WAN-LAN rule 10 action accept
+set firewall ipv4 name WAN-LAN rule 10 state established
+set firewall ipv4 name WAN-LAN rule 10 state related
+set firewall ipv4 name WAN-LAN rule 10 description "Allow established/related"
 
-set firewall name WAN-LAN rule 20 action accept
-set firewall name WAN-LAN rule 20 protocol icmp
-set firewall name WAN-LAN rule 20 description "Allow ICMP"
+set firewall ipv4 name WAN-LAN rule 20 action accept
+set firewall ipv4 name WAN-LAN rule 20 protocol icmp
+set firewall ipv4 name WAN-LAN rule 20 description "Allow ICMP"
 
-set firewall name WAN-LAN rule 100 action accept
-set firewall name WAN-LAN rule 100 protocol tcp
-set firewall name WAN-LAN rule 100 destination port 80,443
-set firewall name WAN-LAN rule 100 description "Allow HTTP/HTTPS to services"
+set firewall ipv4 name WAN-LAN rule 100 action accept
+set firewall ipv4 name WAN-LAN rule 100 protocol tcp
+set firewall ipv4 name WAN-LAN rule 100 destination port 80
+set firewall ipv4 name WAN-LAN rule 100 description "Allow HTTP"
 
-set firewall name WAN-LAN rule 110 action accept
-set firewall name WAN-LAN rule 110 protocol tcp
-set firewall name WAN-LAN rule 110 destination port 25
-set firewall name WAN-LAN rule 110 description "Allow SMTP"
+set firewall ipv4 name WAN-LAN rule 101 action accept
+set firewall ipv4 name WAN-LAN rule 101 protocol tcp
+set firewall ipv4 name WAN-LAN rule 101 destination port 443
+set firewall ipv4 name WAN-LAN rule 101 description "Allow HTTPS"
 
-set firewall name WAN-LAN rule 120 action accept
-set firewall name WAN-LAN rule 120 protocol tcp
-set firewall name WAN-LAN rule 120 destination port 110
-set firewall name WAN-LAN rule 120 description "Allow POP3"
+set firewall ipv4 name WAN-LAN rule 110 action accept
+set firewall ipv4 name WAN-LAN rule 110 protocol tcp
+set firewall ipv4 name WAN-LAN rule 110 destination port 25
+set firewall ipv4 name WAN-LAN rule 110 description "Allow SMTP"
 
-set firewall name WAN-LAN rule 130 action accept
-set firewall name WAN-LAN rule 130 protocol tcp
-set firewall name WAN-LAN rule 130 destination port 20-21
-set firewall name WAN-LAN rule 130 description "Allow FTP"
+set firewall ipv4 name WAN-LAN rule 120 action accept
+set firewall ipv4 name WAN-LAN rule 120 protocol tcp
+set firewall ipv4 name WAN-LAN rule 120 destination port 110
+set firewall ipv4 name WAN-LAN rule 120 description "Allow POP3"
 
-set firewall name WAN-LAN rule 140 action accept
-set firewall name WAN-LAN rule 140 protocol udp
-set firewall name WAN-LAN rule 140 destination port 53
-set firewall name WAN-LAN rule 140 description "Allow DNS UDP"
+set firewall ipv4 name WAN-LAN rule 130 action accept
+set firewall ipv4 name WAN-LAN rule 130 protocol tcp
+set firewall ipv4 name WAN-LAN rule 130 destination port 20
+set firewall ipv4 name WAN-LAN rule 130 description "Allow FTP-DATA"
 
-set firewall name WAN-LAN rule 141 action accept
-set firewall name WAN-LAN rule 141 protocol tcp
-set firewall name WAN-LAN rule 141 destination port 53
-set firewall name WAN-LAN rule 141 description "Allow DNS TCP"
+set firewall ipv4 name WAN-LAN rule 131 action accept
+set firewall ipv4 name WAN-LAN rule 131 protocol tcp
+set firewall ipv4 name WAN-LAN rule 131 destination port 21
+set firewall ipv4 name WAN-LAN rule 131 description "Allow FTP"
+
+set firewall ipv4 name WAN-LAN rule 140 action accept
+set firewall ipv4 name WAN-LAN rule 140 protocol udp
+set firewall ipv4 name WAN-LAN rule 140 destination port 53
+set firewall ipv4 name WAN-LAN rule 140 description "Allow DNS UDP"
+
+set firewall ipv4 name WAN-LAN rule 141 action accept
+set firewall ipv4 name WAN-LAN rule 141 protocol tcp
+set firewall ipv4 name WAN-LAN rule 141 destination port 53
+set firewall ipv4 name WAN-LAN rule 141 description "Allow DNS TCP"
 
 echo "✓ WAN to LAN rules configured (services should score)"
 sleep 2
@@ -281,41 +308,41 @@ sleep 2
 # ==========================================
 echo ">>> Configuring LAN to router and inter-LAN firewall rules..."
 
-set firewall name LAN-LOCAL default-action drop
-set firewall name LAN-LOCAL description "LAN to router"
+set firewall ipv4 name LAN-LOCAL default-action drop
+set firewall ipv4 name LAN-LOCAL description "LAN to router"
 
-set firewall name LAN-LOCAL rule 10 action accept
-set firewall name LAN-LOCAL rule 10 state established enable
-set firewall name LAN-LOCAL rule 10 state related enable
+set firewall ipv4 name LAN-LOCAL rule 10 action accept
+set firewall ipv4 name LAN-LOCAL rule 10 state established
+set firewall ipv4 name LAN-LOCAL rule 10 state related
 
-set firewall name LAN-LOCAL rule 20 action accept
-set firewall name LAN-LOCAL rule 20 protocol icmp
+set firewall ipv4 name LAN-LOCAL rule 20 action accept
+set firewall ipv4 name LAN-LOCAL rule 20 protocol icmp
 
-set firewall name LAN-LOCAL rule 30 action accept
-set firewall name LAN-LOCAL rule 30 protocol tcp
-set firewall name LAN-LOCAL rule 30 destination port 22
+set firewall ipv4 name LAN-LOCAL rule 30 action accept
+set firewall ipv4 name LAN-LOCAL rule 30 protocol tcp
+set firewall ipv4 name LAN-LOCAL rule 30 destination port 22
 
-set firewall name LAN-LOCAL rule 40 action accept
-set firewall name LAN-LOCAL rule 40 protocol udp
-set firewall name LAN-LOCAL rule 40 destination port 53
+set firewall ipv4 name LAN-LOCAL rule 40 action accept
+set firewall ipv4 name LAN-LOCAL rule 40 protocol udp
+set firewall ipv4 name LAN-LOCAL rule 40 destination port 53
 
 # ==========================================
 # Firewall Rules - LOCAL to LAN
 # ==========================================
 
-set firewall name LOCAL-LAN default-action accept
-set firewall name LOCAL-LAN description "Router to LAN"
+set firewall ipv4 name LOCAL-LAN default-action accept
+set firewall ipv4 name LOCAL-LAN description "Router to LAN"
 
 # ==========================================
 # Inter-LAN Traffic (LAN1 to LAN2)
 # ==========================================
 
-set firewall name LAN-LAN default-action accept
-set firewall name LAN-LAN description "Inter-LAN traffic"
+set firewall ipv4 name LAN-LAN default-action accept
+set firewall ipv4 name LAN-LAN description "Inter-LAN traffic"
 
-set firewall name LAN-LAN rule 10 action accept
-set firewall name LAN-LAN rule 10 state established enable
-set firewall name LAN-LAN rule 10 state related enable
+set firewall ipv4 name LAN-LAN rule 10 action accept
+set firewall ipv4 name LAN-LAN rule 10 state established
+set firewall ipv4 name LAN-LAN rule 10 state related
 
 echo "✓ LAN and inter-LAN rules configured"
 sleep 2
@@ -325,18 +352,18 @@ sleep 2
 # ==========================================
 echo ">>> Applying zone policies (linking zones to firewall rules)..."
 
-set zone-policy zone WAN from LOCAL firewall name LOCAL-WAN
-set zone-policy zone LOCAL from WAN firewall name WAN-LOCAL
-set zone-policy zone WAN from LAN1 firewall name LAN-WAN
-set zone-policy zone WAN from LAN2 firewall name LAN-WAN
-set zone-policy zone LAN1 from WAN firewall name WAN-LAN
-set zone-policy zone LAN2 from WAN firewall name WAN-LAN
-set zone-policy zone LOCAL from LAN1 firewall name LAN-LOCAL
-set zone-policy zone LOCAL from LAN2 firewall name LAN-LOCAL
-set zone-policy zone LAN1 from LOCAL firewall name LOCAL-LAN
-set zone-policy zone LAN2 from LOCAL firewall name LOCAL-LAN
-set zone-policy zone LAN1 from LAN2 firewall name LAN-LAN
-set zone-policy zone LAN2 from LAN1 firewall name LAN-LAN
+set firewall zone WAN from LOCAL firewall name LOCAL-WAN
+set firewall zone LOCAL from WAN firewall name WAN-LOCAL
+set firewall zone WAN from LAN1 firewall name LAN-WAN
+set firewall zone WAN from LAN2 firewall name LAN-WAN
+set firewall zone LAN1 from WAN firewall name WAN-LAN
+set firewall zone LAN2 from WAN firewall name WAN-LAN
+set firewall zone LOCAL from LAN1 firewall name LAN-LOCAL
+set firewall zone LOCAL from LAN2 firewall name LAN-LOCAL
+set firewall zone LAN1 from LOCAL firewall name LOCAL-LAN
+set firewall zone LAN2 from LOCAL firewall name LOCAL-LAN
+set firewall zone LAN1 from LAN2 firewall name LAN-LAN
+set firewall zone LAN2 from LAN1 firewall name LAN-LAN
 
 echo "✓ Zone policies applied"
 sleep 2
@@ -362,9 +389,9 @@ sleep 2
 # ==========================================
 echo ">>> Enabling DoS protection features..."
 
-set firewall syn-cookies enable
-set firewall all-ping enable
-set firewall broadcast-ping disable
+set firewall global-options syn-cookies
+set firewall global-options all-ping
+set firewall global-options broadcast-ping disable
 
 echo "✓ DoS protection enabled"
 sleep 2
@@ -379,6 +406,7 @@ if [ $? -ne 0 ]; then
     echo "ERROR: Configuration commit failed!"
     echo "Review errors above before proceeding."
     sleep 5
+    exit
     exit 1
 fi
 
@@ -416,8 +444,8 @@ echo ""
 echo "Next Steps:"
 echo "  1. Verify connectivity: ping ${CORE_IP}"
 echo "  2. Test NAT: ping 8.8.8.8 from internal hosts"
-echo "  3. Check firewall logs: show log firewall"
-echo "  4. Monitor connections: show firewall"
+echo "  3. Check firewall: show firewall ipv4 name WAN-LAN"
+echo "  4. Monitor zones: show firewall zone"
 echo ""
 echo "IMPORTANT: Change default credentials immediately!"
 echo "  configure"
