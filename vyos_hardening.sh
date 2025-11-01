@@ -312,6 +312,28 @@ set firewall ipv4 name LAN-LAN rule 10 action accept
 set firewall ipv4 name LAN-LAN rule 10 state established
 set firewall ipv4 name LAN-LAN rule 10 state related
 
+# Updated for Splunk ports
+set firewall ipv4 name LAN-LAN rule 20 action accept
+set firewall ipv4 name LAN-LAN rule 20 protocol tcp
+set firewall ipv4 name LAN-LAN rule 20 destination port 8000
+set firewall ipv4 name LAN-LAN rule 20 description "Allow Splunk UI"
+
+
+set firewall ipv4 name LAN-LAN rule 21 action accept
+set firewall ipv4 name LAN-LAN rule 21 protocol tcp
+set firewall ipv4 name LAN-LAN rule 21 destination port 8089
+set firewall ipv4 name LAN-LAN rule 21 description "Allow Splunk MGMT"
+
+set firewall ipv4 name LAN-LAN rule 22 action accept
+set firewall ipv4 name LAN-LAN rule 22 protocol tcp
+set firewall ipv4 name LAN-LAN rule 22 destination port 9997
+set firewall ipv4 name LAN-LAN rule 22 description "Allow Splunk Forwarder"
+
+set firewall ipv4 name LAN-LAN rule 23 action accept
+set firewall ipv4 name LAN-LAN rule 23 protocol udp
+set firewall ipv4 name LAN-LAN rule 23 destination port 514
+set firewall ipv4 name LAN-LAN rule 23 description "Allow Syslog to Splunk"
+
 echo "✓ LAN-LAN rules configured"
 sleep 2
 
