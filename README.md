@@ -17,7 +17,7 @@ pip install -r requirements.txt
 ansible-galaxy install -r requirements.yml
 
 # 3. Ensure vault password is set
-cat ~/.vault_pass
+cat .vault_pass
 # Should contain your vault password
 
 # 4. Test connectivity
@@ -250,17 +250,17 @@ ansible-vault rekey group_vars/linux/vault.yml
 ```
 
 ### Vault Password Location
-- Stored in: `~/.vault_pass`
+- Stored in: `.vault_pass`
 - Referenced in: `ansible.cfg`
 - **NEVER commit `.vault_pass` to git!**
 
-> Note: This repository's `ansible.cfg` has been updated to reference a user-local vault password file at `~/.vault_pass`.
+> Note: This repository's `ansible.cfg` has been updated to reference a user-local vault password file at `.vault_pass`.
 > Each team member should create their own local file before running playbooks:
 > ```bash
-> echo "YOUR_VAULT_PASSWORD" > ~/.vault_pass
-> chmod 600 ~/.vault_pass
+> echo "YOUR_VAULT_PASSWORD" > .vault_pass
+> chmod 600 .vault_pass
 > ```
-> Do not add `~/.vault_pass` to git; keep it local and secret.
+> Do not add `.vault_pass` to git; keep it local and secret.
 
 ---
 
@@ -403,7 +403,7 @@ ansible-playbook playbooks/baseline.yml --limit ubuntu_ecom -tags firewall -vvv
 - [ ] Install Python 3.8+ and create virtualenv
 - [ ] Install Ansible: `pip install ansible pywinrm`
 - [ ] Install collections: `ansible-galaxy collection install -r requirements.yml`
-- [ ] Create `~/.vault_pass` with vault password
+- [ ] Create `.vault_pass` with vault password
 - [ ] Verify all vault files are encrypted
 - [ ] Update IP addresses in inventory if changed
 - [ ] Set competition-specific passwords in vault files
