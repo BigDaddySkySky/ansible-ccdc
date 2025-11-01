@@ -39,8 +39,10 @@ read -p "Press Enter to continue or Ctrl+C to abort..."
 
 # Start configuration
 echo "Configuring VyOS router..."
+echo ""
 
 # Enter configuration mode
+echo ">>> Applying basic system hardening..."
 vtysh << 'EOF'
 configure terminal
 
@@ -67,6 +69,21 @@ set system time-zone America/Chicago
 set system ntp server time.google.com
 set system ntp server time.cloudflare.com
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: System hardening failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ System hardening complete"
+sleep 2
+
+echo ">>> Configuring logging..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Logging Configuration
 ! ==========================================
@@ -74,6 +91,21 @@ set system ntp server time.cloudflare.com
 set system syslog global facility all level info
 set system syslog global facility protocols level debug
 set system syslog host ${CORE_IP} facility all level info
+
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Logging configuration failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ Logging configured"
+sleep 2
+
+echo ">>> Configuring network interfaces..."
+vtysh << 'EOF'
+configure terminal
 
 ! ==========================================
 ! Interface Configuration
@@ -90,11 +122,41 @@ set interfaces ethernet eth1 description "LAN-PaloAlto"
 set interfaces ethernet eth2 address ${NET2}
 set interfaces ethernet eth2 description "LAN-CiscoFTD"
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Interface configuration failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ Interfaces configured"
+sleep 2
+
+echo ">>> Configuring static routes..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Static Routes
 ! ==========================================
 
 set protocols static route 0.0.0.0/0 next-hop ${CORE_IP}
+
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Static route configuration failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ Static routes configured"
+sleep 2
+
+echo ">>> Configuring NAT (Source NAT for internal networks)..."
+vtysh << 'EOF'
+configure terminal
 
 ! ==========================================
 ! NAT Configuration (Source NAT)
@@ -109,6 +171,21 @@ set nat source rule 10 translation address ${PUBLIC_NET}
 set nat source rule 20 outbound-interface eth0
 set nat source rule 20 source address 172.16.102.0/24
 set nat source rule 20 translation address ${PUBLIC_NET}
+
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: NAT configuration failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ NAT configured"
+sleep 2
+
+echo ">>> Configuring firewall zones..."
+vtysh << 'EOF'
+configure terminal
 
 ! ==========================================
 ! Firewall Zones
@@ -125,6 +202,21 @@ set zone-policy zone LAN2 interface eth2
 
 set zone-policy zone LOCAL description "Router itself"
 set zone-policy zone LOCAL local-zone
+
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Firewall zone configuration failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ Firewall zones configured"
+sleep 2
+
+echo ">>> Configuring firewall rules for router (LOCAL zone)..."
+vtysh << 'EOF'
+configure terminal
 
 ! ==========================================
 ! Firewall Rules - LOCAL to WAN
@@ -186,6 +278,21 @@ set firewall name WAN-LOCAL rule 30 recent count 3
 set firewall name WAN-LOCAL rule 30 recent time 60
 set firewall name WAN-LOCAL rule 30 description "Rate-limited SSH"
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: LOCAL firewall rules failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ Router firewall rules configured"
+sleep 2
+
+echo ">>> Configuring LAN to WAN firewall rules (outbound Internet access)..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Firewall Rules - LAN to WAN (Allow Internet)
 ! ==========================================
@@ -215,6 +322,21 @@ set firewall name LAN-WAN rule 120 action drop
 set firewall name LAN-WAN rule 120 destination address 192.168.0.0/16
 set firewall name LAN-WAN rule 120 log enable
 set firewall name LAN-WAN rule 120 description "Block RFC1918 192.168.0.0/16"
+
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: LAN-WAN firewall rules failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ LAN to WAN rules configured"
+sleep 2
+
+echo ">>> Configuring WAN to LAN firewall rules (CRITICAL for service scoring)..."
+vtysh << 'EOF'
+configure terminal
 
 ! ==========================================
 ! Firewall Rules - WAN to LAN (Strict)
@@ -270,6 +392,21 @@ set firewall name WAN-LAN rule 141 protocol tcp
 set firewall name WAN-LAN rule 141 destination port 53
 set firewall name WAN-LAN rule 141 description "Allow DNS TCP"
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: WAN-LAN firewall rules failed! This will break service scoring!"
+    sleep 3
+    exit 1
+fi
+echo "✓ WAN to LAN rules configured (services should score)"
+sleep 2
+
+echo ">>> Configuring LAN to router and inter-LAN firewall rules..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Firewall Rules - LAN to LOCAL
 ! ==========================================
@@ -315,6 +452,21 @@ set firewall name LAN-LAN rule 10 action accept
 set firewall name LAN-LAN rule 10 state established enable
 set firewall name LAN-LAN rule 10 state related enable
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: LAN-LOCAL/LOCAL-LAN/LAN-LAN firewall rules failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ LAN and inter-LAN rules configured"
+sleep 2
+
+echo ">>> Applying zone policies (linking zones to firewall rules)..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Apply Zone Policies
 ! ==========================================
@@ -332,6 +484,21 @@ set zone-policy zone LAN2 from LOCAL firewall name LOCAL-LAN
 set zone-policy zone LAN1 from LAN2 firewall name LAN-LAN
 set zone-policy zone LAN2 from LAN1 firewall name LAN-LAN
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Zone policy application failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ Zone policies applied"
+sleep 2
+
+echo ">>> Enabling connection tracking modules..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Connection Tracking
 ! ==========================================
@@ -344,6 +511,21 @@ set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Connection tracking configuration failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ Connection tracking modules enabled"
+sleep 2
+
+echo ">>> Enabling DoS protection features..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Rate Limiting and DoS Protection
 ! ==========================================
@@ -355,14 +537,52 @@ set firewall syn-cookies enable
 set firewall all-ping enable
 set firewall broadcast-ping disable
 
+exit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: DoS protection configuration failed!"
+    sleep 3
+    exit 1
+fi
+echo "✓ DoS protection enabled"
+sleep 2
+
+echo ">>> Committing configuration to active config..."
+vtysh << 'EOF'
+configure terminal
+
 ! ==========================================
 ! Save and Commit
 ! ==========================================
 
 commit
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Configuration commit failed!"
+    echo "Review errors above before proceeding."
+    sleep 5
+    exit 1
+fi
+echo "✓ Configuration committed"
+sleep 2
+
+echo ">>> Saving configuration to disk..."
+vtysh << 'EOF'
+configure terminal
 save
 exit
 EOF
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Configuration save failed!"
+    echo "Changes are active but may not survive reboot."
+    sleep 3
+else
+    echo "✓ Configuration saved to disk"
+    sleep 1
+fi
 
 echo ""
 echo "=========================================="
