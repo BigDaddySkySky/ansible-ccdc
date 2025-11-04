@@ -2,126 +2,142 @@
 # ============================================
 # ENVIRONMENT VALIDATION
 # ============================================
-# Purpose: Check prerequisites before running automation
+# Purpose: Pre-flight checks before running automation
 # Runtime: 1-2 minutes
-# Safe: YES (read-only checks)
+# Safe: YES (read-only, no changes)
 # ============================================
 
 - name: Validate Local Control Node
   hosts: localhost
   gather_facts: true
-
-  vars:
-    min_ansible_version: "2.15"
-
+  
   tasks:
+    - name: Display header
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════════╗"
+          - "║   ENVIRONMENT VALIDATION                 ║"
+          - "╚══════════════════════════════════════════╝"
+    
     - name: Check Ansible version
       ansible.builtin.assert:
         that:
           - ansible_version.major >= 2
           - ansible_version.minor >= 15
-        fail_msg: "Ansible {{ min_ansible_version }}+ required (found {{ ansible_version.full }})"
+        fail_msg: "❌ Ansible 2.15+ required (found {{ ansible_version.full }})"
         success_msg: "✅ Ansible {{ ansible_version.full }}"
-
+    
     - name: Check Python version
       ansible.builtin.command: python3 --version
       register: py_version
       changed_when: false
-
+    
     - name: Display Python version
       ansible.builtin.debug:
         msg: "✅ {{ py_version.stdout }}"
-
+    
+    - name: Check virtual environment (recommended)
+      ansible.builtin.shell: |
+        if [[ -n "$VIRTUAL_ENV" ]]; then
+          echo "Active: $VIRTUAL_ENV"
+        else
+          echo "Not activated (run: source .venv/bin/activate)"
+        fi
+      register: venv_check
+      changed_when: false
+    
+    - name: Display venv status
+      ansible.builtin.debug:
+        msg: "{{ '✅' if 'Active' in venv_check.stdout else '⚠️' }} Virtual environment: {{ venv_check.stdout }}"
+    
     - name: Check vault password file
       ansible.builtin.stat:
         path: "{{ lookup('env', 'HOME') }}/.vault_pass"
       register: vault_file
-
-    - name: Validate vault file exists
-      ansible.builtin.assert:
-        that: vault_file.stat.exists
-        fail_msg: "❌ Vault password file missing: ~/.vault_pass"
-        success_msg: "✅ Vault password file found"
-
-    - name: Check inventory file
-      ansible.builtin.stat:
-        path: "{{ inventory_file }}"
-      register: inv_file
-
-    - name: Display inventory
+    
+    - name: Display vault status
       ansible.builtin.debug:
-        msg: "✅ Using inventory: {{ inventory_file }}"
-
+        msg: "{{ '✅' if vault_file.stat.exists else '❌' }} Vault password file: {{ '~/.vault_pass' if vault_file.stat.exists else 'MISSING' }}"
+    
     - name: Check sshpass (needed for password-based SSH)
       ansible.builtin.command: which sshpass
       register: sshpass_check
       changed_when: false
       failed_when: false
-
-    - name: Warn if sshpass missing
+    
+    - name: Display sshpass status
       ansible.builtin.debug:
-        msg: "⚠ sshpass not found - password-based SSH may fail"
-      when: sshpass_check.rc != 0
+        msg: "{{ '✅' if sshpass_check.rc == 0 else '⚠️' }} sshpass: {{ 'installed' if sshpass_check.rc == 0 else 'missing (SSH may fail)' }}"
 
 - name: Validate Remote Hosts (Priority-Based)
   hosts: all
-  gather_facts: false
+  gather_facts: true
   ignore_unreachable: true
   serial: 1  # Check one at a time for clearer output
-
+  
   tasks:
     - name: Ping test
       ansible.builtin.ping:
       register: ping_result
-
-    - name: Check Python on remote
+    
+    - name: Check Python version on remote
       ansible.builtin.command: python3 --version
       register: remote_py
       changed_when: false
       when: ping_result is success
-
-    - name: Check sudo access (Linux)
+    
+    - name: Check sudo access
       ansible.builtin.command: sudo -n true
       become: true
-      when: 
-        - ping_result is success
-        - ansible_system is defined
-        - ansible_system == "Linux"
       changed_when: false
       failed_when: false
       register: sudo_check
-
+      when: ping_result is success
+    
+    - name: Check disk space
+      ansible.builtin.shell: df -h / | tail -1 | awk '{print $5}' | sed 's/%//'
+      register: disk_check
+      changed_when: false
+      when: ping_result is success
+    
     - name: Display host status
       ansible.builtin.debug:
         msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           - "Host: {{ inventory_hostname }} ({{ ansible_host }})"
-          - "Status: {{ 'READY' if ping_result is success else 'UNREACHABLE' }}"
+          - "Status: {{ '✅ READY' if ping_result is success else '❌ UNREACHABLE' }}"
+          - "{{ 'OS: ' + ansible_facts['distribution'] + ' ' + ansible_facts['distribution_version'] if ping_result is success else '' }}"
           - "{{ 'Python: ' + remote_py.stdout if ping_result is success else '' }}"
-          - "{{ 'Sudo: ' + ('OK' if sudo_check is success else 'FAILED') if ping_result is success else '' }}"
+          - "{{ 'Sudo: ' + ('✅ OK' if sudo_check.rc == 0 else '⚠️ FAILED') if ping_result is success else '' }}"
+          - "{{ 'Disk: ' + disk_check.stdout + '% used' if ping_result is success else '' }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-- name: Validation Summary
+- name: Final Summary
   hosts: localhost
   gather_facts: false
-
+  
   tasks:
-    - name: Count reachable hosts
+    - name: Calculate metrics
       ansible.builtin.set_fact:
-        total_hosts: "{{ groups['all'] | length }}"
-        reachable_count: "{{ ansible_play_hosts_all | length }}"
-
-    - name: Display final summary
+        total: "{{ groups['all'] | length }}"
+        reachable: "{{ ansible_play_hosts_all | length }}"
+    
+    - name: Display summary
       ansible.builtin.debug:
         msg:
-          - "=========================================="
-          - "ENVIRONMENT VALIDATION COMPLETE"
-          - "=========================================="
-          - "Total hosts: {{ total_hosts }}"
-          - "Reachable: {{ reachable_count }}"
-          - "Success rate: {{ ((reachable_count | int / total_hosts | int) * 100) | round(1) }}%"
           - ""
-          - "{{ 'Ready for automation!' if reachable_count | int == total_hosts | int else '⚠ Some hosts unreachable - check SSH' }}"
+          - "╔══════════════════════════════════════════╗"
+          - "║   VALIDATION COMPLETE                    ║"
+          - "╚══════════════════════════════════════════╝"
+          - ""
+          - "Total hosts: {{ total }}"
+          - "✅ Reachable: {{ reachable }}"
+          - "❌ Unreachable: {{ total | int - reachable | int }}"
+          - "Success rate: {{ ((reachable | int / total | int) * 100) | round(1) }}%"
+          - ""
+          - "{{ '✅ Environment ready for automation!' if reachable | int == total | int else '⚠️ Some hosts unreachable - fix SSH before proceeding' }}"
           - ""
           - "Next steps:"
-          - "  - Run critical path playbooks on reachable hosts only"
+          - "  - Run playbooks on reachable hosts only"
           - "  - Fix SSH on unreachable hosts"
           - "  - Re-run this playbook to verify fixes"

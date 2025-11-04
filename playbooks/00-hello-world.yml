@@ -1,87 +1,125 @@
----
 # ============================================
 # HELLO WORLD: SSH Connectivity Validation
 # ============================================
 # Purpose: Verify Ansible can SSH to each host
-# Lesson: Invitational failed due to SSH issues
+# Lesson: Invitational failed because SSH was broken
 # Runtime: <30 seconds
-# Safe: YES (read-only)
+# Safe: YES (read-only, no changes)
+# ============================================
+# Usage:
+#   ansible-playbook playbooks/00-hello-world.yml
 # ============================================
 
 - name: Hello World - SSH Connectivity Check
   hosts: all
   gather_facts: false
-  ignore_unreachable: true  # Continue even if some hosts fail
-
+  ignore_unreachable: true  # Don't stop if one host fails
+  
   tasks:
-    - name: Test raw SSH connection (no Python required)
+    - name: Test raw SSH (no Python needed)
       ansible.builtin.raw: echo "SSH OK from $(hostname)"
       register: ssh_test
       changed_when: false
       failed_when: false
-
-    - name: Display SSH test result
+    
+    - name: Display SSH result
       ansible.builtin.debug:
         msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           - "Host: {{ inventory_hostname }}"
           - "IP: {{ ansible_host }}"
-          - "SSH Status: {{ 'REACHABLE' if ssh_test is success else 'UNREACHABLE' }}"
-
+          - "Status: {{ '✅ REACHABLE' if ssh_test is success else '❌ UNREACHABLE' }}"
+          - "{{ 'Output: ' + ssh_test.stdout if ssh_test is success else 'Error: ' + (ssh_test.msg | default('Connection failed')) }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
     - name: Test Python availability
       ansible.builtin.ping:
       register: py_test
       failed_when: false
-
-    - name: Display Python test result
-      ansible.builtin.debug:
-        msg: "Python Status: {{ 'OK' if py_test is success else 'MISSING' }}"
       when: ssh_test is success
-
-    - name: Mark host as reachable
+    
+    - name: Display Python status
+      ansible.builtin.debug:
+        msg: "Python: {{ '✅ Available' if py_test is success else '❌ Missing' }}"
+      when: ssh_test is success
+    
+    - name: Mark host as reachable (for later use)
       ansible.builtin.set_fact:
         host_reachable: true
       when: ssh_test is success
 
-- name: Generate Reachable Hosts List
+- name: Generate Summary and Reachable Hosts List
   hosts: localhost
   gather_facts: false
-
+  
   tasks:
     - name: Collect reachable hosts
       ansible.builtin.set_fact:
-        reachable_hosts: "{{ groups['all'] | select('in', hostvars.keys()) | select('extract', hostvars, 'host_reachable') | select('defined') | list }}"
-
-    - name: Display summary
+        reachable_hosts: "{{ groups['all'] | map('extract', hostvars) | selectattr('host_reachable', 'defined') | selectattr('host_reachable', 'equalto', true) | map(attribute='inventory_hostname') | list }}"
+    
+    - name: Collect unreachable hosts
+      ansible.builtin.set_fact:
+        unreachable_hosts: "{{ groups['all'] | difference(reachable_hosts) }}"
+    
+    - name: Calculate success rate
+      ansible.builtin.set_fact:
+        success_rate: "{{ ((reachable_hosts | length / (groups['all'] | length | default(1))) * 100) | round(1) }}"
+    - name: Display final summary
       ansible.builtin.debug:
         msg:
-          - "=========================================="
-          - "SSH CONNECTIVITY SUMMARY"
-          - "=========================================="
+          - ""
+          - "╔══════════════════════════════════════════╗"
+          - "║   SSH CONNECTIVITY SUMMARY               ║"
+          - "╚══════════════════════════════════════════╝"
+          - ""
           - "Total hosts: {{ groups['all'] | length }}"
-          - "Reachable: {{ reachable_hosts | length }}"
-          - "Unreachable: {{ groups['all'] | length - (reachable_hosts | length) }}"
+          - "✅ Reachable: {{ reachable_hosts | length }}"
+          - "❌ Unreachable: {{ unreachable_hosts | length }}"
+          - "Success rate: {{ success_rate }}%"
           - ""
           - "Reachable hosts:"
-          - "{{ reachable_hosts | join(', ') if reachable_hosts else 'NONE' }}"
+          - "{{ reachable_hosts | join(', ') if reachable_hosts else '  (none)' }}"
           - ""
-          - "{{ 'Next: Run playbooks/01-validate-environment.yml' if reachable_hosts else '⚠ Fix SSH connectivity before proceeding' }}"
-
-    - name: Save reachable hosts to file
+          - "{% if unreachable_hosts %}Unreachable hosts:"
+          - "{{ unreachable_hosts | join(', ') }}"
+          - ""
+          - "⚠️  Fix SSH on unreachable hosts before proceeding!"
+          - "See docs/VM-SETUP.md troubleshooting section"
+          - "{% endif %}"
+          - ""
+          - "{{ '✅ Next step: ansible-playbook playbooks/01-validate-environment.yml' if reachable_hosts else '❌ Fix SSH connectivity first!' }}"
+    
+    - name: Save reachable hosts to file (for --limit usage)
       ansible.builtin.copy:
         content: "{{ reachable_hosts | join('\n') }}"
         dest: "{{ playbook_dir }}/../reachable_hosts.txt"
       when: reachable_hosts | length > 0
-
-    - name: Fail if no hosts reachable
+    
+    - name: Fail if zero hosts reachable
       ansible.builtin.fail:
         msg: |
-          CRITICAL: No hosts are reachable via SSH!
+          ╔══════════════════════════════════════════╗
+          ║   CRITICAL: NO HOSTS REACHABLE           ║
+          ╚══════════════════════════════════════════╝
           
-          Troubleshooting steps:
-          1. Are VMs running? (virsh list --all)
-          2. Can you ping VMs? (ping 192.168.122.10)
-          3. Is SSH running on VMs? (ssh ccdc@192.168.122.10)
-          4. Are credentials correct in inventory?
+          Troubleshooting checklist:
           
-          See docs/TROUBLESHOOTING.md for more help.
+          1. Are VMs running?
+             → Check VMware Workstation
+          
+          2. Can you ping VMs?
+             → ping {{ groups['all'] | map('extract', hostvars, 'ansible_host') | first }}
+          
+          3. Is SSH running on VMs?
+             → Login to VM console, run: sudo systemctl status sshd
+          
+          4. Are credentials correct?
+             → Check inventory/staging.ini
+             → Default: ccdc / changeme
+          
+          5. Is inventory IP correct?
+             → Login to VM console, run: ip addr show
+             → Update inventory/staging.ini with correct IP
+          
+          See docs/VM-SETUP.md for detailed troubleshooting.
       when: reachable_hosts | length == 0

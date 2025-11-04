@@ -1,21 +1,22 @@
 # CCDC Ansible Automation - V2.0
 
-**"SSH connectivity first, everything else second."**  
-— Lesson learned from MWCCDC Invitational 2025
+> **"SSH connectivity first, everything else second."**  
+> — Lesson learned from MWCCDC Invitational 2025
 
-## What's Different in V2.0
+## What Failed at Invitational (V1.x)
 
-### V1.x Problems (Invitational Postmortem)
-1. **SSH unreachable hosts** - automation failed because we couldn't connect
-2. **Messy bootstrap** - Python environment setup was inconsistent
-3. **No connectivity priority** - didn't know which hosts to focus on
-4. **Poor team communication** - teammates didn't understand critical requirements
+1. **SSH connectivity issues** - Playbooks cited "unreachable"
+2. **Messy bootstrap** - Team couldn't set up Python environment consistently
+3. **No visibility** - Didn't know which hosts were reachable
+4. **Poor communication** - Teammates didn't understand prerequisites
 
-### V2.0 Core Principles
-1. **Connectivity First:** Every playbook starts with connection validation
-2. **Graceful Degradation:** Automation continues even if some hosts unreachable
-3. **Priority-Based:** Focus on reachable hosts, skip unreachable ones
-4. **Self-Documenting:** Every playbook explains what it does and why
+## V2.0 Core Principles
+
+1. **Connectivity First:** Every playbook validates SSH before doing work
+2. **Linux-Only Focus:** Windows is out of scope (too unreliable under pressure)
+3. **Graceful Degradation:** Automation continues even if some hosts fail
+4. **Priority-Based:** Focus on what's reachable, skip what's not
+5. **Self-Documenting:** Every file has comments explaining "why"
 
 ## Quick Start (Competition Day)
 ```bash
@@ -28,23 +29,18 @@ source .venv/bin/activate
 # 3. Check which hosts are reachable
 ansible-playbook playbooks/01-validate-environment.yml
 
-# 4. Establish SSH to critical hosts first
-ansible-playbook playbooks/02-establish-connectivity.yml
-
-# 5. Run automation on reachable hosts only
-ansible-playbook playbooks/XX-critical-path.yml --limit @reachable_hosts.txt
+# 4. Run automation ONLY on reachable hosts
+ansible-playbook playbooks/03-critical-path.yml --limit @reachable_hosts.txt
 ```
 
-## Quick Start (Local Development)
+## Quick Start (Local Testing with VMware)
 ```bash
-# 1. Set up VMs (see docs/VM-SETUP.md)
-./scripts/setup-vms.sh
-
+# 1. Create VMs in VMware Workstation (see docs/VM-SETUP.md)
 # 2. Bootstrap
 ./scripts/bootstrap.sh
 source .venv/bin/activate
 
-# 3. Test against staging
+# 3. Test against VMs
 ansible-playbook -i inventory/staging.ini playbooks/00-hello-world.yml
 ```
 
@@ -52,25 +48,29 @@ ansible-playbook -i inventory/staging.ini playbooks/00-hello-world.yml
 ```
 ansible-ccdc-v2/
 ├── inventory/
-│   ├── staging.ini          # Local VMs for testing
-│   └── production.ini       # Competition network (updated day-of)
+│   ├── staging.ini          # VMware VMs for testing
+│   └── production.ini       # Competition network (filled in day-of)
 ├── group_vars/              # Variables by logical group
+│   └── all/                 # Global settings
 ├── playbooks/               # Numbered by execution order
 │   ├── 00-hello-world.yml   # Simplest connectivity test
 │   ├── 01-validate-environment.yml  # What's reachable?
-│   └── 02-establish-connectivity.yml  # Fix SSH issues
+│   └── 03-critical-path.yml # First 20 minutes (Sprint 3)
 ├── roles/                   # Reusable components (Sprint 4+)
 ├── scripts/                 # Helper automation
-└── docs/                    # Design docs
+│   ├── bootstrap.sh         # Environment setup
+│   └── test-sprint.sh       # Validate sprint deliverables
+└── docs/                    # Design docs and guides
 ```
 
 ## Development Workflow
 
-1. Work on `v2-rebuild` branch
-2. Test changes on local VMs
-3. Complete sprint deliverables
-4. Run `./scripts/test-sprint.sh`
-5. Push to GitHub when sprint complete
+1. Work on `v2-rebuild` branch (not `main`)
+2. Test changes in VMware VMs
+3. Complete one sprint at a time
+4. Run `./scripts/test-sprint.sh` to validate
+5. Push to GitHub: `git push origin v2-rebuild`
+6. Merge to `main` when V2.0 is proven stable
 
 ## Sprint Progress
 
@@ -84,16 +84,23 @@ ansible-ccdc-v2/
 
 ## What's NOT in V2.0
 
-Based on invitational experience, these are **out of scope** until V2.0 is rock-solid:
-- Active Directory automation (manual is fine)
-- Windows automation (WinRM too unreliable under pressure)
-- Network device automation (requires manual password changes anyway)
-- Intrusion detection (manual setup faster)
+Based on invitational experience and time constraints:
+- ❌ Windows automation (WinRM unreliable)
+- ❌ Active Directory (manual is faster)
+- ❌ Network devices (require manual password changes)
+- ❌ Intrusion detection (manual setup faster)
 
-**V2.0 Goal:** Get Linux hosts secured in 20 minutes. Everything else is bonus.
+**V2.0 Goal:** Secure Linux hosts in 20 minutes. Everything else is V2.1+.
 
-## Environment Support
+## Tech Stack
 
-- **Local Development:** Arch Linux + KVM/libvirt
-- **Remote Development:** GitHub Codespaces (testing limited)
-- **Competition:** Ubuntu/Debian-based control node
+- **Local Dev:** VMware Workstation Pro (Windows/Arch dual-boot)
+- **Remote Dev:** GitHub Codespaces (editing only, no VMs)
+- **Competition:** Ubuntu-based control node
+- **Target Systems:** Ubuntu, Fedora, Debian Linux servers
+
+## Learning Resources
+
+- Git branching: See docs/GIT-EXPLAINED.md
+- VMware setup: See docs/VM-SETUP.md
+- Ansible basics: See docs/ANSIBLE-PRIMER.md
