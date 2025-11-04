@@ -1,0 +1,87 @@
+---
+# ============================================
+# HELLO WORLD: SSH Connectivity Validation
+# ============================================
+# Purpose: Verify Ansible can SSH to each host
+# Lesson: Invitational failed due to SSH issues
+# Runtime: <30 seconds
+# Safe: YES (read-only)
+# ============================================
+
+- name: Hello World - SSH Connectivity Check
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true  # Continue even if some hosts fail
+
+  tasks:
+    - name: Test raw SSH connection (no Python required)
+      ansible.builtin.raw: echo "SSH OK from $(hostname)"
+      register: ssh_test
+      changed_when: false
+      failed_when: false
+
+    - name: Display SSH test result
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "IP: {{ ansible_host }}"
+          - "SSH Status: {{ 'REACHABLE' if ssh_test is success else 'UNREACHABLE' }}"
+
+    - name: Test Python availability
+      ansible.builtin.ping:
+      register: py_test
+      failed_when: false
+
+    - name: Display Python test result
+      ansible.builtin.debug:
+        msg: "Python Status: {{ 'OK' if py_test is success else 'MISSING' }}"
+      when: ssh_test is success
+
+    - name: Mark host as reachable
+      ansible.builtin.set_fact:
+        host_reachable: true
+      when: ssh_test is success
+
+- name: Generate Reachable Hosts List
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Collect reachable hosts
+      ansible.builtin.set_fact:
+        reachable_hosts: "{{ groups['all'] | select('in', hostvars.keys()) | select('extract', hostvars, 'host_reachable') | select('defined') | list }}"
+
+    - name: Display summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "SSH CONNECTIVITY SUMMARY"
+          - "=========================================="
+          - "Total hosts: {{ groups['all'] | length }}"
+          - "Reachable: {{ reachable_hosts | length }}"
+          - "Unreachable: {{ groups['all'] | length - (reachable_hosts | length) }}"
+          - ""
+          - "Reachable hosts:"
+          - "{{ reachable_hosts | join(', ') if reachable_hosts else 'NONE' }}"
+          - ""
+          - "{{ 'Next: Run playbooks/01-validate-environment.yml' if reachable_hosts else '⚠ Fix SSH connectivity before proceeding' }}"
+
+    - name: Save reachable hosts to file
+      ansible.builtin.copy:
+        content: "{{ reachable_hosts | join('\n') }}"
+        dest: "{{ playbook_dir }}/../reachable_hosts.txt"
+      when: reachable_hosts | length > 0
+
+    - name: Fail if no hosts reachable
+      ansible.builtin.fail:
+        msg: |
+          CRITICAL: No hosts are reachable via SSH!
+          
+          Troubleshooting steps:
+          1. Are VMs running? (virsh list --all)
+          2. Can you ping VMs? (ping 192.168.122.10)
+          3. Is SSH running on VMs? (ssh ccdc@192.168.122.10)
+          4. Are credentials correct in inventory?
+          
+          See docs/TROUBLESHOOTING.md for more help.
+      when: reachable_hosts | length == 0

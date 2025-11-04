@@ -1,0 +1,127 @@
+---
+# ============================================
+# ENVIRONMENT VALIDATION
+# ============================================
+# Purpose: Check prerequisites before running automation
+# Runtime: 1-2 minutes
+# Safe: YES (read-only checks)
+# ============================================
+
+- name: Validate Local Control Node
+  hosts: localhost
+  gather_facts: true
+
+  vars:
+    min_ansible_version: "2.15"
+
+  tasks:
+    - name: Check Ansible version
+      ansible.builtin.assert:
+        that:
+          - ansible_version.major >= 2
+          - ansible_version.minor >= 15
+        fail_msg: "Ansible {{ min_ansible_version }}+ required (found {{ ansible_version.full }})"
+        success_msg: "✅ Ansible {{ ansible_version.full }}"
+
+    - name: Check Python version
+      ansible.builtin.command: python3 --version
+      register: py_version
+      changed_when: false
+
+    - name: Display Python version
+      ansible.builtin.debug:
+        msg: "✅ {{ py_version.stdout }}"
+
+    - name: Check vault password file
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'HOME') }}/.vault_pass"
+      register: vault_file
+
+    - name: Validate vault file exists
+      ansible.builtin.assert:
+        that: vault_file.stat.exists
+        fail_msg: "❌ Vault password file missing: ~/.vault_pass"
+        success_msg: "✅ Vault password file found"
+
+    - name: Check inventory file
+      ansible.builtin.stat:
+        path: "{{ inventory_file }}"
+      register: inv_file
+
+    - name: Display inventory
+      ansible.builtin.debug:
+        msg: "✅ Using inventory: {{ inventory_file }}"
+
+    - name: Check sshpass (needed for password-based SSH)
+      ansible.builtin.command: which sshpass
+      register: sshpass_check
+      changed_when: false
+      failed_when: false
+
+    - name: Warn if sshpass missing
+      ansible.builtin.debug:
+        msg: "⚠ sshpass not found - password-based SSH may fail"
+      when: sshpass_check.rc != 0
+
+- name: Validate Remote Hosts (Priority-Based)
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  serial: 1  # Check one at a time for clearer output
+
+  tasks:
+    - name: Ping test
+      ansible.builtin.ping:
+      register: ping_result
+
+    - name: Check Python on remote
+      ansible.builtin.command: python3 --version
+      register: remote_py
+      changed_when: false
+      when: ping_result is success
+
+    - name: Check sudo access (Linux)
+      ansible.builtin.command: sudo -n true
+      become: true
+      when: 
+        - ping_result is success
+        - ansible_system is defined
+        - ansible_system == "Linux"
+      changed_when: false
+      failed_when: false
+      register: sudo_check
+
+    - name: Display host status
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }} ({{ ansible_host }})"
+          - "Status: {{ 'READY' if ping_result is success else 'UNREACHABLE' }}"
+          - "{{ 'Python: ' + remote_py.stdout if ping_result is success else '' }}"
+          - "{{ 'Sudo: ' + ('OK' if sudo_check is success else 'FAILED') if ping_result is success else '' }}"
+
+- name: Validation Summary
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Count reachable hosts
+      ansible.builtin.set_fact:
+        total_hosts: "{{ groups['all'] | length }}"
+        reachable_count: "{{ ansible_play_hosts_all | length }}"
+
+    - name: Display final summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "ENVIRONMENT VALIDATION COMPLETE"
+          - "=========================================="
+          - "Total hosts: {{ total_hosts }}"
+          - "Reachable: {{ reachable_count }}"
+          - "Success rate: {{ ((reachable_count | int / total_hosts | int) * 100) | round(1) }}%"
+          - ""
+          - "{{ 'Ready for automation!' if reachable_count | int == total_hosts | int else '⚠ Some hosts unreachable - check SSH' }}"
+          - ""
+          - "Next steps:"
+          - "  - Run critical path playbooks on reachable hosts only"
+          - "  - Fix SSH on unreachable hosts"
+          - "  - Re-run this playbook to verify fixes"

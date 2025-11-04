@@ -1,5 +1,0 @@
----
-- name: Include OS-specific firewall tasks
-  ansible.builtin.include_tasks:
-    file: "{{ ansible_os_family }}.yml"
-  when: ansible_os_family in ['Debian', 'RedHat', 'Windows']

@@ -1,112 +1,171 @@
 #!/usr/bin/env bash
-# scripts/bootstrap.sh
+# V2.0 Bootstrap Script
+# Supports: Arch Linux (local), Debian/Ubuntu (competition)
 
 set -euo pipefail
 
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}=== CCDC Ansible Bootstrap ===${NC}"
-echo "Starting at: $(date)"
+echo -e "${YELLOW}=== CCDC Ansible V2.0 Bootstrap ===${NC}"
 echo ""
 
-check_ssh_password_auth() {
-  echo -e "${YELLOW}Checking SSH password authentication...${NC}"
-  if grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config 2>/dev/null; then
-    echo -e "${GREEN}✓ SSH password auth enabled${NC}"
-  elif grep -q "^#PasswordAuthentication" /etc/ssh/sshd_config 2>/dev/null; then
-    echo -e "${YELLOW}⚠ SSH password auth commented (usually defaults to yes)${NC}"
-  else
-    echo -e "${RED}✗ SSH password auth may be disabled${NC}"
-    echo "To enable: sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config"
-    echo "Then run: sudo systemctl restart sshd"
-  fi
-  echo ""
-}
-
-install_packages() {
-  echo -e "${YELLOW}Installing required packages...${NC}"
-
-  if command -v apt-get &> /dev/null; then
-    sudo apt-get update -qq
-    sudo apt-get install -y python3 python3-pip python3-apt sshpass
-    echo -e "${GREEN}✓ Packages installed (Debian/Ubuntu)${NC}"
-  elif command -v dnf &> /dev/null; then
-    sudo dnf install -y python3 python3-pip sshpass
-    echo -e "${GREEN}✓ Packages installed (RHEL/Fedora)${NC}"
-  else
-    echo -e "${RED}✗ Unsupported package manager${NC}"
+# Detect environment
+if [[ -f /etc/arch-release ]]; then
+    PKG_MANAGER="pacman"
+    INSTALL_CMD="sudo pacman -S --noconfirm"
+    echo -e "${GREEN}✓${NC} Detected: Arch Linux"
+elif command -v apt-get &>/dev/null; then
+    PKG_MANAGER="apt"
+    INSTALL_CMD="sudo apt-get install -y"
+    echo -e "${GREEN}✓${NC} Detected: Debian/Ubuntu"
+elif command -v dnf &>/dev/null; then
+    PKG_MANAGER="dnf"
+    INSTALL_CMD="sudo dnf install -y"
+    echo -e "${GREEN}✓${NC} Detected: Fedora/RHEL"
+else
+    echo -e "${RED}✗${NC} Unsupported distribution"
     exit 1
-  fi
-  echo ""
-}
+fi
 
-upgrade_ansible() {
-  echo -e "${YELLOW}Upgrading Ansible to core 2.15+...${NC}"
+# Check if we're in GitHub Codespaces
+if [[ -n "${CODESPACES:-}" ]]; then
+    echo -e "${YELLOW}⚠ Running in GitHub Codespaces${NC}"
+    echo "Note: VM testing not available in Codespaces"
+    CODESPACE=true
+else
+    CODESPACE=false
+fi
 
-  CURRENT_VERSION=$(ansible --version 2>/dev/null | head -1 | grep -oP '\d+\.\d+\.\d+' || echo "0.0.0")
-  echo "Current version: $CURRENT_VERSION"
+# Install system dependencies
+echo ""
+echo -e "${YELLOW}Installing system dependencies...${NC}"
 
-  pip3 install --user --upgrade ansible-core
+if [[ "$PKG_MANAGER" == "pacman" ]]; then
+    # Arch-specific
+    sudo pacman -Sy
+    $INSTALL_CMD python python-pip python-virtualenv sshpass git
+elif [[ "$PKG_MANAGER" == "apt" ]]; then
+    # Debian/Ubuntu
+    sudo apt-get update -qq
+    $INSTALL_CMD python3 python3-pip python3-venv sshpass git
+else
+    # Fedora/RHEL
+    $INSTALL_CMD python3 python3-pip sshpass git
+fi
 
-  NEW_VERSION=$(~/.local/bin/ansible --version 2>/dev/null | head -1 | grep -oP '\d+\.\d+\.\d+' || ansible --version | head -1 | grep -oP '\d+\.\d+\.\d+')
-  echo "New version: $NEW_VERSION"
+echo -e "${GREEN}✓${NC} System packages installed"
 
-  if [[ ! "$PATH" =~ /.local/bin ]]; then
-    echo -e "${YELLOW}⚠ Adding ~/.local/bin to PATH${NC}"
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-    export PATH="$HOME/.local/bin:$PATH"
-  fi
+# Create virtual environment
+echo ""
+echo -e "${YELLOW}Setting up Python virtual environment...${NC}"
 
-  echo -e "${GREEN}✓ Ansible upgraded${NC}"
-  echo ""
-}
+if [[ -d .venv ]]; then
+    echo -e "${YELLOW}⚠ .venv already exists, removing...${NC}"
+    rm -rf .venv
+fi
 
-verify_installation() {
-  echo -e "${YELLOW}Verifying installation...${NC}"
+python3 -m venv .venv
+source .venv/bin/activate
 
-  for cmd in python3 pip3 ansible sshpass; do
-    if command -v $cmd &> /dev/null; then
-      VERSION=$($cmd --version 2>&1 | head -1 || echo "unknown")
-      echo -e "${GREEN}✓${NC} $cmd: $VERSION"
-    else
-      echo -e "${RED}✗${NC} $cmd: NOT FOUND"
-    fi
-  done
-  echo ""
-}
+echo -e "${GREEN}✓${NC} Virtual environment created"
 
-check_vault_pass() {
-  echo -e "${YELLOW}Checking vault password file...${NC}"
+# Install Python packages
+echo ""
+echo -e "${YELLOW}Installing Python packages...${NC}"
 
-  if [[ -f ~/.vault_pass ]]; then
-    echo -e "${GREEN}✓ ~/.vault_pass exists${NC}"
-  elif [[ -f .vault_pass ]]; then
-    echo -e "${GREEN}✓ .vault_pass exists (local)${NC}"
-  else
-    echo -e "${YELLOW}⚠ No vault password file found${NC}"
-    echo "Create one with: echo 'your_password' > ~/.vault_pass && chmod 600 ~/.vault_pass"
-  fi
-  echo ""
-}
+pip install --upgrade pip setuptools wheel
+pip install ansible-core==2.16.0  # Latest stable
 
-main() {
-  check_ssh_password_auth
-  install_packages
-  upgrade_ansible
-  verify_installation
-  check_vault_pass
+echo -e "${GREEN}✓${NC} Ansible installed"
 
-  echo -e "${GREEN}=== Bootstrap Complete ===${NC}"
-  echo ""
-  echo "Next steps:"
-  echo "  1. Ensure .vault_pass or ~/.vault_pass is configured"
-  echo "  2. Test connectivity: ansible all -m ping"
-  echo "  3. Run playbooks: ansible-playbook playbooks/run_all.yml"
-  echo ""
-}
+# Install Ansible collections (minimal set for Sprint 0.5)
+echo ""
+echo -e "${YELLOW}Installing Ansible collections...${NC}"
 
-main
+ansible-galaxy collection install ansible.posix community.general
+
+echo -e "${GREEN}✓${NC} Collections installed"
+
+# Set up vault password
+echo ""
+echo -e "${YELLOW}Setting up vault password...${NC}"
+
+VAULT_FILE="$HOME/.vault_pass"
+
+if [[ -f "$VAULT_FILE" ]]; then
+    echo -e "${GREEN}✓${NC} Vault password file already exists: $VAULT_FILE"
+else
+    echo "Enter vault password (or press Enter for default 'changeme'):"
+    read -s VAULT_PASS
+    VAULT_PASS=${VAULT_PASS:-changeme}
+    
+    echo "$VAULT_PASS" > "$VAULT_FILE"
+    chmod 600 "$VAULT_FILE"
+    
+    echo -e "${GREEN}✓${NC} Vault password saved to: $VAULT_FILE"
+fi
+
+# Verify ansible.cfg points to vault file
+if ! grep -q "vault_password_file.*\.vault_pass" ansible.cfg 2>/dev/null; then
+    echo -e "${YELLOW}⚠ ansible.cfg not found or vault_password_file not set${NC}"
+    echo "Creating minimal ansible.cfg..."
+    
+    cat > ansible.cfg << 'ANSIBLECFG'
+[defaults]
+inventory = inventory/staging.ini
+vault_password_file = ~/.vault_pass
+host_key_checking = False
+timeout = 30
+forks = 10
+retry_files_enabled = False
+
+[ssh_connection]
+pipelining = True
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no
+ANSIBLECFG
+    
+    echo -e "${GREEN}✓${NC} ansible.cfg created"
+fi
+
+# Verify installation
+echo ""
+echo -e "${YELLOW}Verifying installation...${NC}"
+
+ansible --version | head -1
+python3 --version
+
+# Display next steps
+echo ""
+echo -e "${GREEN}=== Bootstrap Complete ===${NC}"
+echo ""
+
+if [[ "$CODESPACE" == true ]]; then
+    echo -e "${YELLOW}Codespace Limitations:${NC}"
+    echo "  - Cannot run VMs for testing"
+    echo "  - Can edit playbooks and test syntax"
+    echo "  - Push to GitHub, test on local machine"
+    echo ""
+fi
+
+echo "Virtual environment activated! Next steps:"
+echo ""
+echo "  1. Test sprint deliverables:"
+echo "     ./scripts/test-sprint.sh"
+echo ""
+
+if [[ "$CODESPACE" != true ]]; then
+    echo "  2. Set up local VMs (BATTLE-STATION mode):"
+    echo "     ./scripts/setup-vms.sh"
+    echo ""
+    echo "  3. Test hello-world:"
+    echo "     ansible-playbook playbooks/00-hello-world.yml"
+else
+    echo "  2. Exit Codespace and test on local machine"
+fi
+
+echo ""
+echo -e "${YELLOW}To activate venv in future sessions:${NC}"
+echo "  source .venv/bin/activate"

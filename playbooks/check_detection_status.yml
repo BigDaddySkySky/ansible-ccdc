@@ -1,8 +1,0 @@
----
-- name: Placeholder for check_detection_status (moved)
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Informative placeholder
-      ansible.builtin.debug:
-        msg: "check_detection_status was a script; the canonical copy is in roles/intrusion_detection/files/alert_retry_daemon.py"

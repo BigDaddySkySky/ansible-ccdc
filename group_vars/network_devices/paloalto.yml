@@ -1,9 +1,0 @@
----
-
-# PURPOSE: Palo Alto device credentials and mgmt interface
-# NOTES: ansible_password is the default, paloalto_pass_new is rotated
-
-ansible_user: admin
-ansible_password: {{ vault_paloalto_password }}
-paloalto_pass_new: {{ vault_paloalto_new}}
-paloalto_mgmt_interface: "172.20.242.150"

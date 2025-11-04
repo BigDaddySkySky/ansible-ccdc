@@ -1,8 +1,0 @@
----
-- name: Placeholder for restart_detection (moved)
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Informative placeholder
-      ansible.builtin.debug:
-        msg: "restart_detection was a script; canonical copy is in roles/intrusion_detection/files/alert_retry_daemon.py"

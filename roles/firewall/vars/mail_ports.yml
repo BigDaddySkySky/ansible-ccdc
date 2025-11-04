@@ -1,4 +1,0 @@
----
-firewall_mail_ports:
-  - "{{ mail_ports.smtp }}"
-  - "{{ mail_ports.pop3 }}"

@@ -1,0 +1,11 @@
+---
+# Competition-specific values
+# Update this file before each competition
+competition_name: MWCCDC2025
+competition_date: "2025-03-15"
+team_number: 1  # CHANGE THIS
+team_name: "Your University"
+
+# Calculated values (do not edit)
+team_subnet_offset: "{{ 20 + team_number }}"
+public_ip_range: "172.25.{{ team_subnet_offset }}.0/24"

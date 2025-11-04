@@ -1,7 +1,0 @@
----
-ansible_user: sysadmin
-ansible_ssh_pass: "changeme"
-ansible_become_pass: "changeme"
-
-new_sysadmin_password: "Pochita7!AxE"
-new_root_password: "Pochita7!AxE"

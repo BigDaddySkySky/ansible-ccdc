@@ -1,8 +1,0 @@
----
-- name: Placeholder for test_detection_system (moved)
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Informative placeholder
-      ansible.builtin.debug:
-        msg: "test_detection_system was a script; canonical copy is in roles/intrusion_detection/files/alert_retry_daemon.py"
