@@ -15,7 +15,7 @@
 - name: Host Discovery - Gather Intelligence
   hosts: all
   gather_facts: true
-
+  
   tasks:
     - name: Display discovery header
       ansible.builtin.debug:
@@ -24,7 +24,7 @@
           - "🔍 Discovering: {{ inventory_hostname }}"
           - "IP: {{ ansible_host }}"
           - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
+    
     # ============================================
     # System Information
     # ============================================
@@ -39,7 +39,7 @@
           architecture: "{{ ansible_architecture }}"
           python_version: "{{ ansible_python_version }}"
           uptime_seconds: "{{ ansible_uptime_seconds }}"
-
+    
     - name: Display system info
       ansible.builtin.debug:
         msg:
@@ -49,7 +49,7 @@
           - "  Arch: {{ system_info.architecture }}"
           - "  Python: {{ system_info.python_version }}"
           - "  Uptime: {{ (system_info.uptime_seconds | int / 3600) | round(1) }} hours"
-
+    
     # ============================================
     # Network Information
     # ============================================
@@ -59,19 +59,19 @@
       register: listening_ports
       changed_when: false
       failed_when: false
-
+    
     - name: Parse listening ports
       ansible.builtin.set_fact:
         open_ports: "{{ listening_ports.stdout_lines | map('regex_search', ':(\\d+)', '\\1') | select('string') | map('first') | unique | sort | list }}"
       when: listening_ports.rc == 0
-
+    
     - name: Display network info
       ansible.builtin.debug:
         msg:
           - ""
           - "Network Information:"
           - "  Listening Ports: {{ open_ports | join(', ') if open_ports is defined else 'Unable to determine' }}"
-
+    
     # ============================================
     # Service Discovery
     # ============================================
@@ -81,7 +81,7 @@
       register: running_services
       changed_when: false
       failed_when: false
-
+    
     - name: Filter critical services
       ansible.builtin.set_fact:
         critical_services:
@@ -92,7 +92,7 @@
           dns: "{{ running_services.stdout_lines | select('search', 'bind9|named') | list }}"
           ftp: "{{ running_services.stdout_lines | select('search', 'vsftpd|proftpd') | list }}"
       when: running_services.rc == 0
-
+    
     - name: Display critical services
       ansible.builtin.debug:
         msg:
@@ -105,7 +105,7 @@
           - "  DNS: {{ critical_services.dns | join(', ') if critical_services.dns | length > 0 else 'None' }}"
           - "  FTP: {{ critical_services.ftp | join(', ') if critical_services.ftp | length > 0 else 'None' }}"
       when: critical_services is defined
-
+    
     # ============================================
     # Package Discovery
     # ============================================
@@ -115,14 +115,14 @@
       changed_when: false
       failed_when: false
       when: ansible_os_family == "Debian"
-
+    
     - name: Count installed packages (RedHat-based)
       ansible.builtin.shell: rpm -qa | wc -l
       register: rpm_count
       changed_when: false
       failed_when: false
       when: ansible_os_family == "RedHat"
-
+    
     - name: Check for security tools
       ansible.builtin.shell: |
         for pkg in fail2ban ufw firewalld iptables aide rkhunter chkrootkit auditd apparmor selinux; do
@@ -133,7 +133,7 @@
       register: security_tools
       changed_when: false
       failed_when: false
-
+    
     - name: Display package info
       ansible.builtin.debug:
         msg:
@@ -142,7 +142,7 @@
           - "  Total packages: {{ dpkg_count.stdout if dpkg_count.stdout is defined else rpm_count.stdout if rpm_count.stdout is defined else 'Unknown' }}"
           - "  Security tools:"
           - "{{ security_tools.stdout_lines | map('regex_replace', '^', '    ') | list if security_tools.stdout_lines | length > 0 else ['    None detected'] }}"
-
+    
     # ============================================
     # User Discovery
     # ============================================
@@ -151,13 +151,13 @@
         awk -F: '$7 !~ /(nologin|false)/ {print $1}' /etc/passwd
       register: login_users
       changed_when: false
-
+    
     - name: Check for users with UID 0 (root equivalent)
       ansible.builtin.shell: |
         awk -F: '$3 == 0 {print $1}' /etc/passwd
       register: uid_zero_users
       changed_when: false
-
+    
     - name: Display user info
       ansible.builtin.debug:
         msg:
@@ -165,7 +165,7 @@
           - "User Information:"
           - "  Users with login shells: {{ login_users.stdout_lines | join(', ') }}"
           - "  Users with UID 0 (root privileges): {{ uid_zero_users.stdout_lines | join(', ') }}"
-
+    
     # ============================================
     # Suspicious Activity Checks
     # ============================================
@@ -175,21 +175,21 @@
       register: suspicious_crons
       changed_when: false
       failed_when: false
-
+    
     - name: Check for world-writable files in critical directories
       ansible.builtin.shell: |
         find /etc /usr/bin /usr/sbin -type f -perm -002 2>/dev/null | head -10
       register: world_writable
       changed_when: false
       failed_when: false
-
+    
     - name: Check for SUID/SGID binaries
       ansible.builtin.shell: |
         find / -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null | wc -l
       register: suid_count
       changed_when: false
       failed_when: false
-
+    
     - name: Display security checks
       ansible.builtin.debug:
         msg:
@@ -198,7 +198,7 @@
           - "  Suspicious cron jobs: {{ 'None' if suspicious_crons.stdout == 'None found' else suspicious_crons.stdout_lines | length }}"
           - "  World-writable files: {{ world_writable.stdout_lines | length if world_writable.stdout_lines else 0 }}"
           - "  SUID/SGID binaries: {{ suid_count.stdout }}"
-
+    
     # ============================================
     # Resource Information
     # ============================================
@@ -206,12 +206,12 @@
       ansible.builtin.shell: df -h / | tail -1 | awk '{print $2, $3, $5}'
       register: disk_usage
       changed_when: false
-
+    
     - name: Get memory info
       ansible.builtin.shell: free -h | grep Mem | awk '{print $2, $3, $7}'
       register: memory_info
       changed_when: false
-
+    
     - name: Display resource info
       ansible.builtin.debug:
         msg:
@@ -219,7 +219,7 @@
           - "Resource Usage:"
           - "  Disk: {{ disk_usage.stdout }}"
           - "  Memory (Total Used Available): {{ memory_info.stdout }}"
-
+    
     # ============================================
     # Generate Baseline Report
     # ============================================
@@ -248,13 +248,14 @@
           resources:
             disk: "{{ disk_usage.stdout }}"
             memory: "{{ memory_info.stdout }}"
-
+    
     - name: Save baseline report locally
       ansible.builtin.copy:
         content: "{{ discovery_report | to_nice_json }}"
         dest: "/tmp/{{ inventory_hostname }}_baseline.json"
       delegate_to: localhost
-
+      become: false
+    
     - name: Display completion message
       ansible.builtin.debug:
         msg:
@@ -266,7 +267,7 @@
 - name: Generate Summary Report
   hosts: localhost
   gather_facts: false
-
+  
   tasks:
     - name: Display final summary
       ansible.builtin.debug:
