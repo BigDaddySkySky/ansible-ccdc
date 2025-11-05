@@ -1,4 +1,4 @@
-#!/workspaces/ansible-ccdc/.venv/bin/python3
+#!/home/smoyers/ccdc-testing/ansible-ccdc-v2/.venv/bin/python3
 # PYTHON_ARGCOMPLETE_OK
 """Command line entry point for ansible-test."""
 

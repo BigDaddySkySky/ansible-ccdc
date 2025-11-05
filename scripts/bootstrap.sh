@@ -50,7 +50,7 @@ case "$ENV" in
     arch)
         if [[ $VERBOSE -eq 1 ]]; then
             sudo pacman -Sy --noconfirm
-            sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git
+            sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git ansible-core
         else
             sudo pacman -Sy --noconfirm > /dev/null 2>&1
             sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git > /dev/null 2>&1
@@ -59,7 +59,7 @@ case "$ENV" in
     debian|codespaces)
         if [[ $VERBOSE -eq 1 ]]; then
             sudo apt-get update
-            sudo apt-get install -y python3 python3-pip python3-venv sshpass git
+            sudo apt-get install -y python3 python3-pip python3-venv sshpass git ansible-core
         else
             sudo apt-get update -qq > /dev/null 2>&1
             sudo apt-get install -y -qq python3 python3-pip python3-venv sshpass git > /dev/null 2>&1
@@ -67,7 +67,7 @@ case "$ENV" in
         ;;
     fedora)
         if [[ $VERBOSE -eq 1 ]]; then
-            sudo dnf install -y python3 python3-pip sshpass git
+            sudo dnf install -y python3 python3-pip sshpass git ansible-core
         else
             sudo dnf install -y -q python3 python3-pip sshpass git > /dev/null 2>&1
         fi
