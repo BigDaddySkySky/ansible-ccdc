@@ -1,4 +1,50 @@
-.venv
-.ansible
-.vscode
-.gitignore
+# Backup files
+*.backup
+*.backup.*
+*.bak
+*~
+
+# Vault password files
+.vault_pass
+vault_pass.txt
+*.vault_pass
+
+# Temporary scripts
+fix_all.sh
+fix_*.sh
+
+# Ansible temporary
+*.retry
+*.pyc
+__pycache__/
+.ansible/
+/tmp/ansible_facts
+
+# Python virtual environment
+.venv/
+venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Deprecated directories
+group_vars/linux/
+
+# SSH keys (NEVER commit!)
+*.pem
+*.key
+*_rsa
+*_rsa.pub
+ccdc_rsa
+ccdc_rsa.pub
