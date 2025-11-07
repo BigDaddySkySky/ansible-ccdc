@@ -48,3 +48,6 @@ group_vars/linux/
 *_rsa.pub
 ccdc_rsa
 ccdc_rsa.pub
+
+# SSH Scripts
+ssh_*.sh

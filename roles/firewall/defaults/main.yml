@@ -1,0 +1,158 @@
+---
+# ============================================
+# FIREWALL HARDENING ROLE - DEFAULT VARIABLES
+# ============================================
+# Override these in group_vars or host_vars as needed
+# ============================================
+
+# ============================================
+# Firewall Backend Selection
+# ============================================
+
+# Auto-detect firewall backend based on OS
+firewall_backend: "{{ 'ufw' if ansible_os_family == 'Debian' else 'firewalld' }}"
+
+# Force enable/disable firewall
+firewall_enabled: true
+
+# ============================================
+# Scored Services (from MWCCDC PDF)
+# ============================================
+
+# Services that must remain accessible for scoring
+firewall_scored_services:
+  - name: ssh
+    port: 22
+    proto: tcp
+    comment: "SSH - Required for management"
+  
+  - name: http
+    port: 80
+    proto: tcp
+    comment: "HTTP - Web server (scored)"
+  
+  - name: https
+    port: 443
+    proto: tcp
+    comment: "HTTPS - Secure web (scored)"
+  
+  - name: smtp
+    port: 25
+    proto: tcp
+    comment: "SMTP - Mail submission (scored)"
+  
+  - name: pop3
+    port: 110
+    proto: tcp
+    comment: "POP3 - Mail retrieval (scored)"
+  
+  - name: ftp
+    port: 21
+    proto: tcp
+    comment: "FTP - File transfer (scored)"
+  
+  - name: dns
+    port: 53
+    proto: udp
+    comment: "DNS - Name resolution (scored)"
+
+# Additional services (host-specific, not scored by default)
+firewall_additional_services: []
+
+# ============================================
+# Scoring Engine / White Team Access
+# ============================================
+
+# Allow traffic from scoring engine IPs
+# Update these with actual competition IPs
+firewall_scoring_ips:
+  - "172.31.0.0/16"      # Common CCDC scoring range
+  - "192.168.0.0/16"     # Local network range
+
+# Allow traffic from White Team (if specified)
+firewall_whiteteam_ips: []
+
+# ============================================
+# Rate Limiting (DDoS Protection)
+# ============================================
+
+# Enable rate limiting for web services
+firewall_enable_rate_limiting: true
+
+# HTTP/HTTPS rate limit (connections per minute)
+firewall_http_rate_limit: "30/minute"
+
+# SSH rate limit (new connections per minute)
+firewall_ssh_rate_limit: "10/minute"
+
+# ============================================
+# Logging Configuration
+# ============================================
+
+# Enable firewall logging
+firewall_enable_logging: true
+
+# Log level (low/medium/high for ufw, notice/info/debug for firewalld)
+firewall_log_level: "{{ 'low' if ansible_os_family == 'Debian' else 'notice' }}"
+
+# Log denied packets
+firewall_log_denied: true
+
+# Log accepted packets (verbose, useful for debugging)
+firewall_log_accepted: false
+
+# ============================================
+# Security Settings
+# ============================================
+
+# Default policy for incoming traffic
+firewall_default_incoming: deny
+
+# Default policy for outgoing traffic (allow for package updates, etc.)
+firewall_default_outgoing: allow
+
+# Default policy for forwarding (disable unless this is a router)
+firewall_default_forward: deny
+
+# Block ICMP ping requests (may impact scoring - use cautiously)
+firewall_block_icmp: false
+
+# Enable SYN flood protection (Linux kernel setting)
+firewall_enable_syn_protection: true
+
+# ============================================
+# UFW-Specific Settings
+# ============================================
+
+# UFW application profiles to enable
+ufw_applications: []
+
+# UFW before rules (advanced)
+ufw_before_rules: []
+
+# ============================================
+# Firewalld-Specific Settings
+# ============================================
+
+# Default zone for firewalld
+firewalld_default_zone: public
+
+# Firewalld zones to configure
+firewalld_zones:
+  - name: public
+    description: "Public zone - scored services only"
+
+# Rich rules for advanced firewalld configuration
+firewalld_rich_rules: []
+
+# ============================================
+# Host-Specific Service Filtering
+# ============================================
+
+# Only enable services that are actually running on this host
+# Set to true to auto-detect running services
+firewall_auto_detect_services: false
+
+# Manually specify which services to enable (overrides auto-detect)
+# Example: ['ssh', 'http', 'https']
+firewall_enabled_services: []

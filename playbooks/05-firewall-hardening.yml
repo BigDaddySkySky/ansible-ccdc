@@ -1,0 +1,209 @@
+---
+# ============================================
+# FIREWALL HARDENING PLAYBOOK
+# ============================================
+# Purpose: Configure host-based firewall on all Linux hosts
+# Priority: CRITICAL - Run after SSH hardening
+# Runtime: 3-5 minutes per host
+# Safe: YES (with pre-flight checks and validation)
+# ============================================
+
+- name: Pre-Flight Validation
+  hosts: localhost
+  gather_facts: false
+  become: false
+  
+  tasks:
+    - name: Display header
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════════╗"
+          - "║   FIREWALL HARDENING - SPRINT 3.2        ║"
+          - "╚══════════════════════════════════════════╝"
+          - ""
+          - "⚠️  CRITICAL: Read before proceeding!"
+          - ""
+          - "This playbook will:"
+          - "  • Enable host-based firewall (ufw or firewalld)"
+          - "  • Block all inbound traffic except scored services"
+          - "  • Enable rate limiting for SSH/HTTP"
+          - "  • Configure kernel-level DDoS protection"
+          - ""
+          - "Allowed services:"
+          - "  • SSH (22/tcp) - Management"
+          - "  • HTTP (80/tcp) - Web server"
+          - "  • HTTPS (443/tcp) - Secure web"
+          - "  • SMTP (25/tcp) - Mail submission"
+          - "  • POP3 (110/tcp) - Mail retrieval"
+          - "  • FTP (21/tcp) - File transfer"
+          - "  • DNS (53/udp) - Name resolution"
+          - ""
+          - "Prerequisites:"
+          - "  ✅ SSH hardening complete"
+          - "  ✅ VM snapshots created"
+          - "  ✅ Connectivity verified"
+          - ""
+          - "Targets: {{ groups['all'] | join(', ') }}"
+    
+    - name: Pause for confirmation
+      ansible.builtin.pause:
+        prompt: |
+          
+          ⚠️  LAST CHANCE TO ABORT!
+          
+          Have you created VM snapshots?
+          Without snapshots, you cannot rollback if services become unreachable!
+          
+          Press ENTER to continue, or Ctrl+C to abort
+      when: confirm is not defined or confirm != "yes"
+
+- name: Verify Target Connectivity
+  hosts: all
+  gather_facts: true
+  ignore_unreachable: true
+  
+  tasks:
+    - name: Ping test
+      ansible.builtin.ping:
+      register: ping_result
+    
+    - name: Check if SSH hardening was applied
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config.backup.*
+      register: ssh_hardening_check
+      when: ping_result is success
+    
+    - name: Display target status
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Host: {{ inventory_hostname }}"
+          - "Reachable: {{ '✅' if ping_result is success else '❌' }}"
+          - "{{ 'SSH hardened: ' + ('✅' if ssh_hardening_check.stat.exists else '⚠️  Not yet hardened') if ping_result is success else '' }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    - name: Warn if SSH hardening missing
+      ansible.builtin.debug:
+        msg:
+          - "⚠️  WARNING: SSH hardening not detected on {{ inventory_hostname }}"
+          - "   Recommended: Run 04-ssh-hardening.yml first"
+          - "   Continuing anyway..."
+      when:
+        - ping_result is success
+        - not ssh_hardening_check.stat.exists
+
+- name: Apply Firewall Hardening
+  hosts: all
+  gather_facts: true
+  
+  # Load vault variables before running role
+  pre_tasks:
+    - name: Load global vault variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+    
+    - name: Load host-specific vault variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+    
+    - name: Set ansible_become_password from vault
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ vault_host_password }}"
+  
+  roles:
+    - firewall
+
+- name: Post-Hardening Validation
+  hosts: localhost
+  gather_facts: false
+  become: false
+  
+  tasks:
+    - name: Test SSH connectivity to all hosts
+      ansible.builtin.command: ssh -i ~/.ssh/ccdc_rsa -o BatchMode=yes -o ConnectTimeout=5 {{ ansible_user }}@{{ hostvars[item].ansible_host }} 'echo SUCCESS'
+      register: ssh_test
+      failed_when: false
+      changed_when: false
+      loop: "{{ groups['all'] }}"
+      loop_control:
+        label: "{{ item }}"
+    
+    - name: Calculate results
+      ansible.builtin.set_fact:
+        successful_hosts: "{{ ssh_test.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+        failed_hosts: "{{ ssh_test.results | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+    
+    - name: Test HTTP service availability
+      ansible.builtin.uri:
+        url: "http://{{ hostvars[item].ansible_host }}"
+        status_code: [200, 301, 302, 403, 404]
+        timeout: 5
+      register: http_test
+      failed_when: false
+      loop: "{{ successful_hosts }}"
+      loop_control:
+        label: "{{ item }}"
+      when: successful_hosts | length > 0
+    
+    - name: Calculate HTTP results
+      ansible.builtin.set_fact:
+        http_working: "{{ http_test.results | selectattr('status', 'defined') | map(attribute='item') | list if http_test.results is defined else [] }}"
+        http_failed: "{{ http_test.results | rejectattr('status', 'defined') | map(attribute='item') | list if http_test.results is defined else [] }}"
+      when: successful_hosts | length > 0
+    
+    - name: Display final summary
+      ansible.builtin.debug:
+        msg:
+          - ""
+          - "╔══════════════════════════════════════════╗"
+          - "║   FIREWALL HARDENING COMPLETE            ║"
+          - "╚══════════════════════════════════════════╝"
+          - ""
+          - "Total hosts: {{ groups['all'] | length }}"
+          - "✅ SSH accessible: {{ successful_hosts | length }}"
+          - "❌ SSH failed: {{ failed_hosts | length }}"
+          - "{{ '✅ HTTP working: ' ~ http_working | length if http_working is defined else '' }}"
+          - "{{ '❌ HTTP failed: ' ~ http_failed | length if http_failed is defined else '' }}"
+          - ""
+          - "{{ 'SSH accessible: ' ~ successful_hosts | join(', ') if successful_hosts else '' }}"
+          - "{{ 'SSH failed: ' ~ failed_hosts | join(', ') if failed_hosts else '' }}"
+          - ""
+          - "Next steps:"
+          - "  1. Test all scored services manually:"
+          - "     curl http://{{ hostvars[successful_hosts[0]].ansible_host if successful_hosts else 'HOST' }}"
+          - "     telnet {{ hostvars[successful_hosts[0]].ansible_host if successful_hosts else 'HOST' }} 25"
+          - "     telnet {{ hostvars[successful_hosts[0]].ansible_host if successful_hosts else 'HOST' }} 110"
+          - ""
+          - "  2. Check firewall status:"
+          - "     ansible all -m command -a 'ufw status verbose' -b"
+          - "     ansible all -m command -a 'firewall-cmd --list-all' -b"
+          - ""
+          - "  3. Monitor firewall logs:"
+          - "     ansible all -m command -a 'tail -50 /var/log/ufw.log' -b"
+          - ""
+          - "  4. Create new VM snapshots: 'Post-Firewall-Hardening'"
+          - ""
+          - "  5. Commit changes:"
+          - "     git add -A"
+          - "     git commit -m 'Sprint 3.2: Firewall hardening complete'"
+          - ""
+          - "  6. Continue Sprint 3.3: Auditd monitoring"
+    
+    - name: Fail if any hosts unreachable
+      ansible.builtin.fail:
+        msg: |
+          ╔══════════════════════════════════════════╗
+          ║   FIREWALL HARDENING FAILED              ║"
+          ╚══════════════════════════════════════════╝
+          
+          Some hosts are unreachable after hardening!
+          
+          Failed hosts: {{ failed_hosts | join(', ') }}
+          
+          IMMEDIATE ACTION REQUIRED:
+          
+          1. Revert failed VMs to snapshot
+          2. Check firewall logs: ansible {{ failed_hosts[0] }} -m command -a "tail -100 /var/log/syslog" -b
+          3. Verify scored services: curl http://{{ hostvars[failed_hosts[0]].ansible_host }}
+          4. Test manually from VM console
+      when: failed_hosts | length > 0
