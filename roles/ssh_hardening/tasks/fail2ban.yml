@@ -1,0 +1,79 @@
+---
+# ============================================
+# FAIL2BAN INSTALLATION & CONFIGURATION
+# ============================================
+# Intrusion prevention for SSH brute-force attacks
+# ============================================
+
+- name: Install fail2ban (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  register: fail2ban_apt
+  become: true
+
+- name: Install fail2ban (RedHat/Fedora)
+  ansible.builtin.dnf:
+    name: fail2ban
+    state: present
+  when: ansible_os_family == "RedHat"
+  register: fail2ban_dnf
+  become: true
+
+- name: Display fail2ban installation result
+  ansible.builtin.debug:
+    msg: "{{ '✅ fail2ban installed' if (fail2ban_apt is changed or fail2ban_dnf is changed) else '✅ fail2ban already installed' }}"
+
+- name: Ensure fail2ban configuration directory exists
+  ansible.builtin.file:
+    path: /etc/fail2ban
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Deploy fail2ban jail configuration for SSH
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: '0644'
+    backup: true
+  notify: restart fail2ban
+  become: true
+
+- name: Ensure fail2ban is enabled and started
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+  register: fail2ban_service
+  become: true
+
+- name: Display fail2ban service status
+  ansible.builtin.debug:
+    msg: "{{ '✅ fail2ban running' if fail2ban_service is success else '❌ fail2ban failed to start' }}"
+
+- name: Check fail2ban status
+  ansible.builtin.command: "fail2ban-client status sshd"
+  register: fail2ban_status
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Display fail2ban SSH jail status
+  ansible.builtin.debug:
+    msg: "{{ fail2ban_status.stdout_lines }}"
+  when: fail2ban_status.rc == 0
+
+- name: Display fail2ban summary
+  ansible.builtin.debug:
+    msg:
+      - "Fail2ban configuration:"
+      - "  • SSH jail: ENABLED"
+      - "  • Ban time: {{ ssh_hardening_fail2ban_bantime }}s"
+      - "  • Find time: {{ ssh_hardening_fail2ban_findtime }}s"
+      - "  • Max retries: {{ ssh_hardening_fail2ban_maxretry }}"
+      - ""
+      - "ℹ️  Monitor fail2ban: fail2ban-client status sshd"

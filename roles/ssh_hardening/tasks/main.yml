@@ -1,0 +1,74 @@
+---
+# ============================================
+# SSH HARDENING ROLE - MAIN TASKS
+# ============================================
+# Purpose: Secure SSH configuration for CCDC competition
+# Priority: CRITICAL (SSH is primary access vector)
+# Testing: Always test on VM snapshot first!
+# ============================================
+
+- name: Display SSH hardening header
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "🔐 SSH Hardening: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================
+# Pre-flight Checks
+# ============================================
+
+- name: Include pre-flight checks
+  ansible.builtin.include_tasks: preflight.yml
+
+# ============================================
+# Root Account Hardening
+# ============================================
+
+- name: Include root hardening tasks
+  ansible.builtin.include_tasks: root_hardening.yml
+
+# ============================================
+# SSH Configuration
+# ============================================
+
+- name: Include SSH configuration tasks
+  ansible.builtin.include_tasks: ssh_config.yml
+
+# ============================================
+# Fail2ban Installation & Configuration
+# ============================================
+
+- name: Include fail2ban tasks
+  ansible.builtin.include_tasks: fail2ban.yml
+  when: ssh_hardening_enable_fail2ban | bool
+
+# ============================================
+# Validation
+# ============================================
+
+- name: Include validation tasks
+  ansible.builtin.include_tasks: validate.yml
+
+# ============================================
+# Summary
+# ============================================
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "✅ SSH Hardening Complete: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - ""
+      - "Applied configurations:"
+      - "  • Root login: DISABLED"
+      - "  • Root shell: /bin/nologin"
+      - "  • Password authentication: DISABLED"
+      - "  • SSH key authentication: ENABLED"
+      - "  • Empty passwords: DISABLED"
+      - "  • X11 forwarding: DISABLED"
+      - "{{ '  • Fail2ban: ENABLED' if ssh_hardening_enable_fail2ban else '  • Fail2ban: SKIPPED' }}"
+      - ""
+      - "⚠️  IMPORTANT: Verify SSH access works before logout!"
+      - "Test: ssh -i ~/.ssh/ccdc_rsa sysadmin@{{ ansible_host }}"

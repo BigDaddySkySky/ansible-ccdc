@@ -1,0 +1,85 @@
+---
+# ============================================
+# VALIDATION TASKS
+# ============================================
+# Verify SSH hardening was applied correctly
+# ============================================
+
+- name: Verify root shell is /bin/nologin
+  ansible.builtin.shell: "getent passwd root | cut -d: -f7"
+  register: root_shell_validate
+  changed_when: false
+  failed_when: root_shell_validate.stdout != "/bin/nologin"
+
+- name: Verify PermitRootLogin is disabled
+  ansible.builtin.shell: "grep -E '^PermitRootLogin[[:space:]]+(no|prohibit-password)' {{ ssh_hardening_config_path }}"
+  register: root_login_validate
+  changed_when: false
+  failed_when: root_login_validate.rc != 0
+  become: true
+
+- name: Verify PasswordAuthentication is disabled
+  ansible.builtin.shell: "grep -E '^PasswordAuthentication no' {{ ssh_hardening_config_path }}"
+  register: password_auth_validate
+  changed_when: false
+  failed_when: password_auth_validate.rc != 0
+  when: ssh_hardening_disable_password_auth | bool
+  become: true
+
+- name: Verify PubkeyAuthentication is enabled
+  ansible.builtin.shell: "grep '^PubkeyAuthentication yes' {{ ssh_hardening_config_path }}"
+  register: pubkey_auth_validate
+  changed_when: false
+  failed_when: pubkey_auth_validate.rc != 0
+  become: true
+
+- name: Verify SSH service is running
+  ansible.builtin.systemd:
+    name: "{{ ssh_hardening_service_name }}"
+  register: ssh_service_validate
+  check_mode: false
+  become: true
+
+- name: Display validation results
+  ansible.builtin.debug:
+    msg:
+      - "Validation results:"
+      - "  • Root shell: {{ '✅ /bin/nologin' if root_shell_validate.stdout == '/bin/nologin' else '❌ NOT CHANGED' }}"
+      - "  • Root login disabled: {{ '✅' if root_login_validate.rc == 0 else '❌' }}"
+      - "{{ '  • Password auth disabled: ' + ('✅' if password_auth_validate.rc == 0 else '❌') if ssh_hardening_disable_password_auth else '' }}"
+      - "  • Pubkey auth enabled: {{ '✅' if pubkey_auth_validate.rc == 0 else '❌' }}"
+      - "  • SSH service running: {{ '✅' if ssh_service_validate.status.ActiveState == 'active' else '❌' }}"
+
+- name: Test SSH connectivity from localhost
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    state: started
+    delay: 0
+    timeout: 10
+  delegate_to: localhost
+  become: false
+  register: ssh_connectivity
+
+- name: Display connectivity test result
+  ansible.builtin.debug:
+    msg: "{{ '✅ SSH port 22 responding' if ssh_connectivity is success else '❌ SSH connectivity failed' }}"
+
+- name: Final validation summary
+  ansible.builtin.debug:
+    msg:
+      - ""
+      - "╔══════════════════════════════════════════╗"
+      - "║   VALIDATION COMPLETE                    ║"
+      - "╚══════════════════════════════════════════╝"
+      - ""
+      - "All security checks passed! SSH hardening successful."
+      - ""
+      - "⚠️  CRITICAL: Test SSH access NOW before logout!"
+      - ""
+      - "From control node, run:"
+      - "  ssh -i ~/.ssh/ccdc_rsa {{ ansible_user }}@{{ ansible_host }}"
+      - ""
+      - "If locked out, revert VM to snapshot and:"
+      - "  1. Ensure SSH keys are installed first"
+      - "  2. Re-run hardening with keys in place"
