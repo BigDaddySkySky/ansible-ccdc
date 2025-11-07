@@ -1,0 +1,25 @@
+---
+# ============================================
+# AUDITD ROLE - HANDLERS
+# ============================================
+# Service restart and rule reload handlers
+# ============================================
+
+- name: reload auditd
+  ansible.builtin.systemd:
+    name: "{{ auditd_service_name }}"
+    state: reloaded
+  listen: restart auditd
+  become: true
+
+- name: reload auditd rules
+  ansible.builtin.shell: "augenrules --load"
+  listen: reload auditd rules
+  changed_when: true
+  become: true
+
+- name: flush auditd cache
+  ansible.builtin.command: "auditctl -D"
+  listen: flush auditd cache
+  changed_when: true
+  become: true

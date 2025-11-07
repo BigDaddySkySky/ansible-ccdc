@@ -1,0 +1,63 @@
+---
+# ============================================
+# AUDITD PRE-FLIGHT CHECKS
+# ============================================
+# Verify prerequisites before installation
+# ============================================
+
+- name: Detect operating system family
+  ansible.builtin.debug:
+    msg: "OS Family: {{ ansible_os_family }}, Distribution: {{ ansible_distribution }}"
+
+- name: Verify supported operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family in ['Debian', 'RedHat']
+    fail_msg: "Unsupported OS family: {{ ansible_os_family }}"
+    success_msg: "✅ Supported OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: Check if auditd is already installed
+  ansible.builtin.command: "which auditd"
+  register: auditd_check
+  changed_when: false
+  failed_when: false
+
+- name: Display auditd status
+  ansible.builtin.debug:
+    msg: "{{ 'Auditd already installed' if auditd_check.rc == 0 else 'Auditd not found (will install)' }}"
+
+- name: Check available disk space for logs
+  ansible.builtin.shell: "df -BM /var/log | tail -1 | awk '{print $4}' | sed 's/M//'"
+  register: disk_space_check
+  changed_when: false
+
+- name: Display disk space
+  ansible.builtin.debug:
+    msg: "Available space in /var/log: {{ disk_space_check.stdout }} MB"
+
+- name: Warn if low disk space
+  ansible.builtin.debug:
+    msg:
+      - "⚠️  WARNING: Low disk space in /var/log!"
+      - "   Available: {{ disk_space_check.stdout }} MB"
+      - "   Recommended: 500+ MB for audit logs"
+  when: disk_space_check.stdout | int < 500
+
+- name: Create evidence collection directory
+  ansible.builtin.file:
+    path: "{{ auditd_evidence_dir }}"
+    state: directory
+    mode: '0750'
+    owner: root
+    group: root
+  when: auditd_enable_evidence_collection | bool
+  become: true
+
+- name: Display pre-flight summary
+  ansible.builtin.debug:
+    msg:
+      - "Pre-flight checks complete:"
+      - "  • OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      - "  • Disk space: {{ disk_space_check.stdout }} MB available"
+      - "{{ '  • Evidence directory: ' ~ auditd_evidence_dir if auditd_enable_evidence_collection else '' }}"
+      - "  • Ready for installation"

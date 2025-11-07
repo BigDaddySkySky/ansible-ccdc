@@ -1,0 +1,82 @@
+---
+# ============================================
+# AUDITD MONITORING ROLE - MAIN TASKS
+# ============================================
+# Purpose: Install and configure auditd for intrusion detection
+# Priority: CRITICAL (defense-in-depth layer)
+# Testing: Always test on VM snapshot first!
+# ============================================
+
+- name: Display auditd monitoring header
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "📊 Auditd Monitoring: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================
+# Pre-flight Checks
+# ============================================
+
+- name: Include pre-flight checks
+  ansible.builtin.include_tasks: preflight.yml
+
+# ============================================
+# Installation
+# ============================================
+
+- name: Include installation tasks
+  ansible.builtin.include_tasks: install.yml
+  when: auditd_enabled | bool
+
+# ============================================
+# Configuration
+# ============================================
+
+- name: Include configuration tasks
+  ansible.builtin.include_tasks: configure.yml
+  when: auditd_enabled | bool
+
+# ============================================
+# Discord Integration (Optional)
+# ============================================
+
+- name: Include Discord alert configuration
+  ansible.builtin.include_tasks: discord_alerts.yml
+  when:
+    - auditd_enabled | bool
+    - auditd_enable_discord_alerts | bool
+    - vault_discord_webhook_url is defined
+    - vault_discord_webhook_url != ""
+
+# ============================================
+# Validation
+# ============================================
+
+- name: Include validation tasks
+  ansible.builtin.include_tasks: validate.yml
+  when: auditd_enabled | bool
+
+# ============================================
+# Summary
+# ============================================
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "✅ Auditd Monitoring Complete: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - ""
+      - "Applied configurations:"
+      - "  • Service: ACTIVE"
+      - "  • File integrity monitoring: ENABLED"
+      - "  • Privilege escalation detection: ENABLED"
+      - "  • Authentication tracking: ENABLED"
+      - "{{ '  • Discord alerts: ENABLED' if auditd_enable_discord_alerts else '  • Discord alerts: DISABLED' }}"
+      - "{{ '  • Evidence collection: ENABLED' if auditd_enable_evidence_collection else '  • Evidence collection: DISABLED' }}"
+      - ""
+      - "Log file: {{ auditd_log_file }}"
+      - "Rules loaded: Check with 'auditctl -l'"
+      - ""
+      - "⚠️  Monitor audit logs: tail -f {{ auditd_log_file }}"

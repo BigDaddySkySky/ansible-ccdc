@@ -1,0 +1,116 @@
+---
+# ============================================
+# AUDITD VALIDATION TASKS
+# ============================================
+# Verify auditd is running and rules are loaded
+# ============================================
+
+- name: Check auditd service status
+  ansible.builtin.systemd:
+    name: "{{ auditd_service_name }}"
+  register: auditd_status_check
+  failed_when: auditd_status_check.status.ActiveState != "active"
+  become: true
+
+- name: Display service status
+  ansible.builtin.debug:
+    msg: "✅ Auditd service: {{ auditd_status_check.status.ActiveState | upper }}"
+
+- name: Verify audit rules are loaded
+  ansible.builtin.command: "auditctl -l"
+  register: audit_rules_loaded
+  changed_when: false
+  failed_when: audit_rules_loaded.stdout | length == 0
+  become: true
+
+- name: Count loaded rules
+  ansible.builtin.set_fact:
+    loaded_rules_count: "{{ audit_rules_loaded.stdout_lines | length }}"
+
+- name: Display loaded rules count
+  ansible.builtin.debug:
+    msg: "✅ Audit rules loaded: {{ loaded_rules_count }}"
+
+- name: Verify critical file watches are active
+  ansible.builtin.shell: "auditctl -l | grep -E '(sshd_config|passwd|shadow|sudoers)' | wc -l"
+  register: critical_watches
+  changed_when: false
+  become: true
+
+- name: Display critical watches
+  ansible.builtin.debug:
+    msg: "✅ Critical file watches: {{ critical_watches.stdout }}"
+
+- name: Check audit log file exists and is writable
+  ansible.builtin.stat:
+    path: "{{ auditd_log_file }}"
+  register: audit_log_stat
+  become: true
+
+- name: Verify audit log
+  ansible.builtin.assert:
+    that:
+      - audit_log_stat.stat.exists
+      - audit_log_stat.stat.isreg
+    fail_msg: "Audit log file does not exist or is not a regular file"
+    success_msg: "✅ Audit log: {{ auditd_log_file }}"
+
+- name: Check recent audit events
+  ansible.builtin.shell: "ausearch -ts recent | head -20"
+  register: recent_events
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Display recent events sample
+  ansible.builtin.debug:
+    msg:
+      - "Recent audit events (sample):"
+      - "{{ recent_events.stdout_lines[:5] | map('regex_replace', '^', '  ') | list }}"
+  when: recent_events.stdout_lines | length > 0
+
+- name: Verify evidence collection directory (if enabled)
+  ansible.builtin.stat:
+    path: "{{ auditd_evidence_dir }}"
+  register: evidence_dir_stat
+  when: auditd_enable_evidence_collection | bool
+
+- name: Display evidence directory status
+  ansible.builtin.debug:
+    msg: "{{ '✅ Evidence directory: ' ~ auditd_evidence_dir if evidence_dir_stat.stat.exists else '⚠️  Evidence directory not found' }}"
+  when: auditd_enable_evidence_collection | bool
+
+- name: Test audit event generation
+  ansible.builtin.command: "auditctl -m 'CCDC Auditd validation test'"
+  register: test_event
+  changed_when: false
+  become: true
+
+- name: Display test event result
+  ansible.builtin.debug:
+    msg: "✅ Test event generated successfully"
+  when: test_event.rc == 0
+
+- name: Final validation summary
+  ansible.builtin.debug:
+    msg:
+      - ""
+      - "╔══════════════════════════════════════════╗"
+      - "║   AUDITD VALIDATION COMPLETE             ║"
+      - "╚══════════════════════════════════════════╝"
+      - ""
+      - "Service: {{ auditd_status_check.status.ActiveState | upper }}"
+      - "Rules loaded: {{ loaded_rules_count }}"
+      - "Critical watches: {{ critical_watches.stdout }}"
+      - "Log file: {{ auditd_log_file }} ({{ (audit_log_stat.stat.size / 1024 / 1024) | round(2) }} MB)"
+      - ""
+      - "⚠️  Monitor audit logs:"
+      - "  tail -f {{ auditd_log_file }}"
+      - ""
+      - "View loaded rules:"
+      - "  auditctl -l"
+      - ""
+      - "Search events:"
+      - "  ausearch -ts recent"
+      - "  ausearch -k file_integrity"
+      - "  ausearch -k privilege_escalation"
