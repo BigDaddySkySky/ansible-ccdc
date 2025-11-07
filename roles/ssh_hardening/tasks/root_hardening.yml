@@ -5,11 +5,14 @@
 # Disable root login and change shell
 # ============================================
 
+# NOTE: PermitRootLogin is handled in sshd_config.yml
+
 - name: Get current root shell
   ansible.builtin.shell: "getent passwd root | cut -d: -f7"
   register: root_shell_before
   changed_when: false
   check_mode: false
+  become: true
 
 - name: Display current root shell
   ansible.builtin.debug:
@@ -33,6 +36,7 @@
   changed_when: false
   check_mode: false
   failed_when: root_shell_after.stdout != "/bin/nologin"
+  become: true
 
 - name: Lock root account (disable password login)
   ansible.builtin.user:
@@ -52,7 +56,7 @@
     msg:
       - "Root account hardening complete:"
       - "  • Shell: {{ root_shell_before.stdout }} → /bin/nologin"
-      - "  • Direct login: DISABLED"
+      - "  • Direct login: DISABLED (via sshd_config)"
       - "{{ '  • Password lock: ENABLED' if ssh_hardening_lock_root_account else '  • Password lock: SKIPPED' }}"
       - ""
       - "ℹ️  Root access via: sudo -i (from {{ ansible_user }})"

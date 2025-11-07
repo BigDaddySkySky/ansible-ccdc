@@ -22,18 +22,18 @@
   ansible.builtin.include_tasks: preflight.yml
 
 # ============================================
-# Root Account Hardening
+# Root Account Hardening (User settings)
 # ============================================
 
 - name: Include root hardening tasks
   ansible.builtin.include_tasks: root_hardening.yml
 
 # ============================================
-# SSH Configuration
+# SSH Configuration (File settings)
 # ============================================
 
-- name: Include SSH configuration tasks
-  ansible.builtin.include_tasks: ssh_config.yml
+- name: Include SSH daemon configuration tasks
+  ansible.builtin.include_tasks: sshd_config.yml
 
 # ============================================
 # Fail2ban Installation & Configuration
@@ -64,10 +64,10 @@
       - "Applied configurations:"
       - "  • Root login: DISABLED"
       - "  • Root shell: /bin/nologin"
-      - "  • Password authentication: DISABLED"
+      - "  • Password authentication: {{ 'DISABLED' if ssh_hardening_disable_password_auth else 'ENABLED' }}"
       - "  • SSH key authentication: ENABLED"
       - "  • Empty passwords: DISABLED"
-      - "  • X11 forwarding: DISABLED"
+      - "  • X11 forwarding: {{ 'DISABLED' if ssh_hardening_disable_x11 else 'ENABLED' }}"
       - "{{ '  • Fail2ban: ENABLED' if ssh_hardening_enable_fail2ban else '  • Fail2ban: SKIPPED' }}"
       - ""
       - "⚠️  IMPORTANT: Verify SSH access works before logout!"
