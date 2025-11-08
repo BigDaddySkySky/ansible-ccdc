@@ -5,10 +5,10 @@
 # Service restart and rule reload handlers
 # ============================================
 
-- name: reload auditd
+- name: restart auditd
   ansible.builtin.systemd:
     name: "{{ auditd_service_name }}"
-    state: reloaded
+    state: restarted
   listen: restart auditd
   become: true
 

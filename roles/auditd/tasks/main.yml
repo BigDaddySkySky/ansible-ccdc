@@ -1,10 +1,9 @@
 ---
 # ============================================
-# AUDITD MONITORING ROLE - MAIN TASKS
+# AUDITD MONITORING ROLE - MAIN TASKS (SPRINT 4)
 # ============================================
-# Purpose: Install and configure auditd for intrusion detection
-# Priority: CRITICAL (defense-in-depth layer)
-# Testing: Always test on VM snapshot first!
+# NOTE: Pre-flight and Validation are handled
+# by common_preflight and common_validation
 # ============================================
 
 - name: Display auditd monitoring header
@@ -13,13 +12,6 @@
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       - "📊 Auditd Monitoring: {{ inventory_hostname }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-# ============================================
-# Pre-flight Checks
-# ============================================
-
-- name: Include pre-flight checks
-  ansible.builtin.include_tasks: preflight.yml
 
 # ============================================
 # Installation
@@ -50,14 +42,6 @@
     - vault_discord_webhook_url != ""
 
 # ============================================
-# Validation
-# ============================================
-
-- name: Include validation tasks
-  ansible.builtin.include_tasks: validate.yml
-  when: auditd_enabled | bool
-
-# ============================================
 # Summary
 # ============================================
 
@@ -67,16 +51,3 @@
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       - "✅ Auditd Monitoring Complete: {{ inventory_hostname }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      - ""
-      - "Applied configurations:"
-      - "  • Service: ACTIVE"
-      - "  • File integrity monitoring: ENABLED"
-      - "  • Privilege escalation detection: ENABLED"
-      - "  • Authentication tracking: ENABLED"
-      - "{{ '  • Discord alerts: ENABLED' if auditd_enable_discord_alerts else '  • Discord alerts: DISABLED' }}"
-      - "{{ '  • Evidence collection: ENABLED' if auditd_enable_evidence_collection else '  • Evidence collection: DISABLED' }}"
-      - ""
-      - "Log file: {{ auditd_log_file }}"
-      - "Rules loaded: Check with 'auditctl -l'"
-      - ""
-      - "⚠️  Monitor audit logs: tail -f {{ auditd_log_file }}"

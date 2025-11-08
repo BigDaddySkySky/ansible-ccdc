@@ -1,10 +1,9 @@
 ---
 # ============================================
-# FIREWALL HARDENING ROLE - MAIN TASKS
+# FIREWALL HARDENING ROLE - MAIN TASKS (SPRINT 4)
 # ============================================
-# Purpose: Configure host-based firewall for CCDC competition
-# Priority: CRITICAL (second only to SSH hardening)
-# Testing: Always test on VM snapshot first!
+# NOTE: Pre-flight and Validation are handled
+# by common_preflight and common_validation
 # ============================================
 
 - name: Display firewall hardening header
@@ -14,13 +13,6 @@
       - "🔥 Firewall Hardening: {{ inventory_hostname }}"
       - "Backend: {{ firewall_backend }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-# ============================================
-# Pre-flight Checks
-# ============================================
-
-- name: Include pre-flight checks
-  ansible.builtin.include_tasks: preflight.yml
 
 # ============================================
 # Kernel Security Settings
@@ -51,13 +43,6 @@
     - firewall_enabled | bool
 
 # ============================================
-# Validation
-# ============================================
-
-- name: Include validation tasks
-  ansible.builtin.include_tasks: validate.yml
-
-# ============================================
 # Summary
 # ============================================
 
@@ -67,14 +52,3 @@
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       - "✅ Firewall Hardening Complete: {{ inventory_hostname }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      - ""
-      - "Configuration applied:"
-      - "  • Backend: {{ firewall_backend }}"
-      - "  • Default incoming: {{ firewall_default_incoming | upper }}"
-      - "  • Default outgoing: {{ firewall_default_outgoing | upper }}"
-      - "  • Scored services: {{ firewall_scored_services | length }}"
-      - "{{ '  • Rate limiting: ENABLED' if firewall_enable_rate_limiting else '  • Rate limiting: DISABLED' }}"
-      - "{{ '  • Logging: ' ~ firewall_log_level | upper if firewall_enable_logging else '  • Logging: DISABLED' }}"
-      - ""
-      - "⚠️  IMPORTANT: Verify services are still accessible!"
-      - "Test: curl http://{{ ansible_host }}"

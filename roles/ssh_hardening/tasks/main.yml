@@ -1,10 +1,9 @@
 ---
 # ============================================
-# SSH HARDENING ROLE - MAIN TASKS
+# SSH HARDENING ROLE - MAIN TASKS (SPRINT 4)
 # ============================================
-# Purpose: Secure SSH configuration for CCDC competition
-# Priority: CRITICAL (SSH is primary access vector)
-# Testing: Always test on VM snapshot first!
+# NOTE: Pre-flight and Validation are handled
+# by common_preflight and common_validation
 # ============================================
 
 - name: Display SSH hardening header
@@ -13,13 +12,6 @@
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       - "🔐 SSH Hardening: {{ inventory_hostname }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-# ============================================
-# Pre-flight Checks
-# ============================================
-
-- name: Include pre-flight checks
-  ansible.builtin.include_tasks: preflight.yml
 
 # ============================================
 # Root Account Hardening (User settings)
@@ -44,13 +36,6 @@
   when: ssh_hardening_enable_fail2ban | bool
 
 # ============================================
-# Validation
-# ============================================
-
-- name: Include validation tasks
-  ansible.builtin.include_tasks: validate.yml
-
-# ============================================
 # Summary
 # ============================================
 
@@ -60,15 +45,3 @@
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       - "✅ SSH Hardening Complete: {{ inventory_hostname }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      - ""
-      - "Applied configurations:"
-      - "  • Root login: DISABLED"
-      - "  • Root shell: /bin/nologin"
-      - "  • Password authentication: {{ 'DISABLED' if ssh_hardening_disable_password_auth else 'ENABLED' }}"
-      - "  • SSH key authentication: ENABLED"
-      - "  • Empty passwords: DISABLED"
-      - "  • X11 forwarding: {{ 'DISABLED' if ssh_hardening_disable_x11 else 'ENABLED' }}"
-      - "{{ '  • Fail2ban: ENABLED' if ssh_hardening_enable_fail2ban else '  • Fail2ban: SKIPPED' }}"
-      - ""
-      - "⚠️  IMPORTANT: Verify SSH access works before logout!"
-      - "Test: ssh -i ~/.ssh/ccdc_rsa sysadmin@{{ ansible_host }}"

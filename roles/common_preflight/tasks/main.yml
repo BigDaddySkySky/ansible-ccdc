@@ -1,0 +1,60 @@
+---
+# ============================================
+# COMMON PRE-FLIGHT CHECKS
+# ============================================
+# Purpose: Check host state before running any hardening
+# ============================================
+
+- name: Display pre-flight header
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "🛡️  Common Pre-Flight: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+- name: Check Ansible version on control node
+  ansible.builtin.assert:
+    that:
+      - ansible_version.major >= 2
+      - ansible_version.minor >= 15
+    fail_msg: "❌ Ansible 2.15+ required (found {{ ansible_version.full }})"
+    success_msg: "✅ Ansible {{ ansible_version.full }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Detect operating system family
+  ansible.builtin.debug:
+    msg: "OS Family: {{ ansible_os_family }}, Distribution: {{ ansible_distribution }}"
+
+- name: Verify supported operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family in ['Debian', 'RedHat']
+    fail_msg: "❌ Unsupported OS family: {{ ansible_os_family }}"
+    success_msg: "✅ Supported OS: {{ ansible_distribution }}"
+
+- name: Ping test (check basic connectivity)
+  ansible.builtin.ping:
+  register: ping_result
+
+- name: Test sudo access (whoami)
+  ansible.builtin.command: whoami
+  become: true
+  changed_when: false
+  register: sudo_test
+
+- name: Verify sudo access
+  ansible.builtin.assert:
+    that:
+      - sudo_test.rc == 0
+      - sudo_test.stdout == 'root'
+    fail_msg: "❌ Sudo test failed! (User: {{ ansible_user }}, Output: {{ sudo_test.stdout }})"
+    success_msg: "✅ Sudo access confirmed ({{ ansible_user }} -> root)"
+
+- name: Display pre-flight summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Pre-flight checks passed for {{ inventory_hostname }}"
+      - "   • OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      - "   • Sudo: OK"
+      - "   • Ready for hardening."
