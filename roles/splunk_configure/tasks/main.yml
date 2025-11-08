@@ -1,0 +1,56 @@
+---
+# ============================================
+# SPLUNK APPLICATION CONFIGURATION
+# ============================================
+# Purpose: Accept license, change password, open firewall
+# ============================================
+
+- name: Display Splunk config header
+  ansible.builtin.debug:
+    msg: "Configuring Splunk application on {{ inventory_hostname }}..."
+
+- name: Open Splunk UI port (8000/tcp) in firewalld
+  ansible.posix.firewalld:
+    port: 8000/tcp
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: public
+  become: true
+
+- name: Accept Splunk license
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
+  become: true
+  become_user: splunk
+  changed_when: "'License accepted' in license_result.stdout"
+  register: license_result
+
+- name: Change default Splunk admin password
+  ansible.builtin.command:
+    cmd: >
+      /opt/splunk/bin/splunk edit user admin 
+      -password "{{ vault_splunk_admin_password }}" 
+      -auth "admin:changeme"
+  become: true
+  become_user: splunk
+  changed_when: "'User admin edited.' in password_result.stdout"
+  register: password_result
+  no_log: true # Hide the password from logs
+
+- name: Verify Splunk is running
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk status
+  become: true
+  become_user: splunk
+  changed_when: false
+
+- name: Display Splunk configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Splunk configuration complete!"
+      - "   • Firewall: Port 8000/tcp OPEN"
+      - "   • License: {{ 'Accepted' if license_result.changed else 'Already accepted' }}"
+      - "   • Admin password: {{ 'Changed' if password_result.changed else 'Already set' }}"
+      - "   • Access UI: http://{{ ansible_host }}:8000"
+      - "   • Login: admin / {{ vault_splunk_admin_password }}"
