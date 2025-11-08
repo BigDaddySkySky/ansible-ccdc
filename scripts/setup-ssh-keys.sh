@@ -25,6 +25,8 @@ VM_PASSWORD="changeme"
 declare -A VMS=(
     ["ubuntu_ecom_vm"]="192.168.1.250"
     ["fedora_webmail_vm"]="192.168.1.251"
+    ["splunk_vm"]="192.168.1.246"
+    ["ubuntu_wkst_vm"]="192.168.1.243"
 )
 
 # Check sshpass is available
