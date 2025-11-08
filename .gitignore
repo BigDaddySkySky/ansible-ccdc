@@ -1,4 +1,6 @@
 # Backup files
+.ansible/
+.venv/
 *.backup
 *.backup.*
 *.bak
