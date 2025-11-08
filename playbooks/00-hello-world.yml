@@ -2,12 +2,12 @@
 - name: Hello World - SSH Test
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Test SSH connectivity
       ansible.builtin.ping:
       register: ping_result
-    
+
     - name: Display result
       ansible.builtin.debug:
         msg: "✅ {{ inventory_hostname }} is reachable!"
@@ -17,7 +17,7 @@
   hosts: localhost
   gather_facts: false
   become: false
-  
+
   tasks:
     - name: Show summary
       ansible.builtin.debug:

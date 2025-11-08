@@ -30,12 +30,12 @@
     - name: Pause for confirmation
       ansible.builtin.pause:
         prompt: |
-          
+
           ⚠️  LAST CHANCE TO ABORT!
-          
+
           Have you created VM snapshots?
           Without snapshots, you cannot rollback if locked out!
-          
+
           Press ENTER to continue, or Ctrl+C to abort
       when: confirm is not defined or confirm != "yes"
 
@@ -55,20 +55,20 @@
     - name: Set ansible_become_password from vault
       ansible.builtin.set_fact:
         ansible_become_password: "{{ vault_host_password }}"
-  
+
   roles:
     - role: common_preflight
       tags: [always]
 
     - role: ssh_hardening
       tags: [ssh]
-    
+
     - role: firewall
       tags: [firewall]
-    
+
     - role: auditd
       tags: [auditd]
-    
+
     - role: common_validation
       tags: [always]
 

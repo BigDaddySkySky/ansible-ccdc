@@ -10,7 +10,7 @@
 - name: Validate Local Control Node
   hosts: localhost
   gather_facts: true
-  
+
   tasks:
     - name: Display header
       ansible.builtin.debug:
@@ -18,7 +18,7 @@
           - "╔══════════════════════════════════════════╗"
           - "║   ENVIRONMENT VALIDATION                 ║"
           - "╚══════════════════════════════════════════╝"
-    
+
     - name: Check Ansible version
       ansible.builtin.assert:
         that:
@@ -26,16 +26,16 @@
           - ansible_version.minor >= 15
         fail_msg: "❌ Ansible 2.15+ required (found {{ ansible_version.full }})"
         success_msg: "✅ Ansible {{ ansible_version.full }}"
-    
+
     - name: Check Python version
       ansible.builtin.command: python3 --version
       register: py_version
       changed_when: false
-    
+
     - name: Display Python version
       ansible.builtin.debug:
         msg: "✅ {{ py_version.stdout }}"
-    
+
     - name: Check virtual environment (recommended)
       ansible.builtin.shell: |
         if [[ -n "$VIRTUAL_ENV" ]]; then
@@ -45,26 +45,26 @@
         fi
       register: venv_check
       changed_when: false
-    
+
     - name: Display venv status
       ansible.builtin.debug:
         msg: "{{ '✅' if 'Active' in venv_check.stdout else '⚠️' }} Virtual environment: {{ venv_check.stdout }}"
-    
+
     - name: Check vault password file
       ansible.builtin.stat:
         path: "{{ lookup('env', 'HOME') }}/.vault_pass"
       register: vault_file
-    
+
     - name: Display vault status
       ansible.builtin.debug:
         msg: "{{ '✅' if vault_file.stat.exists else '❌' }} Vault password file: {{ '~/.vault_pass' if vault_file.stat.exists else 'MISSING' }}"
-    
+
     - name: Check sshpass (needed for password-based SSH)
       ansible.builtin.command: which sshpass
       register: sshpass_check
       changed_when: false
       failed_when: false
-    
+
     - name: Display sshpass status
       ansible.builtin.debug:
         msg: "{{ '✅' if sshpass_check.rc == 0 else '⚠️' }} sshpass: {{ 'installed' if sshpass_check.rc == 0 else 'missing (SSH may fail)' }}"
@@ -74,18 +74,18 @@
   gather_facts: true
   ignore_unreachable: true
   serial: 1  # Check one at a time for clearer output
-  
+
   tasks:
     - name: Ping test
       ansible.builtin.ping:
       register: ping_result
-    
+
     - name: Check Python version on remote
       ansible.builtin.command: python3 --version
       register: remote_py
       changed_when: false
       when: ping_result is success
-    
+
     - name: Check sudo access
       ansible.builtin.command: sudo -n true
       become: true
@@ -93,13 +93,13 @@
       failed_when: false
       register: sudo_check
       when: ping_result is success
-    
+
     - name: Check disk space
       ansible.builtin.shell: df -h / | tail -1 | awk '{print $5}' | sed 's/%//'
       register: disk_check
       changed_when: false
       when: ping_result is success
-    
+
     - name: Display host status
       ansible.builtin.debug:
         msg:
@@ -115,13 +115,13 @@
 - name: Final Summary
   hosts: localhost
   gather_facts: false
-  
+
   tasks:
     - name: Calculate metrics
       ansible.builtin.set_fact:
         total: "{{ groups['all'] | length }}"
         reachable: "{{ ansible_play_hosts_all | length }}"
-    
+
     - name: Display summary
       ansible.builtin.debug:
         msg:

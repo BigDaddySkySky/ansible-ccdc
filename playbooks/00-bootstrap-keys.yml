@@ -32,7 +32,7 @@
   hosts: localhost
   gather_facts: false
   become: false
-  
+
   tasks:
     - name: Display next steps
       ansible.builtin.debug:
