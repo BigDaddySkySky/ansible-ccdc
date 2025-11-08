@@ -5,27 +5,15 @@
 # Intrusion prevention for SSH brute-force attacks
 # ============================================
 
-- name: Install fail2ban (Debian/Ubuntu)
-  ansible.builtin.apt:
-    name: fail2ban
-    state: present
-    update_cache: true
-    cache_valid_time: 3600
+- name: Import Debian fail2ban tasks
+  ansible.builtin.import_tasks: _fail2ban_debian.yml
   when: ansible_os_family == "Debian"
-  register: fail2ban_apt
-  become: true
 
-- name: Install fail2ban (RedHat/Fedora)
-  ansible.builtin.dnf:
-    name: fail2ban
-    state: present
+- name: Import RedHat fail2ban tasks
+  ansible.builtin.import_tasks: _fail2ban_redhat.yml
   when: ansible_os_family == "RedHat"
-  register: fail2ban_dnf
-  become: true
 
-- name: Display fail2ban installation result
-  ansible.builtin.debug:
-    msg: "{{ '✅ fail2ban installed' if (fail2ban_apt is changed or fail2ban_dnf is changed) else '✅ fail2ban already installed' }}"
+# --- Common tasks below ---
 
 - name: Ensure fail2ban configuration directory exists
   ansible.builtin.file:

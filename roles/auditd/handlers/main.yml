@@ -6,10 +6,9 @@
 # ============================================
 
 - name: restart auditd
-  ansible.builtin.systemd:
-    name: "{{ auditd_service_name }}"
-    state: restarted
+  ansible.builtin.command: "killall -SIGHUP auditd"
   listen: restart auditd
+  changed_when: true
   become: true
 
 - name: reload auditd rules

@@ -34,13 +34,16 @@ action = %(action_)s
 enabled = true
 port = ssh
 filter = sshd
-logpath = /var/log/auth.log
 {% if ansible_os_family == "RedHat" %}
-logpath = /var/log/secure
+# RHEL 0 / Oracle 0 use the journald
+backend = systemd
+logpath = systemd-journal
+{% else %}
+# Debian / Ubuntu use auth.log
+backend = auto
+logpath = /var/log/auth.log
 {% endif %}
 maxretry = {{ ssh_hardening_fail2ban_maxretry }}
-bantime = {{ ssh_hardening_fail2ban_bantime }}
-findtime = {{ ssh_hardening_fail2ban_findtime }}
 
 # Use iptables to block offenders
 action = %(action_mwl)s
