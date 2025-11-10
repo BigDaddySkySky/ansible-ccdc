@@ -1,35 +1,140 @@
 ---
-- name: Set Splunk Forwarder package name
-  set_fact:
+- name: Detect system architecture
+  ansible.builtin.set_fact:
+    system_arch: "{{ ansible_architecture }}"
+
+- name: Display detected architecture
+  ansible.builtin.debug:
+    msg: "Detected architecture: {{ system_arch }}"
+
+- name: Set Splunk Forwarder package URL
+  ansible.builtin.set_fact:
     splunk_forwarder_url: >-
       {{ splunk_forwarder_rpm_url if ansible_os_family == 'RedHat'
          else splunk_forwarder_deb_url }}
 
 - name: Set Splunk Forwarder package filename
-  set_fact:
+  ansible.builtin.set_fact:
     splunk_forwarder_pkg: "{{ splunk_forwarder_url | basename }}"
 
+- name: Display download information
+  ansible.builtin.debug:
+    msg:
+      - "Downloading from: {{ splunk_forwarder_url }}"
+      - "Saving to: /tmp/{{ splunk_forwarder_pkg }}"
+
 - name: Download Splunk Universal Forwarder
-  get_url:
+  ansible.builtin.get_url:
     url: "{{ splunk_forwarder_url }}"
     dest: "/tmp/{{ splunk_forwarder_pkg }}"
-
-- name: Install Splunk Universal Forwarder
-  ansible.builtin.package:
-    name: "/tmp/{{ splunk_forwarder_pkg }}"
-    state: present
+    mode: '0644'
+    validate_certs: false
+    timeout: 300
+  register: download_result
   become: true
 
-- name: Accept license and start Splunk Forwarder
-  shell: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
-  become_user: splunk
+- name: Verify download succeeded
+  ansible.builtin.stat:
+    path: "/tmp/{{ splunk_forwarder_pkg }}"
+  register: forwarder_file
+  failed_when: not forwarder_file.stat.exists
+
+- name: Display download result
+  ansible.builtin.debug:
+    msg: "✅ Downloaded: /tmp/{{ splunk_forwarder_pkg }} ({{ forwarder_file.stat.size | human_readable }})"
+
+- name: Install Splunk Universal Forwarder (Debian)
+  ansible.builtin.apt:
+    deb: "/tmp/{{ splunk_forwarder_pkg }}"
+    state: present
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Install Splunk Universal Forwarder (RedHat)
+  ansible.builtin.dnf:
+    name: "/tmp/{{ splunk_forwarder_pkg }}"
+    state: present
+    disable_gpg_check: true
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Check if splunk user exists (created by package)
+  ansible.builtin.getent:
+    database: passwd
+    key: splunk
+  register: splunk_user_check
+  failed_when: false
+
+- name: Display user created by package
+  ansible.builtin.debug:
+    msg: "Splunk user created by package: {{ 'Yes' if splunk_user_check.ansible_facts.getent_passwd.splunk is defined else 'No' }}"
+
+- name: Fix ownership of Splunk Forwarder directory
+  ansible.builtin.file:
+    path: /opt/splunkforwarder
+    state: directory
+    owner: splunk
+    group: splunk
+    recurse: true
+  become: true
+
+- name: Accept license and start Splunk Forwarder (as root initially)
+  ansible.builtin.shell: |
+    /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
   args:
     creates: /opt/splunkforwarder/var/log/splunk/splunkd.log
+  register: splunk_start
+  become: true
+
+- name: Display Splunk start result
+  ansible.builtin.debug:
+    msg: "{{ splunk_start.stdout_lines if splunk_start.stdout_lines is defined else '✅ Splunk Forwarder already running' }}"
+
+- name: Enable Splunk Forwarder boot-start (as splunk user)
+  ansible.builtin.shell: |
+    /opt/splunkforwarder/bin/splunk enable boot-start -user splunk --accept-license --answer-yes --no-prompt
+  args:
+    creates: /etc/init.d/splunk
+  register: boot_start
+  become: true
+  changed_when: "'Configured to start automatically' in boot_start.stdout"
+  failed_when: false
+
+- name: Ensure ownership is correct after boot-start
+  ansible.builtin.file:
+    path: /opt/splunkforwarder
+    state: directory
+    owner: splunk
+    group: splunk
+    recurse: true
+  become: true
+
+- name: Ensure outputs.conf directory exists
+  ansible.builtin.file:
+    path: /opt/splunkforwarder/etc/system/local
+    state: directory
+    owner: splunk
+    group: splunk
+    mode: '0755'
+  become: true
 
 - name: Configure outputs.conf to forward to Splunk indexer
-  ini_file:
+  ansible.builtin.ini_file:
     path: /opt/splunkforwarder/etc/system/local/outputs.conf
-    section: tcpout:group1
+    section: tcpout
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    owner: splunk
+    group: splunk
+    mode: '0600'
+  loop:
+    - { option: defaultGroup, value: "splunk_indexers" }
+  become: true
+
+- name: Configure outputs.conf tcpout group
+  ansible.builtin.ini_file:
+    path: /opt/splunkforwarder/etc/system/local/outputs.conf
+    section: tcpout:splunk_indexers
     option: "{{ item.option }}"
     value: "{{ item.value }}"
     owner: splunk
@@ -37,32 +142,59 @@
     mode: '0600'
   loop:
     - { option: server, value: "{{ hostvars['splunk_vm']['ansible_host'] }}:9997" }
-    - { option: sslCertPath, value: /opt/splunkforwarder/etc/auth/mycerts/mySplunkCert.pem }
-    - { option: sslVerifyServerCert, value: false }
+  become: true
+  notify: restart splunk forwarder
+
+- name: Ensure inputs.conf directory exists
+  ansible.builtin.file:
+    path: /opt/splunkforwarder/etc/system/local
+    state: directory
+    owner: splunk
+    group: splunk
+    mode: '0755'
+  become: true
 
 - name: Configure inputs.conf to monitor critical logs
   block:
     - name: Monitor audit.log
-      ini_file:
+      ansible.builtin.ini_file:
         path: /opt/splunkforwarder/etc/system/local/inputs.conf
         section: monitor:///var/log/audit/audit.log
         option: disabled
-        value: 0
+        value: "0"
+        owner: splunk
+        group: splunk
+        mode: '0600'
+      become: true
+
     - name: Monitor auth.log (Debian)
-      ini_file:
+      ansible.builtin.ini_file:
         path: /opt/splunkforwarder/etc/system/local/inputs.conf
         section: monitor:///var/log/auth.log
         option: disabled
-        value: 0
+        value: "0"
+        owner: splunk
+        group: splunk
+        mode: '0600'
       when: ansible_os_family == "Debian"
+      become: true
+
     - name: Monitor secure (RedHat)
-      ini_file:
+      ansible.builtin.ini_file:
         path: /opt/splunkforwarder/etc/system/local/inputs.conf
         section: monitor:///var/log/secure
         option: disabled
-        value: 0
+        value: "0"
+        owner: splunk
+        group: splunk
+        mode: '0600'
       when: ansible_os_family == "RedHat"
+      become: true
+  notify: restart splunk forwarder
 
-- name: Restart Splunk Forwarder
-  shell: /opt/splunkforwarder/bin/splunk restart
-  become_user: splunk
+- name: Display configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Splunk Universal Forwarder configured"
+      - "   • Forwarding to: {{ hostvars['splunk_vm']['ansible_host'] }}:9997"
+      - "   • Monitoring: audit.log, {{ 'auth.log' if ansible_os_family == 'Debian' else 'secure' }}"
