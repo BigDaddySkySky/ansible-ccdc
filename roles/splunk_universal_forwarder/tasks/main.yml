@@ -1,0 +1,68 @@
+---
+- name: Set Splunk Forwarder package name
+  set_fact:
+    splunk_forwarder_url: >-
+      {{ splunk_forwarder_rpm_url if ansible_os_family == 'RedHat'
+         else splunk_forwarder_deb_url }}
+
+- name: Set Splunk Forwarder package filename
+  set_fact:
+    splunk_forwarder_pkg: "{{ splunk_forwarder_url | basename }}"
+
+- name: Download Splunk Universal Forwarder
+  get_url:
+    url: "{{ splunk_forwarder_url }}"
+    dest: "/tmp/{{ splunk_forwarder_pkg }}"
+
+- name: Install Splunk Universal Forwarder
+  ansible.builtin.package:
+    name: "/tmp/{{ splunk_forwarder_pkg }}"
+    state: present
+  become: true
+
+- name: Accept license and start Splunk Forwarder
+  shell: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
+  become_user: splunk
+  args:
+    creates: /opt/splunkforwarder/var/log/splunk/splunkd.log
+
+- name: Configure outputs.conf to forward to Splunk indexer
+  ini_file:
+    path: /opt/splunkforwarder/etc/system/local/outputs.conf
+    section: tcpout:group1
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    owner: splunk
+    group: splunk
+    mode: '0600'
+  loop:
+    - { option: server, value: "{{ hostvars['splunk_vm']['ansible_host'] }}:9997" }
+    - { option: sslCertPath, value: /opt/splunkforwarder/etc/auth/mycerts/mySplunkCert.pem }
+    - { option: sslVerifyServerCert, value: false }
+
+- name: Configure inputs.conf to monitor critical logs
+  block:
+    - name: Monitor audit.log
+      ini_file:
+        path: /opt/splunkforwarder/etc/system/local/inputs.conf
+        section: monitor:///var/log/audit/audit.log
+        option: disabled
+        value: 0
+    - name: Monitor auth.log (Debian)
+      ini_file:
+        path: /opt/splunkforwarder/etc/system/local/inputs.conf
+        section: monitor:///var/log/auth.log
+        option: disabled
+        value: 0
+      when: ansible_os_family == "Debian"
+    - name: Monitor secure (RedHat)
+      ini_file:
+        path: /opt/splunkforwarder/etc/system/local/inputs.conf
+        section: monitor:///var/log/secure
+        option: disabled
+        value: 0
+      when: ansible_os_family == "RedHat"
+
+- name: Restart Splunk Forwarder
+  shell: /opt/splunkforwarder/bin/splunk restart
+  become_user: splunk

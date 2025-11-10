@@ -1,0 +1,12 @@
+---
+- name: restart splunk safely
+  ansible.builtin.shell: |
+    /opt/splunk/bin/splunk stop
+    sleep 5
+    /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
+  become: true
+  become_user: splunk
+  register: splunk_restart
+  changed_when: "'Starting splunk server daemon' in splunk_restart.stdout"
+  failed_when: splunk_restart.rc != 0 and "'web interface does not seem to be available!'" not in splunk_restart.stdout
+

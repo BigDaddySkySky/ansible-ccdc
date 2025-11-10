@@ -1,0 +1,104 @@
+---
+# ============================================
+# SPLUNK APPLICATION CONFIGURATION
+# ============================================
+# Purpose: Accept license, change password, open firewall
+# ============================================
+
+- name: Display Splunk config header
+  ansible.builtin.debug:
+    msg: "Configuring Splunk application on {{ inventory_hostname }}..."
+
+- name: Open Splunk UI port (8000/tcp) in firewalld
+  ansible.posix.firewalld:
+    port: 8000/tcp
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: public
+  become: true
+
+# --- NEW TASK: Kill any lingering Splunk processes ---
+- name: Stop and kill all lingering Splunk processes
+  ansible.builtin.shell: |
+    /opt/splunk/bin/splunk stop
+    killall -9 splunkd splunk
+  register: kill_result
+  changed_when: kill_result.rc == 0
+  failed_when: false # Don't fail if processes don't exist
+  become: true
+
+- name: Ensure correct file ownership for Splunk (pre-start)
+  ansible.builtin.file:
+    path: /opt/splunk
+    state: directory
+    owner: splunk
+    group: splunk
+    recurse: true
+  become: true
+
+# --- TASK 2: Run 'splunk start' as SPLUNK user ---
+- name: Accept Splunk license (and create splunk user)
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
+  become: true
+  become_user: splunk
+  changed_when: "'License accepted' in license_result.stdout"
+  register: license_result
+
+# --- TASK 3: Wait for Splunkd to be ready ---
+- name: Wait for Splunkd (port 8089) to be ready
+  ansible.builtin.wait_for:
+    port: 8089
+    host: "{{ ansible_host | default('127.0.0.1') }}"
+    state: started
+    delay: 10
+    timeout: 120
+  become: false
+
+# --- TASK 4: Change Password as SPLUNK ---
+- name: Change default Splunk admin password via REST API
+  ansible.builtin.uri:
+    url: "https://127.0.0.1:8089/services/authentication/users/admin"
+    method: POST
+    user: admin
+    password: changemenow  # ← current known password
+    body_format: form-urlencoded
+    body:
+      password: "{{ vault_splunk_admin_password }}"
+      oldpassword: "changemenow"
+    force_basic_auth: yes
+    validate_certs: no
+    status_code: 200
+  register: password_result
+  changed_when: true
+#  no_log: true # You can re-enable this now
+
+- name: Verify new Splunk admin password works
+  ansible.builtin.uri:
+    url: "https://127.0.0.1:8089/services/server/info"
+    method: GET
+    user: admin
+    password: "{{ vault_splunk_admin_password }}"
+    force_basic_auth: yes
+    validate_certs: no
+    status_code: 200
+  register: verify_result
+  changed_when: false
+
+- name: Verify Splunk is running
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk status
+  become: true
+  become_user: splunk
+  changed_when: false
+
+- name: Display Splunk configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Splunk configuration complete!"
+      - "   • Firewall: Port 8000/tcp OPEN"
+      - "   • License: {{ 'Accepted' if license_result.changed else 'Already accepted' }}"
+      - "   • Admin password: {{ 'Changed' if password_result.changed else 'Already set' }}"
+      - "   • Access UI: http://{{ ansible_host }}:8000"
+      - "   • Login: admin / {{ vault_splunk_admin_password }}"
