@@ -1,42 +1,42 @@
-competition_team_number: 21   # lab default, script can overwrite this later
+competition_team_number: 21 # lab default, script can overwrite this later
 
 # Linux LAN
 linux_lan_cidr: 172.20.242.0/24
 
-ecom_private_ip:    172.20.242.104
-ecom_public_ip:     172.25.21.11
+ecom_private_ip: 172.20.242.104
+ecom_public_ip: 172.25.21.11
 
 webmail_private_ip: 172.20.242.101
-webmail_public_ip:  172.25.21.39
+webmail_public_ip: 172.25.21.39
 
-splunk_private_ip:  172.20.242.20
-splunk_public_ip:   172.25.21.9
+splunk_private_ip: 172.20.242.20
+splunk_public_ip: 172.25.21.9
 
-ubuntu_wks_subnet:  172.20.242.0/24   # where your mgmt workstation lives
+ubuntu_wks_subnet: 172.20.242.0/24 # where your mgmt workstation lives
 
 # Windows / FTD side (Needed for Palo Alto routing)
-win_lan_cidr:       172.20.240.0/24
+win_lan_cidr: 172.20.240.0/24
 
-ad_private_ip:      172.20.240.102
-ad_public_ip:       172.25.21.155
+ad_private_ip: 172.20.240.102
+ad_public_ip: 172.25.21.155
 
 win_web_private_ip: 172.20.240.101
-win_web_public_ip:  172.25.21.140
+win_web_public_ip: 172.25.21.140
 
-ftp_private_ip:     172.20.240.104
-ftp_public_ip:      172.25.21.162
+ftp_private_ip: 172.20.240.104
+ftp_public_ip: 172.25.21.162
 
 win_wks_private_ip: 172.20.240.100
-win_wks_public_ip:  172.25.21.144
+win_wks_public_ip: 172.25.21.144
 
 # Firewall infra
-palo_inside_ip:     172.20.242.254   # to Linux LAN
-palo_outside_ip:    172.16.101.254   # to VyOS
-palo_mgmt_ip:       172.20.242.150
+palo_inside_ip: 172.20.242.254 # to Linux LAN
+palo_outside_ip: 172.16.101.254 # to VyOS
+palo_mgmt_ip: 172.20.242.150
 
-ftd_inside_ip:      172.20.240.254
-ftd_outside_ip:     172.16.102.254
+ftd_inside_ip: 172.20.240.254
+ftd_outside_ip: 172.16.102.254
 
-vyos_net1_ip:       172.16.101.1
-vyos_net2_ip:       172.16.102.1
-vyos_wan_ip:        172.31.21.2
+vyos_net1_ip: 172.16.101.1
+vyos_net2_ip: 172.16.102.1
+vyos_wan_ip: 172.31.21.2

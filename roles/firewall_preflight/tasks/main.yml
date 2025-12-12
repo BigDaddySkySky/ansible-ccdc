@@ -1,12 +1,15 @@
----
 # FIREWALL PREFLIGHT (READ-ONLY)
 
 - name: Detect firewall backend
   ansible.builtin.set_fact:
     firewall_preflight_backend: >-
-      {{ 'firewalld' if (ansible_facts.packages['firewalld'] is defined or (ansible_facts.services|default({})).get('firewalld.service')) else
-         'ufw' if (ansible_facts.packages['ufw'] is defined or (ansible_facts.services|default({})).get('ufw.service')) else
-         'none' }}
+      {{ 'firewalld'
+         if (ansible_facts.packages['firewalld'] is defined
+             or (ansible_facts.services | default({})).get('firewalld.service'))
+         else 'ufw'
+         if (ansible_facts.packages['ufw'] is defined
+             or (ansible_facts.services | default({})).get('ufw.service'))
+         else 'none' }}
 
 - name: Get firewalld default zone
   ansible.builtin.command: firewall-cmd --get-default-zone
@@ -79,7 +82,10 @@
       firewalld:
         default_zone: "{{ firewall_preflight_default_zone | default(omit) }}"
         state: "{{ firewall_preflight_firewalld_state.stdout | default('unknown') }}"
-        open_ports: "{{ firewall_preflight_firewalld_ports.stdout.split() if firewall_preflight_firewalld_ports.stdout is defined else [] }}"
+        open_ports: >-
+          {{ firewall_preflight_firewalld_ports.stdout.split()
+             if firewall_preflight_firewalld_ports.stdout is defined
+             else [] }}
       ufw:
         raw_rules: "{{ firewall_preflight_ufw_rules.stdout_lines | default([]) }}"
       ip_forward_ipv4: "{{ firewall_preflight_ip_forward.stdout | default('0') }}"

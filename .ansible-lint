@@ -1,12 +1,11 @@
 warn_list:
-  - fqcn-builtins  # allow short module names for speed under competition
+  - fqcn-builtins # allow short module names for speed under competition
+
 skip_list:
-  - experimental  # avoid nonessential checks
-  - no-changed-when  # many commands are intentional
-  - var-naming  # allow existing vars
-parser:
-  yaml:
-    allow_duplicate_keys: false
-    relaxed_strings: true
+  - experimental # avoid nonessential checks
+  - no-changed-when # many commands are intentional
+  - var-naming # allow existing vars
+  - yaml[document-start]
+
 enable_list:
   - yaml

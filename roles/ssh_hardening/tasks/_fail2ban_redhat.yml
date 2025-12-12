@@ -1,4 +1,3 @@
----
 - name: Enable EPEL repository (RHEL/CentOS/Oracle only)
   ansible.builtin.command:
     cmd: dnf install -y epel-release

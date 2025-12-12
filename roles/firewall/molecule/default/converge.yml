@@ -1,4 +1,3 @@
----
 - name: Converge firewall role (check mode)
   hosts: localhost
   connection: local

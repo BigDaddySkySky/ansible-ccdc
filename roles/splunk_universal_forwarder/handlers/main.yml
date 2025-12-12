@@ -1,5 +1,4 @@
----
-- name: restart splunk forwarder
+- name: Restart Splunk forwarder
   ansible.builtin.service:
     name: SplunkForwarder
     state: restarted

@@ -1,4 +1,3 @@
----
 # ============================================
 # PLAYBOOK: BOOTSTRAP SSH KEYS
 # ============================================
@@ -22,11 +21,12 @@
         key: "{{ lookup('file', '~/.ssh/ccdc_rsa.pub') }}"
         state: present
       register: key_deploy
+      notify: Display result
 
+  handlers:
     - name: Display result
       ansible.builtin.debug:
         msg: "✅ SSH key successfully deployed to {{ inventory_hostname }}"
-      when: key_deploy is changed
 
 - name: Bootstrap Complete
   hosts: localhost

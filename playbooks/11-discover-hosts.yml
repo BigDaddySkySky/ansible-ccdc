@@ -1,4 +1,3 @@
----
 # ============================================
 # HOST DISCOVERY & BASELINE REPORT
 # ============================================
@@ -55,14 +54,24 @@
     # ============================================
     - name: Get all listening ports
       ansible.builtin.shell: |
+        set -o pipefail
         ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null | grep LISTEN
       register: listening_ports
       changed_when: false
       failed_when: false
+      args:
+        executable: /bin/bash
 
     - name: Parse listening ports
       ansible.builtin.set_fact:
-        open_ports: "{{ listening_ports.stdout_lines | map('regex_search', ':(\\d+)', '\\1') | select('string') | map('first') | unique | sort | list }}"
+        open_ports: >-
+          {{ listening_ports.stdout_lines
+             | map('regex_search', ':(\\d+)', '\\1')
+             | select('string')
+             | map('first')
+             | unique
+             | sort
+             | list }}
       when: listening_ports.rc == 0
 
     - name: Display network info
@@ -75,23 +84,28 @@
     # ============================================
     # Service Discovery
     # ============================================
-    - name: List all running systemd services
-      ansible.builtin.shell: |
-        systemctl list-units --type=service --state=running --no-pager --no-legend | awk '{print $1}'
-      register: running_services
-      changed_when: false
-      failed_when: false
+    - name: Collect running service facts
+      ansible.builtin.service_facts:
+
+    - name: Build running service list
+      ansible.builtin.set_fact:
+        running_service_names: >-
+          {{ ansible_facts.services
+             | dict2items
+             | selectattr('value.state', 'equalto', 'running')
+             | map(attribute='key')
+             | list }}
 
     - name: Filter critical services
       ansible.builtin.set_fact:
         critical_services:
-          web: "{{ running_services.stdout_lines | select('search', 'apache2|httpd|nginx') | list }}"
-          mail: "{{ running_services.stdout_lines | select('search', 'postfix|dovecot|exim|sendmail') | list }}"
-          database: "{{ running_services.stdout_lines | select('search', 'mysql|mariadb|postgresql') | list }}"
-          ssh: "{{ running_services.stdout_lines | select('search', 'sshd|ssh') | list }}"
-          dns: "{{ running_services.stdout_lines | select('search', 'bind9|named') | list }}"
-          ftp: "{{ running_services.stdout_lines | select('search', 'vsftpd|proftpd') | list }}"
-      when: running_services.rc == 0
+          web: "{{ running_service_names | select('search', 'apache2|httpd|nginx') | list }}"
+          mail: "{{ running_service_names | select('search', 'postfix|dovecot|exim|sendmail') | list }}"
+          database: "{{ running_service_names | select('search', 'mysql|mariadb|postgresql') | list }}"
+          ssh: "{{ running_service_names | select('search', 'sshd|ssh') | list }}"
+          dns: "{{ running_service_names | select('search', 'bind9|named') | list }}"
+          ftp: "{{ running_service_names | select('search', 'vsftpd|proftpd') | list }}"
+      when: running_service_names | length > 0
 
     - name: Display critical services
       ansible.builtin.debug:
@@ -109,52 +123,68 @@
     # ============================================
     # Package Discovery
     # ============================================
-    - name: Count installed packages (Debian-based)
-      ansible.builtin.shell: dpkg -l | grep '^ii' | wc -l
-      register: dpkg_count
-      changed_when: false
-      failed_when: false
-      when: ansible_os_family == "Debian"
+    - name: Collect installed packages
+      ansible.builtin.package_facts:
+        manager: auto
 
-    - name: Count installed packages (RedHat-based)
-      ansible.builtin.shell: rpm -qa | wc -l
-      register: rpm_count
-      changed_when: false
-      failed_when: false
-      when: ansible_os_family == "RedHat"
+    - name: Count installed packages
+      ansible.builtin.set_fact:
+        package_count: "{{ ansible_facts.packages | length }}"
 
     - name: Check for security tools
-      ansible.builtin.shell: |
-        for pkg in fail2ban ufw firewalld iptables aide rkhunter chkrootkit auditd apparmor selinux; do
-          if command -v $pkg &>/dev/null || dpkg -l $pkg 2>/dev/null | grep -q '^ii' || rpm -q $pkg &>/dev/null; then
-            echo "$pkg: installed"
-          fi
-        done
-      register: security_tools
-      changed_when: false
-      failed_when: false
+      ansible.builtin.set_fact:
+        security_tools: >-
+          {{ security_candidates
+             | select('in', ansible_facts.packages.keys())
+             | map('regex_replace', '^(.*)$', '\\1: installed')
+             | list }}
+      vars:
+        security_candidates:
+          - fail2ban
+          - ufw
+          - firewalld
+          - iptables
+          - aide
+          - rkhunter
+          - chkrootkit
+          - auditd
+          - apparmor
+          - selinux
 
     - name: Display package info
       ansible.builtin.debug:
         msg:
           - ""
           - "Package Information:"
-          - "  Total packages: {{ dpkg_count.stdout if dpkg_count.stdout is defined else rpm_count.stdout if rpm_count.stdout is defined else 'Unknown' }}"
+          - "  Total packages: {{ package_count | default('Unknown') }}"
           - "  Security tools:"
-          - "{{ security_tools.stdout_lines | map('regex_replace', '^', '    ') | list if security_tools.stdout_lines | length > 0 else ['    None detected'] }}"
+          - >-
+            {{ (security_tools | default([]))
+               | map('regex_replace', '^', '    ')
+               | list
+               if (security_tools | default([])) | length > 0
+               else ['    None detected'] }}
 
     # ============================================
     # User Discovery
     # ============================================
     - name: List users with login shells
-      ansible.builtin.shell: |
-        awk -F: '$7 !~ /(nologin|false)/ {print $1}' /etc/passwd
+      ansible.builtin.command:
+        argv:
+          - awk
+          - -F:
+          - "$7 !~ /(nologin|false)/ {print $1}"
+          - /etc/passwd
       register: login_users
       changed_when: false
 
     - name: Check for users with UID 0 (root equivalent)
-      ansible.builtin.shell: |
-        awk -F: '$3 == 0 {print $1}' /etc/passwd
+      ansible.builtin.command:
+        argv:
+          - awk
+          - -F:
+          - "$3 == 0 {print $1}"
+          - /etc/passwd
       register: uid_zero_users
       changed_when: false
 
@@ -171,24 +201,33 @@
     # ============================================
     - name: Check for suspicious cron jobs
       ansible.builtin.shell: |
+        set -o pipefail
         find /etc/cron* /var/spool/cron -type f 2>/dev/null | xargs grep -l "curl\|wget\|nc\|bash -i" 2>/dev/null || echo "None found"
       register: suspicious_crons
       changed_when: false
       failed_when: false
+      args:
+        executable: /bin/bash
 
     - name: Check for world-writable files in critical directories
       ansible.builtin.shell: |
+        set -o pipefail
         find /etc /usr/bin /usr/sbin -type f -perm -002 2>/dev/null | head -10
       register: world_writable
       changed_when: false
       failed_when: false
+      args:
+        executable: /bin/bash
 
     - name: Check for SUID/SGID binaries
       ansible.builtin.shell: |
+        set -o pipefail
         find / -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null | wc -l
       register: suid_count
       changed_when: false
       failed_when: false
+      args:
+        executable: /bin/bash
 
     - name: Display security checks
       ansible.builtin.debug:
@@ -203,14 +242,22 @@
     # Resource Information
     # ============================================
     - name: Get disk usage
-      ansible.builtin.shell: df -h / | tail -1 | awk '{print $2, $3, $5}'
+      ansible.builtin.shell: |
+        set -o pipefail
+        df -h / | tail -1 | awk '{print $2, $3, $5}'
       register: disk_usage
       changed_when: false
+      args:
+        executable: /bin/bash
 
     - name: Get memory info
-      ansible.builtin.shell: free -h | grep Mem | awk '{print $2, $3, $7}'
+      ansible.builtin.shell: |
+        set -o pipefail
+        free -h | grep Mem | awk '{print $2, $3, $7}'
       register: memory_info
       changed_when: false
+      args:
+        executable: /bin/bash
 
     - name: Display resource info
       ansible.builtin.debug:
@@ -234,10 +281,10 @@
             open_ports: "{{ open_ports | default([]) }}"
           services:
             critical: "{{ critical_services | default({}) }}"
-            total_running: "{{ running_services.stdout_lines | length if running_services.stdout_lines is defined else 0 }}"
+            total_running: "{{ running_service_names | length if running_service_names is defined else 0 }}"
           packages:
-            total: "{{ dpkg_count.stdout if dpkg_count.stdout is defined else rpm_count.stdout if rpm_count.stdout is defined else 'Unknown' }}"
-            security_tools: "{{ security_tools.stdout_lines if security_tools.stdout_lines is defined else [] }}"
+            total: "{{ package_count | default('Unknown') }}"
+            security_tools: "{{ security_tools | default([]) }}"
           users:
             login_users: "{{ login_users.stdout_lines }}"
             uid_zero: "{{ uid_zero_users.stdout_lines }}"
@@ -253,6 +300,7 @@
       ansible.builtin.copy:
         content: "{{ discovery_report | to_nice_json }}"
         dest: "/tmp/{{ inventory_hostname }}_baseline.json"
+        mode: "0600"
       delegate_to: localhost
       become: false
 

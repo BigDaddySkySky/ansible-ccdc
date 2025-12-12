@@ -1,7 +1,11 @@
----
 # Meta for common_preflight
 galaxy_info:
   author: MWCCDC-Team
   description: common_preflight role scaffolding
   license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: EL
+      versions:
+        - all
 dependencies: []

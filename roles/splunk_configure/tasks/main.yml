@@ -1,4 +1,3 @@
----
 # ============================================
 # SPLUNK APPLICATION CONFIGURATION
 # ============================================
@@ -50,7 +49,7 @@
     state: directory
     owner: splunk
     group: splunk
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Create user-seed.conf to set initial admin password
@@ -60,7 +59,7 @@
       [user_info]
       USERNAME = admin
       PASSWORD = {{ vault_splunk_admin_password }}
-    mode: '0600'
+    mode: "0600"
     owner: splunk
     group: splunk
   become: true
@@ -101,8 +100,8 @@
     method: GET
     user: admin
     password: "{{ vault_splunk_admin_password }}"
-    force_basic_auth: yes
-    validate_certs: no
+    force_basic_auth: true
+    validate_certs: false
     status_code: 200
   register: verify_result
   changed_when: false

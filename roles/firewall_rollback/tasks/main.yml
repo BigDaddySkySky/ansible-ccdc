@@ -1,12 +1,15 @@
----
 # FIREWALL ROLLBACK (PANIC REOPEN)
 
 - name: Detect firewall backend
   ansible.builtin.set_fact:
     firewall_rb_backend: >-
-      {{ 'firewalld' if (ansible_facts.packages['firewalld'] is defined or (ansible_facts.services|default({})).get('firewalld.service')) else
-         'ufw' if (ansible_facts.packages['ufw'] is defined or (ansible_facts.services|default({})).get('ufw.service')) else
-         'none' }}
+      {{ 'firewalld'
+         if (ansible_facts.packages['firewalld'] is defined
+             or (ansible_facts.services | default({})).get('firewalld.service'))
+         else 'ufw'
+         if (ansible_facts.packages['ufw'] is defined
+             or (ansible_facts.services | default({})).get('ufw.service'))
+         else 'none' }}
 
 # ---------- UFW ROLLBACK ----------
 - name: Reset ufw to defaults
@@ -81,7 +84,7 @@
 - name: Revert kernel sysctl hardening to defaults (IPv4 forwarding)
   ansible.posix.sysctl:
     name: net.ipv4.ip_forward
-    value: '1'
+    value: "1"
     state: present
     sysctl_set: true
     reload: true
@@ -91,7 +94,7 @@
 - name: Revert kernel sysctl hardening to defaults (IPv6 forwarding)
   ansible.posix.sysctl:
     name: net.ipv6.conf.all.forwarding
-    value: '1'
+    value: "1"
     state: present
     sysctl_set: true
     reload: true
@@ -101,7 +104,7 @@
 - name: Revert kernel sysctl hardening to defaults (rp_filter off)
   ansible.posix.sysctl:
     name: net.ipv4.conf.all.rp_filter
-    value: '0'
+    value: "0"
     state: present
     sysctl_set: true
     reload: true

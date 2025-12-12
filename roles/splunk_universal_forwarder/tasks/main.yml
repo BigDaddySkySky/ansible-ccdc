@@ -1,4 +1,3 @@
----
 # ========== Detect forwarder user ==========
 
 - name: Check if splunk user exists
@@ -42,7 +41,7 @@
   ansible.builtin.get_url:
     url: "{{ splunk_forwarder_url }}"
     dest: "/tmp/{{ splunk_forwarder_pkg }}"
-    mode: '0644'
+    mode: "0644"
     validate_certs: false
     timeout: 300
   when: not (splunk_forwarder_home is exists)
@@ -58,10 +57,10 @@
   become: true
 
 - name: Install Splunk Universal Forwarder (RedHat)
-  ansible.builtin.command: >
-    rpm -Uvh /tmp/{{ splunk_forwarder_pkg }}
-  args:
-    creates: "{{ splunk_forwarder_home }}/bin/splunk"
+  ansible.builtin.dnf:
+    name: "/tmp/{{ splunk_forwarder_pkg }}"
+    state: present
+    disable_gpg_check: true
   when:
     - ansible_os_family == "RedHat"
     - not (splunk_forwarder_home is exists)
@@ -104,7 +103,7 @@
     state: directory
     owner: "{{ forwarder_user }}"
     group: "{{ forwarder_user }}"
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Deploy outputs.conf for forwarder
@@ -113,7 +112,7 @@
     dest: "{{ splunk_forwarder_home }}/etc/system/local/outputs.conf"
     owner: "{{ forwarder_user }}"
     group: "{{ forwarder_user }}"
-    mode: '0600'
+    mode: "0600"
   notify: restart splunk forwarder
   become: true
 
@@ -125,7 +124,7 @@
     dest: "{{ splunk_forwarder_home }}/etc/system/local/inputs.conf"
     owner: "{{ forwarder_user }}"
     group: "{{ forwarder_user }}"
-    mode: '0600'
+    mode: "0600"
   when: ansible_os_family == "Debian"
   notify: restart splunk forwarder
   become: true
@@ -136,7 +135,7 @@
     dest: "{{ splunk_forwarder_home }}/etc/system/local/inputs.conf"
     owner: "{{ forwarder_user }}"
     group: "{{ forwarder_user }}"
-    mode: '0600'
+    mode: "0600"
   when: ansible_os_family == "RedHat"
   notify: restart splunk forwarder
   become: true

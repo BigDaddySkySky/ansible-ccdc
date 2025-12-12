@@ -1,8 +1,7 @@
 # roles/paloalto_firewall/tasks/main.yml
----
 
 - name: Ensure zones exist
-  panos_zone:
+  paloaltonetworks.panos.panos_zone:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
@@ -15,7 +14,7 @@
     - { name: "{{ palo_zone_ftd }}" }
 
 - name: Create address objects for Linux servers
-  panos_address_object:
+  paloaltonetworks.panos.panos_address_object:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
@@ -24,49 +23,58 @@
     value: "{{ item.ip }}"
     description: "{{ item.desc }}"
   loop:
-    - { name: "srv-ecom",   ip: "{{ ecom_private_ip }}",    desc: "Ubuntu Ecom server" }
-    - { name: "srv-webmail",ip: "{{ webmail_private_ip }}", desc: "Fedora Webmail server" }
-    - { name: "srv-splunk", ip: "{{ splunk_private_ip }}",  desc: "Splunk indexer" }
+    - { name: "srv-ecom", ip: "{{ ecom_private_ip }}", desc: "Ubuntu Ecom server" }
+    - { name: "srv-webmail", ip: "{{ webmail_private_ip }}", desc: "Fedora Webmail server" }
+    - { name: "srv-splunk", ip: "{{ splunk_private_ip }}", desc: "Splunk indexer" }
 
 # NAT RULES
 - name: Create static NAT for public services (Linux side)
-  panos_nat_rule:
+  paloaltonetworks.panos.panos_nat_rule2:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
       password: "{{ vault_palo_admin_password }}"
     rule_name: "{{ item.rule_name }}"
     description: "{{ item.desc }}"
-    fromzone: [ "{{ palo_zone_outside }}" ]
-    tozone: [ "{{ palo_zone_inside }}" ]
-    source_ip: [ "any" ]
-    destination_ip: [ "{{ item.public_ip }}" ]
+    fromzone: ["{{ palo_zone_outside }}"]
+    tozone: ["{{ palo_zone_inside }}"]
+    source_ip: ["any"]
+    destination_ip: ["{{ item.public_ip }}"]
     service: "any"
     nat_type: "ipv4"
-    to_interface: "{{ palo_zone_inside }}"   # can be your inside-facing interface name if you prefer
+    to_interface: "{{ palo_zone_inside }}" # can be your inside-facing interface name if you prefer
     source_translation_type: "none"
     destination_translation_address: "{{ item.private_ip }}"
     commit: false
   loop:
-    - { rule_name: "nat-ecom",    desc: "Static NAT for ecom web",    public_ip: "{{ ecom_public_ip }}",    private_ip: "{{ ecom_private_ip }}" }
-    - { rule_name: "nat-webmail", desc: "Static NAT for webmail",     public_ip: "{{ webmail_public_ip }}", private_ip: "{{ webmail_private_ip }}" }
-    - { rule_name: "nat-splunk",  desc: "Static NAT for splunk web",  public_ip: "{{ splunk_public_ip }}",  private_ip: "{{ splunk_private_ip }}" }
+    - rule_name: "nat-ecom"
+      desc: "Static NAT for ecom web"
+      public_ip: "{{ ecom_public_ip }}"
+      private_ip: "{{ ecom_private_ip }}"
+    - rule_name: "nat-webmail"
+      desc: "Static NAT for webmail"
+      public_ip: "{{ webmail_public_ip }}"
+      private_ip: "{{ webmail_private_ip }}"
+    - rule_name: "nat-splunk"
+      desc: "Static NAT for splunk web"
+      public_ip: "{{ splunk_public_ip }}"
+      private_ip: "{{ splunk_private_ip }}"
 
 - name: Create dynamic PAT for Linux LAN outbound
-  panos_nat_rule:
+  paloaltonetworks.panos.panos_nat_rule2:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
       password: "{{ vault_palo_admin_password }}"
     rule_name: "nat-lan-outbound"
     description: "PAT for Linux LAN outbound"
-    fromzone: [ "{{ palo_zone_inside }}" ]
-    tozone: [ "{{ palo_zone_outside }}" ]
-    source_ip: [ "{{ linux_lan_cidr }}" ]
-    destination_ip: [ "any" ]
+    fromzone: ["{{ palo_zone_inside }}"]
+    tozone: ["{{ palo_zone_outside }}"]
+    source_ip: ["{{ linux_lan_cidr }}"]
+    destination_ip: ["any"]
     service: "any"
     nat_type: "ipv4"
-    to_interface: "ethernet1/1"              # adjust to your actual outside interface
+    to_interface: "ethernet1/1" # adjust to your actual outside interface
     source_translation_type: "dynamic-ip-and-port"
     source_translation_address_type: "interface-address"
     commit: false
@@ -74,19 +82,19 @@
 # SECURITY POLICIES - INBOUND
 
 - name: Allow inbound HTTP/HTTPS to Ecom
-  panos_security_rule:
+  paloaltonetworks.panos.panos_security_rule:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
       password: "{{ vault_palo_admin_password }}"
     rule_name: "allow-in-ecom-web"
     description: "Allow HTTP/HTTPS to Ecom"
-    source_zone: [ "{{ palo_zone_outside }}" ]
-    destination_zone: [ "{{ palo_zone_inside }}" ]
-    source_ip: [ "any" ]
-    destination_ip: [ "{{ ecom_private_ip }}" ]
-    application: [ "web-browsing", "ssl" ]
-    service: [ "service-http", "service-https" ]
+    source_zone: ["{{ palo_zone_outside }}"]
+    destination_zone: ["{{ palo_zone_inside }}"]
+    source_ip: ["any"]
+    destination_ip: ["{{ ecom_private_ip }}"]
+    application: ["web-browsing", "ssl"]
+    service: ["service-http", "service-https"]
     action: "allow"
     log_setting: "{{ palo_log_forwarding_profile }}"
     log_start: false
@@ -94,38 +102,38 @@
     commit: false
 
 - name: Allow inbound SMTP/POP3 to Webmail
-  panos_security_rule:
+  paloaltonetworks.panos.panos_security_rule:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
       password: "{{ vault_palo_admin_password }}"
     rule_name: "allow-in-webmail"
     description: "Allow SMTP/POP3 to Fedora Webmail"
-    source_zone: [ "{{ palo_zone_outside }}" ]
-    destination_zone: [ "{{ palo_zone_inside }}" ]
-    source_ip: [ "any" ]
-    destination_ip: [ "{{ webmail_private_ip }}" ]
-    application: [ "smtp", "pop3" ]
-    service: [ "application-default" ]
+    source_zone: ["{{ palo_zone_outside }}"]
+    destination_zone: ["{{ palo_zone_inside }}"]
+    source_ip: ["any"]
+    destination_ip: ["{{ webmail_private_ip }}"]
+    application: ["smtp", "pop3"]
+    service: ["application-default"]
     action: "allow"
     log_setting: "{{ palo_log_forwarding_profile }}"
     log_end: true
     commit: false
 
 - name: Allow inbound HTTP/HTTPS to Splunk
-  panos_security_rule:
+  paloaltonetworks.panos.panos_security_rule:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
       password: "{{ vault_palo_admin_password }}"
     rule_name: "allow-in-splunk-web"
     description: "Allow HTTP/HTTPS to Splunk Web"
-    source_zone: [ "{{ palo_zone_outside }}" ]
-    destination_zone: [ "{{ palo_zone_inside }}" ]
-    source_ip: [ "any" ]
-    destination_ip: [ "{{ splunk_private_ip }}" ]
-    application: [ "web-browsing", "ssl" ]
-    service: [ "service-http", "service-https" ]
+    source_zone: ["{{ palo_zone_outside }}"]
+    destination_zone: ["{{ palo_zone_inside }}"]
+    source_ip: ["any"]
+    destination_ip: ["{{ splunk_private_ip }}"]
+    application: ["web-browsing", "ssl"]
+    service: ["service-http", "service-https"]
     action: "allow"
     log_setting: "{{ palo_log_forwarding_profile }}"
     log_end: true
@@ -134,19 +142,19 @@
 # INTERNAL MANAGEMENT / EAST-WEST
 
 - name: Allow SSH/HTTPS mgmt from Ubuntu Wks subnet to Palo MGMT
-  panos_security_rule:
+  paloaltonetworks.panos.panos_security_rule:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
       password: "{{ vault_palo_admin_password }}"
     rule_name: "allow-mgmt-from-wks"
     description: "Allow SSH/HTTPS from Ubuntu WKS subnet to Palo mgmt"
-    source_zone: [ "{{ palo_zone_inside }}" ]
-    destination_zone: [ "{{ palo_zone_inside }}" ]
-    source_ip: [ "{{ ubuntu_wks_subnet }}" ]
-    destination_ip: [ "{{ palo_mgmt_ip }}" ]
-    application: [ "ssh", "ssl" ]
-    service: [ "service-ssh", "service-https" ]
+    source_zone: ["{{ palo_zone_inside }}"]
+    destination_zone: ["{{ palo_zone_inside }}"]
+    source_ip: ["{{ ubuntu_wks_subnet }}"]
+    destination_ip: ["{{ palo_mgmt_ip }}"]
+    application: ["ssh", "ssl"]
+    service: ["service-ssh", "service-https"]
     action: "allow"
     log_setting: "{{ palo_log_forwarding_profile }}"
     log_end: true
@@ -154,19 +162,19 @@
 
 # ICMP (for scoring)
 - name: Allow ICMP everywhere
-  panos_security_rule:
+  paloaltonetworks.panos.panos_security_rule:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"
       password: "{{ vault_palo_admin_password }}"
     rule_name: "allow-icmp"
     description: "Allow ICMP for scoring and diagnostics"
-    source_zone: [ "{{ palo_zone_inside }}", "{{ palo_zone_outside }}" ]
-    destination_zone: [ "{{ palo_zone_inside }}", "{{ palo_zone_outside }}" ]
-    source_ip: [ "any" ]
-    destination_ip: [ "any" ]
-    application: [ "ping" ]
-    service: [ "application-default" ]
+    source_zone: ["{{ palo_zone_inside }}", "{{ palo_zone_outside }}"]
+    destination_zone: ["{{ palo_zone_inside }}", "{{ palo_zone_outside }}"]
+    source_ip: ["any"]
+    destination_ip: ["any"]
+    application: ["ping"]
+    service: ["application-default"]
     action: "allow"
     log_setting: "{{ palo_log_forwarding_profile }}"
     log_end: true
@@ -174,7 +182,7 @@
 
 # FINAL COMMIT
 - name: Commit candidate config
-  panos_commit:
+  paloaltonetworks.panos.panos_commit_firewall:
     provider:
       ip_address: "{{ ansible_host }}"
       username: "{{ vault_palo_admin_user }}"

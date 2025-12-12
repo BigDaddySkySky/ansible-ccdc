@@ -1,5 +1,4 @@
----
-- name: restart splunk
+- name: Restart Splunk
   ansible.builtin.command:
     cmd: "{{ splunk_home }}/bin/splunk restart --accept-license --answer-yes --no-prompt"
   become: true

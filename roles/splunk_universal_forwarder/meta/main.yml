@@ -1,7 +1,11 @@
----
 # Meta for splunk_universal_forwarder
 galaxy_info:
   author: MWCCDC-Team
   description: splunk_universal_forwarder role scaffolding
   license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: EL
+      versions:
+        - all
 dependencies: []

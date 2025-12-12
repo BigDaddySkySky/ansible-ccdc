@@ -1,10 +1,12 @@
----
 # Where Splunk UF lives
 splunk_forwarder_home: /opt/splunkforwarder
 
 # Forwarder download URLs (same as you had)
-splunk_forwarder_deb_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1-linux-2.6-amd64.deb"
-splunk_forwarder_rpm_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1.x86_64.rpm"
+splunk_forwarder_base_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux"
+splunk_forwarder_deb_file: "splunkforwarder-9.1.1-64e843ea36b1-linux-2.6-amd64.deb"
+splunk_forwarder_rpm_file: "splunkforwarder-9.1.1-64e843ea36b1.x86_64.rpm"
+splunk_forwarder_deb_url: "{{ splunk_forwarder_base_url }}/{{ splunk_forwarder_deb_file }}"
+splunk_forwarder_rpm_url: "{{ splunk_forwarder_base_url }}/{{ splunk_forwarder_rpm_file }}"
 
 # Target indexer
 splunk_indexer_host: "{{ hostvars['splunk_vm']['ansible_host'] }}"

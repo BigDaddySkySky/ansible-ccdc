@@ -1,4 +1,3 @@
----
 # ============================================
 # ROOT ACCOUNT HARDENING
 # ============================================
@@ -8,11 +7,15 @@
 # NOTE: PermitRootLogin is handled in sshd_config.yml
 
 - name: Get current root shell
-  ansible.builtin.shell: "getent passwd root | cut -d: -f7"
+  ansible.builtin.shell: |
+    set -o pipefail
+    getent passwd root | cut -d: -f7
   register: root_shell_before
   changed_when: false
   check_mode: false
   become: true
+  args:
+    executable: /bin/bash
 
 - name: Display current root shell
   ansible.builtin.debug:
@@ -31,12 +34,16 @@
     msg: "{{ '✅ Root shell changed to /bin/nologin' if root_shell_change is changed else '✅ Root shell already /bin/nologin' }}"
 
 - name: Verify root shell change
-  ansible.builtin.shell: "getent passwd root | cut -d: -f7"
+  ansible.builtin.shell: |
+    set -o pipefail
+    getent passwd root | cut -d: -f7
   register: root_shell_after
   changed_when: false
   check_mode: false
   failed_when: root_shell_after.stdout != "/bin/nologin"
   become: true
+  args:
+    executable: /bin/bash
 
 - name: Lock root account (disable password login)
   ansible.builtin.user:

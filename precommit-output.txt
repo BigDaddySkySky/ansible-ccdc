@@ -1,0 +1,547 @@
+[INFO][m Initializing environment for https://github.com/pre-commit/pre-commit-hooks.
+[43;30m[WARNING][m repo `https://github.com/pre-commit/pre-commit-hooks` uses deprecated stage names (commit, push) which will be removed in a future version.  Hint: often `pre-commit autoupdate --repo https://github.com/pre-commit/pre-commit-hooks` will fix this.  if it does not -- consider reporting an issue to that repo.
+[INFO][m Initializing environment for https://github.com/ansible/ansible-lint.git.
+[INFO][m Initializing environment for https://github.com/adrienverge/yamllint.git.
+[INFO][m Installing environment for https://github.com/ansible/ansible-lint.git.
+[INFO][m Once installed this environment will be reused.
+[INFO][m This may take a few minutes...
+ansible-lint.............................................................[41mFailed[m
+[2m- hook id: ansible-lint[m
+[2m- exit code: 2[m
+
+[2mINFO     Identified [35m/home/smoyers/coding/ansible-ccdc[0m as project root due [1m.git directory[0m.[0m
+[2mINFO     Collection paths was patched to include extra directories /home/smoyers/.ansible/collections,/usr/share/ansible/collections,/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/lib/python3.13/dist-packages,/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/lib/python3/dist-packages,/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/local/lib/python3.13/dist-packages,/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/lib/python3.13/site-packages[0m
+[2mINFO     Set ANSIBLE_LIBRARY=/home/smoyers/coding/ansible-ccdc/.ansible/modules:/home/smoyers/.ansible/plugins/modules:/usr/share/ansible/plugins/modules[0m
+[2mINFO     Set ANSIBLE_COLLECTIONS_PATH=/home/smoyers/coding/ansible-ccdc/.ansible/collections:/home/smoyers/.ansible/collections:/usr/share/ansible/collections:/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/lib/python3.13/dist-packages:/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/lib/python3/dist-packages:/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/local/lib/python3.13/dist-packages:/home/smoyers/.cache/pre-commit/repov_5tego4/py_env-python3.13/lib/python3.13/site-packages[0m
+[2mINFO     Set ANSIBLE_ROLES_PATH=/home/smoyers/coding/ansible-ccdc/.ansible/roles:roles:/home/smoyers/coding/ansible-ccdc/roles:/home/smoyers/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles[0m
+[2mINFO     Running ansible-galaxy collection install -v -r /home/smoyers/coding/ansible-ccdc/requirements.yml[0m
+[2mINFO     Loading ignores from .gitignore[0m
+[2mINFO     Loading ignores from .gitignore[0m
+[2mINFO     Executing syntax check on playbook roles/firewall/molecule/default/verify.yml (0.63s)[0m
+[2mINFO     Executing syntax check on playbook roles/ssh_hardening/molecule/default/verify.yml (0.63s)[0m
+[2mINFO     Executing syntax check on role roles/common_preflight (0.66s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/20-rotate-passwords.yml (0.69s)[0m
+[2mINFO     Executing syntax check on role roles/splunk_install (0.69s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/50-deploy-forwarders.yml (0.70s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/40-harden-splunk.yml (0.70s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/30-hardening-main.yml (0.73s)[0m
+[2mINFO     Executing syntax check on role roles/common_validation (0.82s)[0m
+[2mINFO     Executing syntax check on role roles/auditd (0.82s)[0m
+[2mINFO     Executing syntax check on role roles/ssh_hardening (0.85s)[0m
+[2mINFO     Executing syntax check on role roles/firewall (0.85s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/01-connectivity-check.yml (0.67s)[0m
+[2mINFO     Executing syntax check on role roles/splunk_harden (0.68s)[0m
+[2mINFO     Executing syntax check on role roles/splunk_universal_forwarder (0.67s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/00-bootstrap-keys.yml (0.65s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/10-validate-env.yml (0.67s)[0m
+[2mINFO     Executing syntax check on role roles/firewall_preflight (0.69s)[0m
+[2mINFO     Executing syntax check on playbook roles/firewall/molecule/default/converge.yml (0.71s)[0m
+[2mINFO     Executing syntax check on role roles/paloalto_firewall (0.69s)[0m
+[2mINFO     Executing syntax check on playbook roles/ssh_hardening/molecule/default/converge.yml (0.64s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/99-nuke-firewall.yml (0.65s)[0m
+[2mINFO     Executing syntax check on role roles/splunk_configure (0.62s)[0m
+[2mINFO     Executing syntax check on role roles/common_notify (0.64s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/11-discover-hosts.yml (0.45s)[0m
+[2mINFO     Executing syntax check on playbook playbooks/32-configure-palo.yml (0.48s)[0m
+[2mINFO     Executing syntax check on role roles/firewall_rollback (0.48s)[0m
+[2mWARNING  Ignored exception from JinjaRule.matchyaml while processing host_vars/fedora_webmail_vm/vault.yml (vars): Decryption failed (no vault secrets were found that could decrypt).[0m
+[2mWARNING  Ignored exception from JinjaRule.matchyaml while processing host_vars/splunk_vm/vault.yml (vars): Decryption failed (no vault secrets were found that could decrypt).[0m
+[2mWARNING  Ignored exception from JinjaRule.matchyaml while processing host_vars/palo_vm/vault.yml (vars): Decryption failed (no vault secrets were found that could decrypt).[0m
+[2mWARNING  Ignored exception from JinjaRule.matchyaml while processing host_vars/ubuntu_wkst_vm/vault.yml (vars): Decryption failed (no vault secrets were found that could decrypt).[0m
+[2mWARNING  Ignored exception from JinjaRule.matchyaml while processing group_vars/all/vault.yml (vars): Decryption failed (no vault secrets were found that could decrypt).[0m
+[2mWARNING  Ignored exception from JinjaRule.matchyaml while processing host_vars/ubuntu_ecom_vm/vault.yml (vars): Decryption failed (no vault secrets were found that could decrypt).[0m
+[2mWARNING  Listing 113 violation(s) that are fatal[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:6
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:7
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:10
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:12
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:13
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:15
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:18
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:20
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:21
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:24
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:26
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:27
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:30
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:33
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:34
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:35
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:37
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:38
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:40
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:41
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[colons]]8;;\[0m[2m:[0m [31mToo many spaces after colon[0m
+[35mgroup_vars/all/competition.yml[0m:42
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[comments]]8;;\[0m[2m:[0m [31mMissing starting space in comment[0m
+[35mgroup_vars/linux_servers/connection.yml[0m:7
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/jinja/\jinja[invalid]]8;;\[0m[2m:[0m [31mSyntax error in jinja2 template: {{ hostvars[inventory_hostname].ansible_host | default{inventory_hostname}} }[/]
+[35mgroup_vars/palo_firewalls/connection.yml[0m:12:15 [2munexpected '}'[0m
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/no-handler/\no-handler]8;;\[0m[2m:[0m [31mTasks that run when changed should likely be handlers.[0m
+[35mplaybooks/00-bootstrap-keys.yml[0m:29:13 [2mTask/Handler: Display result[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (143 > 140 characters)[0m
+[35mplaybooks/10-validate-env.yml[0m:60
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (141 > 140 characters)[0m
+[35mplaybooks/10-validate-env.yml[0m:70
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/10-validate-env.yml[0m:97 [2mTask/Handler: Check disk space[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (152 > 140 characters)[0m
+[35mplaybooks/10-validate-env.yml[0m:138
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:56 [2mTask/Handler: Get all listening ports[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (153 > 140 characters)[0m
+[35mplaybooks/11-discover-hosts.yml[0m:65
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/command-instead-of-module/\command-instead-of-module]8;;\[0m[2m:[0m [31msystemctl used in place of systemd module[0m
+[35mplaybooks/11-discover-hosts.yml[0m:78 [2mTask/Handler: List all running systemd services[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:78 [2mTask/Handler: List all running systemd services[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:112 [2mTask/Handler: Count installed packages (Debian-based)[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/command-instead-of-module/\command-instead-of-module]8;;\[0m[2m:[0m [31mrpm used in place of yum or rpm_key module[0m
+[35mplaybooks/11-discover-hosts.yml[0m:119 [2mTask/Handler: Count installed packages (RedHat-based)[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:119 [2mTask/Handler: Count installed packages (RedHat-based)[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:126 [2mTask/Handler: Check for security tools[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (155 > 140 characters)[0m
+[35mplaybooks/11-discover-hosts.yml[0m:142
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (161 > 140 characters)[0m
+[35mplaybooks/11-discover-hosts.yml[0m:144
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:149 [2mTask/Handler: List users with login shells[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:172 [2mTask/Handler: Check for suspicious cron jobs[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:179 [2mTask/Handler: Check for world-writable files in critical directories[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:186 [2mTask/Handler: Check for SUID/SGID binaries[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:205 [2mTask/Handler: Get disk usage[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:210 [2mTask/Handler: Get memory info[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (144 > 140 characters)[0m
+[35mplaybooks/11-discover-hosts.yml[0m:239
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-file-permissions/\risky-file-permissions]8;;\[0m[2m:[0m [31mFile permissions unset or incorrect.[0m
+[35mplaybooks/11-discover-hosts.yml[0m:252 [2mTask/Handler: Save baseline report locally[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (212 > 140 characters)[0m
+[35mplaybooks/20-rotate-passwords.yml[0m:109
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (159 > 140 characters)[0m
+[35mplaybooks/20-rotate-passwords.yml[0m:176
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (156 > 140 characters)[0m
+[35mplaybooks/20-rotate-passwords.yml[0m:184
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (160 > 140 characters)[0m
+[35mplaybooks/20-rotate-passwords.yml[0m:185
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/run-once/\run-once[task]]8;;\[0m[2m:[0m [31mUsing run_once may behave differently if strategy is set to free.[0m
+[35mplaybooks/30-hardening-main.yml[0m:76 [2mTask/Handler: Gather facts from localhost for timestamp[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/run-once/\run-once[task]]8;;\[0m[2m:[0m [31mUsing run_once may behave differently if strategy is set to free.[0m
+[35mplaybooks/30-hardening-main.yml[0m:81 [2mTask/Handler: Calculate Results[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/run-once/\run-once[task]]8;;\[0m[2m:[0m [31mUsing run_once may behave differently if strategy is set to free.[0m
+[35mplaybooks/30-hardening-main.yml[0m:90 [2mTask/Handler: Format Results[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/run-once/\run-once[task]]8;;\[0m[2m:[0m [31mUsing run_once may behave differently if strategy is set to free.[0m
+[35mplaybooks/30-hardening-main.yml[0m:101 [2mTask/Handler: Load global vault for notification[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/run-once/\run-once[task]]8;;\[0m[2m:[0m [31mUsing run_once may behave differently if strategy is set to free.[0m
+[35mplaybooks/30-hardening-main.yml[0m:108 [2mTask/Handler: Send Discord notification[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/run-once/\run-once[task]]8;;\[0m[2m:[0m [31mUsing run_once may behave differently if strategy is set to free.[0m
+[35mplaybooks/30-hardening-main.yml[0m:129 [2mTask/Handler: Display final summary[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/fqcn/\fqcn[keyword]]8;;\[0m[2m:[0m [31mAvoid `collections` keyword by using FQCN for all plugins, modules, roles and playbooks.[0m
+[35mplaybooks/32-configure-palo.yml[0m:2:3
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[play]]8;;\[0m[2m:[0m [31mAll plays should be named.[0m
+[35mplaybooks/50-deploy-forwarders.yml[0m:5:3
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/ignore-errors/\ignore-errors]8;;\[0m[2m:[0m [31mUse failed_when and specify error conditions instead of using ignore_errors.[0m
+[35mplaybooks/99-nuke-firewall.yml[0m:27 [2mTask/Handler: Flush IPTables (Nuclear Option)[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/auditd/handlers/main.yml[0m:8:9 [2mTask/Handler: restart auditd[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/command-instead-of-shell/\command-instead-of-shell]8;;\[0m[2m:[0m [31mUse shell only when shell functionality is required.[0m
+[35mroles/auditd/handlers/main.yml[0m:14 [2mTask/Handler: reload auditd rules[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/auditd/handlers/main.yml[0m:14:9 [2mTask/Handler: reload auditd rules[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/auditd/handlers/main.yml[0m:20:9 [2mTask/Handler: flush auditd cache[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/meta-no-tags/\meta-no-tags]8;;\[0m[2m:[0m [31mTags must contain lowercase letters and digits only., invalid: 'file-integrity'[0m
+[35mroles/auditd/meta/main.yml[0m:1
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/meta-no-tags/\meta-no-tags]8;;\[0m[2m:[0m [31mTags must contain lowercase letters and digits only., invalid: 'intrusion-detection'[0m
+[35mroles/auditd/meta/main.yml[0m:1
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info.platforms[2].versions[0] 38 is not one of ['6.1', '7.1', '7.2', 'all']. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[/]
+[35mroles/auditd/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mroles/auditd/tasks/configure.yml[0m:127 [2mTask/Handler: Check loaded audit rules count[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (177 > 140 characters)[0m
+[35mroles/auditd/tasks/discord_alerts.yml[0m:101
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (159 > 140 characters)[0m
+[35mroles/auditd/tasks/discord_alerts.yml[0m:140
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/common_notify/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/common_preflight/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/common_validation/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/firewall/handlers/main.yml[0m:8:9 [2mTask/Handler: restart ufw[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/firewall/handlers/main.yml[0m:15:9 [2mTask/Handler: reload ufw[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/firewall/handlers/main.yml[0m:21:9 [2mTask/Handler: restart firewalld[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/firewall/handlers/main.yml[0m:28:9 [2mTask/Handler: reload firewalld[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/meta-no-tags/\meta-no-tags]8;;\[0m[2m:[0m [31mTags must contain lowercase letters and digits only., invalid: 'network-security'[0m
+[35mroles/firewall/meta/main.yml[0m:1
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info.platforms[2].versions[0] 38 is not one of ['6.1', '7.1', '7.2', 'all']. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[/]
+[35mroles/firewall/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (150 > 140 characters)[0m
+[35mroles/firewall/tasks/firewalld.yml[0m:89
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (151 > 140 characters)[0m
+[35mroles/firewall/tasks/firewalld.yml[0m:144
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/firewall_preflight/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (142 > 140 characters)[0m
+[35mroles/firewall_preflight/tasks/main.yml[0m:7
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (141 > 140 characters)[0m
+[35mroles/firewall_preflight/tasks/main.yml[0m:82
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/firewall_rollback/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (142 > 140 characters)[0m
+[35mroles/firewall_rollback/tasks/main.yml[0m:7
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/paloalto_firewall/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/syntax-check/\syntax-check[unknown-module]]8;;\[0m[2m:[0m [31mcouldn't resolve module/action 'panos_zone'. This often indicates a misspelling, missing collection, or incorrect module path.[0m
+[35mroles/paloalto_firewall/tasks/main.yml[0m:4:3
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/splunk_configure/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/splunk_harden/handlers/main.yml[0m:2:9 [2mTask/Handler: restart splunk[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/splunk_harden/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/fqcn/\fqcn[canonical]]8;;\[0m[2m:[0m [31mYou should use canonical module name `community.general.ini_file` instead of `ansible.builtin.ini_file`.[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:36:3 [2mTask/Handler: Ensure Splunk inputs for key logs and receiver[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[commas]]8;;\[0m[2m:[0m [31mToo many spaces after comma[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:46
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[commas]]8;;\[0m[2m:[0m [31mToo many spaces after comma[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:47
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[commas]]8;;\[0m[2m:[0m [31mToo many spaces after comma[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:48
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[commas]]8;;\[0m[2m:[0m [31mToo many spaces after comma[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:51
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[commas]]8;;\[0m[2m:[0m [31mToo many spaces after comma[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:52
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[commas]]8;;\[0m[2m:[0m [31mToo many spaces after comma[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:56
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[commas]]8;;\[0m[2m:[0m [31mToo many spaces after comma[0m
+[35mroles/splunk_harden/tasks/main.yml[0m:57
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/splunk_install/handlers/main.yml[0m:2:9 [2mTask/Handler: restart splunk[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/splunk_install/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/command-instead-of-module/\command-instead-of-module]8;;\[0m[2m:[0m [31mrpm used in place of yum or rpm_key module[0m
+[35mroles/splunk_install/tasks/main.yml[0m:31 [2mTask/Handler: Install Splunk (RedHat/Fedora)[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (159 > 140 characters)[0m
+[35mroles/splunk_universal_forwarder/defaults/main.yml[0m:6
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/yaml/\yaml[line-length]]8;;\[0m[2m:[0m [31mLine too long (150 > 140 characters)[0m
+[35mroles/splunk_universal_forwarder/defaults/main.yml[0m:7
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/splunk_universal_forwarder/handlers/main.yml[0m:2:9 [2mTask/Handler: restart splunk forwarder[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info 'min_ansible_version' is a required property. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[0m
+[35mroles/splunk_universal_forwarder/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/command-instead-of-module/\command-instead-of-module]8;;\[0m[2m:[0m [31mrpm used in place of yum or rpm_key module[0m
+[35mroles/splunk_universal_forwarder/tasks/main.yml[0m:60 [2mTask/Handler: Install Splunk Universal Forwarder (RedHat)[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/ssh_hardening/handlers/main.yml[0m:8:9 [2mTask/Handler: restart sshd[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/ssh_hardening/handlers/main.yml[0m:15:9 [2mTask/Handler: restart fail2ban[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/name/\name[casing]]8;;\[0m[2m:[0m [31mAll names should start with an uppercase letter.[0m
+[35mroles/ssh_hardening/handlers/main.yml[0m:22:9 [2mTask/Handler: reload sshd[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/meta-no-tags/\meta-no-tags]8;;\[0m[2m:[0m [31mTags must contain lowercase letters and digits only., invalid: 'intrusion-detection'[0m
+[35mroles/ssh_hardening/meta/main.yml[0m:1
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/schema/\schema[meta]]8;;\[0m[2m:[0m [31m$.galaxy_info.platforms[2].versions[0] 38 is not one of ['6.1', '7.1', '7.2', 'all']. See https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_reuse_roles.html#using-role-dependencies[/]
+[35mroles/ssh_hardening/meta/main.yml[0m:1 [2m Returned errors will not include exact line numbers, but they will mention
+the schema name being used as a tag, like ``schema[playbook]``,
+``schema[tasks]``.
+
+This rule is not skippable and stops further processing of the file.
+
+If incorrect schema was picked, you might want to either:
+
+* move the file to standard location, so its file is detected correctly.
+* use ``kinds:`` option in linter config to help it pick correct file type.
+[/]
+[0m[0m[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mroles/ssh_hardening/tasks/root_hardening.yml[0m:10 [2mTask/Handler: Get current root shell[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/risky-shell-pipe/\risky-shell-pipe]8;;\[0m[2m:[0m [31mShells that use pipes should set the pipefail option.[0m
+[35mroles/ssh_hardening/tasks/root_hardening.yml[0m:33 [2mTask/Handler: Verify root shell change[0m
+[0m
+Read [34m]8;;https://docs.ansible.com/projects/lint/configuring/#ignoring-rules-for-entire-files\documentation]8;;\[0m for instructions on how to ignore specific rule violations.
+
+# Rule Violation Summary
+
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\syntax-check]8;;\[0m [2mprofile:min tags:core,unskippable[0m
+  4 [34m]8;;https://docs.ansible.com/projects/lint/rules/\command-instead-of-module]8;;\[0m [2mprofile:min tags:command-shell,idiom[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\command-instead-of-shell]8;;\[0m [2mprofile:min tags:command-shell,idiom[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\jinja]8;;\[0m [2mprofile:min tags:formatting[0m
+ 13 [34m]8;;https://docs.ansible.com/projects/lint/rules/\schema]8;;\[0m [2mprofile:min tags:core[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\name]8;;\[0m [2mprofile:min tags:idiom[0m
+ 21 [34m]8;;https://docs.ansible.com/projects/lint/rules/\yaml]8;;\[0m [2mprofile:min tags:formatting,yaml[0m
+  7 [34m]8;;https://docs.ansible.com/projects/lint/rules/\yaml]8;;\[0m [2mprofile:min tags:formatting,yaml[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\yaml]8;;\[0m [2mprofile:min tags:formatting,yaml[0m
+ 20 [34m]8;;https://docs.ansible.com/projects/lint/rules/\yaml]8;;\[0m [2mprofile:min tags:formatting,yaml[0m
+ 13 [34m]8;;https://docs.ansible.com/projects/lint/rules/\name]8;;\[0m [2mprofile:min tags:idiom[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\risky-file-permissions]8;;\[0m [2mprofile:min tags:unpredictability[0m
+ 15 [34m]8;;https://docs.ansible.com/projects/lint/rules/\risky-shell-pipe]8;;\[0m [2mprofile:min tags:command-shell[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\ignore-errors]8;;\[0m [2mprofile:min tags:unpredictability[0m
+  4 [34m]8;;https://docs.ansible.com/projects/lint/rules/\meta-no-tags]8;;\[0m [2mprofile:min tags:metadata[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\no-handler]8;;\[0m [2mprofile:min tags:idiom[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\fqcn]8;;\[0m [2mprofile:min tags:formatting[0m
+  1 [34m]8;;https://docs.ansible.com/projects/lint/rules/\fqcn]8;;\[0m [2mprofile:min tags:formatting[0m
+  6 [34m]8;;https://docs.ansible.com/projects/lint/rules/\run-once]8;;\[0m [2mprofile:min tags:idiom[0m
+
+[31m[1mFailed[0m[0m: 113 failure(s), 0 warning(s) in 143 files processed of 177 encountered.

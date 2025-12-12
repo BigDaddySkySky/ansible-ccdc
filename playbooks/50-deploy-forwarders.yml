@@ -1,13 +1,10 @@
----
 # ============================================
 # PLAYBOOK: INSTALL SPLUNK UNIVERSAL FORWARDERS
 # ============================================
-- hosts: linux_servers:!splunk_vm
-
 - name: Install and configure Splunk Universal Forwarders
   hosts: linux_servers:!splunk_vm
   become: true
-  gather_facts: false   # disable automatic fact gathering
+  gather_facts: false # disable automatic fact gathering
 
   pre_tasks:
     - name: Load host-specific vault variables

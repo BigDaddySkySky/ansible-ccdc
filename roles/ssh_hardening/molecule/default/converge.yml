@@ -1,4 +1,3 @@
----
 - name: Converge ssh_hardening role (check mode)
   hosts: localhost
   connection: local

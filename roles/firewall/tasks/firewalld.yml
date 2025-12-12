@@ -1,4 +1,3 @@
----
 # ============================================
 # FIREWALLD CONFIGURATION (RedHat/Fedora)
 # ============================================
@@ -86,7 +85,7 @@
   ansible.builtin.debug:
     msg:
       - "Allowed services:"
-      - "{{ firewall_scored_services | map(attribute='name') | map('regex_replace', '^(.*)$', '  • \\1 ({{ item.port }}/{{ item.proto }})') | list }}"
+      - "{{ firewall_scored_services | map(attribute='name') | join(', ') }}"
 
 # ============================================
 # Allow Additional Services (host-specific)
@@ -141,7 +140,9 @@
 
 - name: Display rate limiting status
   ansible.builtin.debug:
-    msg: "{{ '✅ Rate limiting enabled for SSH (' ~ firewall_ssh_rate_limit ~ ')' if firewall_enable_rate_limiting else 'ℹ️  Rate limiting disabled' }}"
+    msg:
+      - "{{ '✅ Rate limiting enabled for SSH' if firewall_enable_rate_limiting else 'ℹ️  Rate limiting disabled' }}"
+      - "{{ 'Limit: ' ~ firewall_ssh_rate_limit if firewall_enable_rate_limiting else '' }}"
 
 # ============================================
 # Logging Configuration

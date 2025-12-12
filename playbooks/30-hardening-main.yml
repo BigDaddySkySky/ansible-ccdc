@@ -1,4 +1,3 @@
----
 # ============================================
 # CRITICAL PATH HARDENING PLAYBOOK (SPRINT 4.1)
 # ============================================
@@ -29,7 +28,7 @@
 
     - name: Pause for confirmation
       ansible.builtin.pause:
-        prompt: |
+        prompt: |2
 
           ⚠️  LAST CHANCE TO ABORT!
 
@@ -76,16 +75,16 @@
     - name: Gather facts from localhost for timestamp
       ansible.builtin.setup:
       delegate_to: localhost
-      run_once: true
+      when: inventory_hostname == (ansible_play_hosts_all | first)
 
     - name: Calculate Results
       ansible.builtin.set_fact:
         total_hosts_list: "{{ ansible_play_hosts_all }}"
         successful_hosts_list: "{{ ansible_play_hosts }}"
         failed_hosts_list: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
-      run_once: true
       delegate_to: localhost
       become: false
+      when: inventory_hostname == (ansible_play_hosts_all | first)
 
     - name: Format Results
       ansible.builtin.set_fact:
@@ -94,16 +93,16 @@
         failed_count: "{{ failed_hosts_list | length }}"
         success_string: "{{ successful_hosts_list | join(', ') }}"
         failed_string: "{{ failed_hosts_list | join(', ') }}"
-      run_once: true
       delegate_to: localhost
       become: false
+      when: inventory_hostname == (ansible_play_hosts_all | first)
 
     - name: Load global vault for notification
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
-      run_once: true
       delegate_to: localhost
       become: false
+      when: inventory_hostname == (ansible_play_hosts_all | first)
 
     - name: Send Discord notification
       ansible.builtin.include_role:
@@ -121,10 +120,10 @@
           **Failed:** {{ failed_string if failed_string else 'None' }}
         discord_color: "{{ '3066993' if failed_count == 0 else '15158332' }}"
         discord_webhook_url: "{{ vault_discord_webhook_url }}"
-      run_once: true
       when:
         - vault_discord_webhook_url is defined
         - "'YOUR_WEBHOOK' not in vault_discord_webhook_url"
+        - inventory_hostname == (ansible_play_hosts_all | first)
 
     - name: Display final summary
       ansible.builtin.debug:
@@ -143,6 +142,6 @@
           - "  2. Check audit logs: ansible all -m command -a 'ausearch -ts recent' -b"
           - "  3. Create new VM snapshots: 'Post-Critical-Path'"
           - "  4. Commit changes: git commit -m 'Sprint 4: Critical path consolidated'"
-      run_once: true
       delegate_to: localhost
       become: false
+      when: inventory_hostname == (ansible_play_hosts_all | first)

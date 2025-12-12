@@ -1,0 +1,6 @@
+=== ~/.config/ansible-lint ===
+
+=== /etc/ansible-lint ===
+
+=== ~/.ansible ===
+/home/smoyers/.ansible/collections/ansible_collections/community/general/plugins/filter/jc.py:23:  parser:

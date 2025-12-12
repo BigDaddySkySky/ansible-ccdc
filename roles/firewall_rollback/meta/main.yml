@@ -1,6 +1,10 @@
----
 galaxy_info:
   author: MWCCDC Team
   description: Emergency firewall rollback to default-allow and reopen scored ports
   license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: EL
+      versions:
+        - all
 dependencies: []

@@ -1,4 +1,3 @@
----
 # ============================================
 # SSH HARDENING ROLE - METADATA
 # ============================================
@@ -8,29 +7,21 @@ galaxy_info:
   description: SSH hardening for CCDC competition environments
   company: MWCCDC
   license: MIT
-  min_ansible_version: "2.15"
+  min_ansible_version: "2.14"
 
   platforms:
-    - name: Ubuntu
-      versions:
-        - focal
-        - jammy
-        - noble
-    - name: Debian
-      versions:
-        - bullseye
-        - bookworm
-    - name: Fedora
-      versions:
-        - 38
-        - 39
-        - 40
-        - 41
-        - 42
     - name: EL
       versions:
-        - 8
-        - 9
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Fedora
+      versions:
+        - all
 
   galaxy_tags:
     - security
@@ -38,8 +29,7 @@ galaxy_info:
     - hardening
     - ccdc
     - fail2ban
-    - intrusion-detection
+    - intrusiondetection
 
 dependencies: []
-
 allow_duplicates: false

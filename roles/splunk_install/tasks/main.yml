@@ -1,4 +1,3 @@
----
 # SPLUNK INSTALLATION
 
 - name: Ensure splunk group exists
@@ -18,7 +17,7 @@
   ansible.builtin.get_url:
     url: "{{ splunk_pkg_url }}"
     dest: "/tmp/{{ splunk_pkg_url | basename }}"
-    mode: '0644'
+    mode: "0644"
     validate_certs: false
 
 - name: Install Splunk (Debian/Ubuntu)
@@ -29,10 +28,10 @@
   become: true
 
 - name: Install Splunk (RedHat/Fedora)
-  ansible.builtin.command: >
-    rpm -Uvh /tmp/{{ splunk_pkg_url | basename }}
-  args:
-    creates: "{{ splunk_home }}/bin/splunk"
+  ansible.builtin.dnf:
+    name: "/tmp/{{ splunk_pkg_url | basename }}"
+    state: present
+    disable_gpg_check: true
   when: ansible_os_family == "RedHat"
   become: true
 
@@ -51,7 +50,7 @@
     state: directory
     owner: "{{ splunk_user }}"
     group: "{{ splunk_group }}"
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Seed admin password
@@ -63,7 +62,7 @@
       PASSWORD = {{ vault_splunk_admin_password }}
     owner: "{{ splunk_user }}"
     group: "{{ splunk_group }}"
-    mode: '0600'
+    mode: "0600"
   become: true
 
 - name: Accept license and start Splunk

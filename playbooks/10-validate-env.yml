@@ -1,4 +1,3 @@
----
 # ============================================
 # ENVIRONMENT VALIDATION
 # ============================================
@@ -57,7 +56,9 @@
 
     - name: Display vault status
       ansible.builtin.debug:
-        msg: "{{ '✅' if vault_file.stat.exists else '❌' }} Vault password file: {{ '~/.vault_pass' if vault_file.stat.exists else 'MISSING' }}"
+        msg:
+          - "{{ '✅' if vault_file.stat.exists else '❌' }} Vault password file:"
+          - "{{ '~/.vault_pass' if vault_file.stat.exists else 'MISSING' }}"
 
     - name: Check sshpass (needed for password-based SSH)
       ansible.builtin.command: which sshpass
@@ -67,13 +68,15 @@
 
     - name: Display sshpass status
       ansible.builtin.debug:
-        msg: "{{ '✅' if sshpass_check.rc == 0 else '⚠️' }} sshpass: {{ 'installed' if sshpass_check.rc == 0 else 'missing (SSH may fail)' }}"
+        msg:
+          - "{{ '✅' if sshpass_check.rc == 0 else '⚠️' }} sshpass:"
+          - "{{ 'installed' if sshpass_check.rc == 0 else 'missing (SSH may fail)' }}"
 
 - name: Validate Remote Hosts (Priority-Based)
   hosts: all
   gather_facts: true
   ignore_unreachable: true
-  serial: 1  # Check one at a time for clearer output
+  serial: 1 # Check one at a time for clearer output
 
   tasks:
     - name: Ping test
@@ -95,10 +98,14 @@
       when: ping_result is success
 
     - name: Check disk space
-      ansible.builtin.shell: df -h / | tail -1 | awk '{print $5}' | sed 's/%//'
+      ansible.builtin.shell: |
+        set -o pipefail
+        df -h / | tail -1 | awk '{print $5}' | sed 's/%//'
       register: disk_check
       changed_when: false
       when: ping_result is success
+      args:
+        executable: /bin/bash
 
     - name: Display host status
       ansible.builtin.debug:
@@ -135,7 +142,8 @@
           - "❌ Unreachable: {{ total | int - reachable | int }}"
           - "Success rate: {{ ((reachable | int / total | int) * 100) | round(1) }}%"
           - ""
-          - "{{ '✅ Environment ready for automation!' if reachable | int == total | int else '⚠️ Some hosts unreachable - fix SSH before proceeding' }}"
+          - "{{ '✅ Environment ready for automation!' if reachable | int == total | int else '⚠️ Some hosts unreachable' }}"
+          - "{{ '' if reachable | int == total | int else 'Fix SSH before proceeding.' }}"
           - ""
           - "Next steps:"
           - "  - Run playbooks on reachable hosts only"

@@ -1,4 +1,3 @@
----
 # ============================================
 # DISCORD WEBHOOK INTEGRATION
 # ============================================
@@ -31,7 +30,7 @@
   ansible.builtin.file:
     path: /usr/local/bin/ccdc-audit-alerts
     state: directory
-    mode: '0755'
+    mode: "0755"
     owner: root
     group: root
   become: true
@@ -89,16 +88,20 @@
           details = sys.argv[2]
 
           sys.exit(send_alert(event_type, details))
-    mode: '0750'
+    mode: "0750"
     owner: root
     group: root
   become: true
 
 - name: Test Discord webhook connectivity
   ansible.builtin.shell: |
+    DETAILS="Auditd monitoring configured on {{ inventory_hostname }}."
+    DETAILS="$DETAILS File integrity monitoring is active."
+    DETAILS="$DETAILS Privilege escalation detection and authentication tracking are now active."
+
     /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py \
       "Auditd Monitoring Active" \
-      "Auditd monitoring has been configured on {{ inventory_hostname }}. File integrity monitoring, privilege escalation detection, and authentication tracking are now active."
+      "$DETAILS"
   register: discord_test
   changed_when: false
   failed_when: false
@@ -137,10 +140,15 @@
 
       # Send summary if events detected
       if [ $TOTAL_EVENTS -gt 0 ]; then
-          SUMMARY="**Last Hour:**\n• Total events: $TOTAL_EVENTS\n• Auth failures: $AUTH_FAILURES\n• File changes: $FILE_CHANGES\n• Priv escalation: $PRIV_ESC"
-          /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py "Hourly Audit Summary" "$SUMMARY"
+          SUMMARY=$'**Last Hour:**\n'
+          SUMMARY+=$'• Total events: '"$TOTAL_EVENTS"'\n'
+          SUMMARY+=$'• Auth failures: '"$AUTH_FAILURES"'\n'
+          SUMMARY+=$'• File changes: '"$FILE_CHANGES"'\n'
+          SUMMARY+=$'• Priv escalation: '"$PRIV_ESC"
+          /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py \
+            "Hourly Audit Summary" "$SUMMARY"
       fi
-    mode: '0750'
+    mode: "0750"
     owner: root
     group: root
   become: true

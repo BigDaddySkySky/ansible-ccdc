@@ -1,4 +1,3 @@
----
 # ============================================
 # PANIC BUTTON: DISABLE ALL FIREWALLS
 # ============================================
@@ -33,7 +32,7 @@
         iptables -t mangle -F
         iptables -F
         iptables -X
-      ignore_errors: true
+      failed_when: false
 
     - name: Display Panic Status
       ansible.builtin.debug:

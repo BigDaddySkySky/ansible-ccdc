@@ -7,11 +7,14 @@ repos:
       - id: detect-aws-credentials
         stages: [manual]
         args: ["--allow-missing-credentials"]
+
   - repo: https://github.com/ansible/ansible-lint.git
-    rev: v6.22.1
+    rev: v25.12.1
     hooks:
       - id: ansible-lint
+        language: python
         additional_dependencies: []
+
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.35.1
     hooks:

@@ -1,4 +1,3 @@
----
 # ============================================
 # FIREWALL HARDENING ROLE - DEFAULT VARIABLES
 # ============================================
@@ -58,7 +57,6 @@ firewall_scored_services:
 
 # Additional services (host-specific, not scored by default)
 firewall_additional_services: []
-
 # ============================================
 # Scoring Engine / White Team Access
 # ============================================
@@ -66,12 +64,11 @@ firewall_additional_services: []
 # Allow traffic from scoring engine IPs
 # Update these with actual competition IPs
 firewall_scoring_ips:
-  - "172.31.0.0/16"      # Common CCDC scoring range
-  - "192.168.0.0/16"     # Local network range
+  - "172.31.0.0/16" # Common CCDC scoring range
+  - "192.168.0.0/16" # Local network range
 
 # Allow traffic from White Team (if specified)
 firewall_whiteteam_ips: []
-
 # ============================================
 # Rate Limiting (DDoS Protection)
 # ============================================
@@ -126,10 +123,8 @@ firewall_enable_syn_protection: true
 
 # UFW application profiles to enable
 ufw_applications: []
-
 # UFW before rules (advanced)
 ufw_before_rules: []
-
 # ============================================
 # Firewalld-Specific Settings
 # ============================================
@@ -144,7 +139,6 @@ firewalld_zones:
 
 # Rich rules for advanced firewalld configuration
 firewalld_rich_rules: []
-
 # ============================================
 # Host-Specific Service Filtering
 # ============================================

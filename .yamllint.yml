@@ -1,20 +1,42 @@
----
 extends: default
+
+ignore: |
+  .venv/
+  .ansible/
+  .cache/
+  .git/
+  .vscode/
+
 rules:
   line-length:
     max: 140
     allow-non-breakable-words: true
+
   indentation:
     indent-sequences: consistent
     spaces: 2
+
   trailing-spaces: enable
+
   new-lines:
     type: unix
+
   truthy:
-    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    allowed-values: ["true", "false", "yes", "no", "on", "off"]
   braces:
     max-spaces-inside: 1
+
   brackets:
     max-spaces-inside: 1
+
   document-start:
     present: false
+
+  comments:
+    min-spaces-from-content: 1
+
+  comments-indentation: false
+
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true

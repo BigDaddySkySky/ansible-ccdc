@@ -1,4 +1,3 @@
----
 - name: Hello World - SSH Test
   hosts: all
   gather_facts: false

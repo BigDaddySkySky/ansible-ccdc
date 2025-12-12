@@ -1,4 +1,3 @@
----
 # ============================================
 # SPLUNK APPLICATION HARDENING (SAFE MODE)
 # ============================================
@@ -33,32 +32,52 @@
 # INPUTS: MONITOR KEY LINUX LOGS + LISTENER 9997
 # ------------------------------------------------
 - name: Ensure Splunk inputs for key logs and receiver
-  ansible.builtin.ini_file:
+  community.general.ini_file:
     path: /opt/splunk/etc/system/local/inputs.conf
     section: "{{ item.section }}"
     option: "{{ item.option }}"
     value: "{{ item.value }}"
     owner: splunk
     group: splunk
-    mode: '0644'
+    mode: "0644"
   loop:
     # --- auth log (CentOS/Rocky) ---
-    - { section: "monitor:///var/log/secure", option: "disabled",    value: "0" }
-    - { section: "monitor:///var/log/secure", option: "index",       value: "main" }
-    - { section: "monitor:///var/log/secure", option: "sourcetype",  value: "linux_secure" }
+    - section: "monitor:///var/log/secure"
+      option: "disabled"
+      value: "0"
+    - section: "monitor:///var/log/secure"
+      option: "index"
+      value: "main"
+    - section: "monitor:///var/log/secure"
+      option: "sourcetype"
+      value: "linux_secure"
 
     # --- generic messages/syslog ---
-    - { section: "monitor:///var/log/messages", option: "disabled",   value: "0" }
-    - { section: "monitor:///var/log/messages", option: "index",      value: "main" }
-    - { section: "monitor:///var/log/messages", option: "sourcetype", value: "syslog" }
+    - section: "monitor:///var/log/messages"
+      option: "disabled"
+      value: "0"
+    - section: "monitor:///var/log/messages"
+      option: "index"
+      value: "main"
+    - section: "monitor:///var/log/messages"
+      option: "sourcetype"
+      value: "syslog"
 
     # --- audit logs (if present) ---
-    - { section: "monitor:///var/log/audit/audit.log", option: "disabled",   value: "0" }
-    - { section: "monitor:///var/log/audit/audit.log", option: "index",      value: "main" }
-    - { section: "monitor:///var/log/audit/audit.log", option: "sourcetype", value: "linux_audit" }
+    - section: "monitor:///var/log/audit/audit.log"
+      option: "disabled"
+      value: "0"
+    - section: "monitor:///var/log/audit/audit.log"
+      option: "index"
+      value: "main"
+    - section: "monitor:///var/log/audit/audit.log"
+      option: "sourcetype"
+      value: "linux_audit"
 
     # --- Splunk TCP receiver (non-SSL) ---
-    - { section: "splunktcp:9997", option: "disabled", value: "0" }
+    - section: "splunktcp:9997"
+      option: "disabled"
+      value: "0"
   become: true
   notify: restart splunk
 
@@ -71,7 +90,7 @@
     state: directory
     owner: splunk
     group: splunk
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Deploy team saved searches
@@ -80,7 +99,7 @@
     dest: /opt/splunk/etc/apps/search/local/savedsearches.conf
     owner: splunk
     group: splunk
-    mode: '0644'
+    mode: "0644"
   become: true
   notify: restart splunk
 
@@ -90,7 +109,7 @@
     state: directory
     owner: splunk
     group: splunk
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Ensure search app views directory exists
@@ -99,7 +118,7 @@
     state: directory
     owner: splunk
     group: splunk
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Deploy CCDC test dashboard
@@ -108,10 +127,9 @@
     dest: /opt/splunk/etc/apps/search/local/data/ui/views/ccdc_test_dashboard.xml
     owner: splunk
     group: splunk
-    mode: '0644'
+    mode: "0644"
   become: true
   notify: restart splunk
-
 
 - name: Deploy CCDC overview dashboard
   ansible.builtin.template:
@@ -119,7 +137,7 @@
     dest: /opt/splunk/etc/apps/search/local/data/ui/views/ccdc_overview.xml
     owner: splunk
     group: splunk
-    mode: '0644'
+    mode: "0644"
   become: true
   notify: restart splunk
 
