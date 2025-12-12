@@ -1,3 +1,5 @@
+[![Lint](https://github.com/smoyers/ansible-ccdc/actions/workflows/lint.yml/badge.svg)](https://github.com/smoyers/ansible-ccdc/actions/workflows/lint.yml)
+
 # CCDC Ansible Automation (Blue Team Runbook)
 
 Purpose
