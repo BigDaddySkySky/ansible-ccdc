@@ -1,0 +1,40 @@
+---
+# ============================================
+# PANIC BUTTON: DISABLE ALL FIREWALLS
+# ============================================
+# Run this if you lock yourself out or scoring fails
+# usage: ansible-playbook playbooks/99-nuke-firewall.yml
+# ============================================
+
+- name: DISABLE ALL FIREWALLS
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Disable UFW (Ubuntu/Debian)
+      community.general.ufw:
+        state: disabled
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Disable Firewalld (RHEL/CentOS/Fedora)
+      ansible.builtin.service:
+        name: firewalld
+        state: stopped
+        enabled: false
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Flush IPTables (Nuclear Option)
+      ansible.builtin.shell: |
+        iptables -P INPUT ACCEPT
+        iptables -P FORWARD ACCEPT
+        iptables -P OUTPUT ACCEPT
+        iptables -t nat -F
+        iptables -t mangle -F
+        iptables -F
+        iptables -X
+      ignore_errors: true
+
+    - name: Display Panic Status
+      ansible.builtin.debug:
+        msg: "⚠️  FIREWALLS DISABLED ON {{ inventory_hostname }} - SYSTEM IS EXPOSED"

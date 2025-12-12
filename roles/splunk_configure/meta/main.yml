@@ -1,0 +1,7 @@
+---
+# Meta for splunk_configure
+galaxy_info:
+  author: MWCCDC-Team
+  description: splunk_configure role scaffolding
+  license: MIT
+dependencies: []

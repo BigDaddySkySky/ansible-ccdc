@@ -1,0 +1,6 @@
+---
+galaxy_info:
+  author: MWCCDC Team
+  description: Emergency firewall rollback to default-allow and reopen scored ports
+  license: MIT
+dependencies: []

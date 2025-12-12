@@ -1,0 +1,7 @@
+---
+- name: restart splunk forwarder
+  ansible.builtin.service:
+    name: SplunkForwarder
+    state: restarted
+    enabled: true
+  become: true

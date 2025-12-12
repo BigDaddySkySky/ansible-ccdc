@@ -1,0 +1,8 @@
+---
+palo_zone_outside: "outside"
+palo_zone_inside: "inside"
+palo_zone_ftd: "ftd-zone"
+
+palo_vsys: "vsys1"
+
+palo_log_forwarding_profile: "log-to-default"

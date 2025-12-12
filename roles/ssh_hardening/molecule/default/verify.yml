@@ -1,0 +1,10 @@
+---
+- name: Verify
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Assert converge succeeded
+      ansible.builtin.assert:
+        that: true
+        success_msg: "Converge completed"

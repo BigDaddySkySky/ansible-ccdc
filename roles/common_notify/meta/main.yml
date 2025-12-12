@@ -1,0 +1,7 @@
+---
+# Meta for common_notify
+galaxy_info:
+  author: MWCCDC-Team
+  description: common_notify role scaffolding
+  license: MIT
+dependencies: []

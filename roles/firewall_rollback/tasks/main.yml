@@ -1,0 +1,137 @@
+---
+# FIREWALL ROLLBACK (PANIC REOPEN)
+
+- name: Detect firewall backend
+  ansible.builtin.set_fact:
+    firewall_rb_backend: >-
+      {{ 'firewalld' if (ansible_facts.packages['firewalld'] is defined or (ansible_facts.services|default({})).get('firewalld.service')) else
+         'ufw' if (ansible_facts.packages['ufw'] is defined or (ansible_facts.services|default({})).get('ufw.service')) else
+         'none' }}
+
+# ---------- UFW ROLLBACK ----------
+- name: Reset ufw to defaults
+  community.general.ufw:
+    state: reset
+  when: firewall_rb_backend == 'ufw'
+  become: true
+
+- name: Set ufw default allow incoming/outgoing
+  community.general.ufw:
+    state: enabled
+    policy: allow
+  when: firewall_rb_backend == 'ufw'
+  become: true
+
+- name: Allow scored ports (ufw)
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop: "{{ firewall_rb_scored_ports }}"
+  when: firewall_rb_backend == 'ufw'
+  become: true
+
+- name: Allow ICMP (ufw)
+  ansible.builtin.command: ufw allow proto icmp
+  when: firewall_rb_backend == 'ufw'
+  changed_when: false
+  failed_when: false
+  become: true
+
+# ---------- FIREWALLD ROLLBACK ----------
+- name: Ensure firewalld running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+    enabled: true
+  when: firewall_rb_backend == 'firewalld'
+  become: true
+
+- name: Set default zone to public
+  ansible.posix.firewalld:
+    zone: "{{ firewall_rb_firewalld_zone }}"
+    state: enabled
+    permanent: true
+    immediate: true
+  when: firewall_rb_backend == 'firewalld'
+  become: true
+
+- name: Allow scored ports (firewalld)
+  ansible.posix.firewalld:
+    port: "{{ item.port }}/{{ item.proto }}"
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: "{{ firewall_rb_firewalld_zone }}"
+  loop: "{{ firewall_rb_scored_ports }}"
+  when: firewall_rb_backend == 'firewalld'
+  become: true
+
+- name: Allow ICMP (firewalld)
+  ansible.posix.firewalld:
+    service: icmp
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: "{{ firewall_rb_firewalld_zone }}"
+  when: firewall_rb_backend == 'firewalld'
+  become: true
+
+# ---------- KERNEL SYSCTL ROLLBACK ----------
+- name: Revert kernel sysctl hardening to defaults (IPv4 forwarding)
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    sysctl_set: true
+    reload: true
+  when: firewall_rb_reset_sysctl | bool
+  become: true
+
+- name: Revert kernel sysctl hardening to defaults (IPv6 forwarding)
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: '1'
+    state: present
+    sysctl_set: true
+    reload: true
+  when: firewall_rb_reset_sysctl | bool
+  become: true
+
+- name: Revert kernel sysctl hardening to defaults (rp_filter off)
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.rp_filter
+    value: '0'
+    state: present
+    sysctl_set: true
+    reload: true
+  when: firewall_rb_reset_sysctl | bool
+  become: true
+
+# ---------- SSH SAFETY ----------
+- name: Ensure SSH port open via ufw
+  community.general.ufw:
+    rule: allow
+    port: 22
+    proto: tcp
+  when: firewall_rb_backend == 'ufw'
+  become: true
+
+- name: Ensure SSH port open via firewalld
+  ansible.posix.firewalld:
+    service: ssh
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: "{{ firewall_rb_firewalld_zone }}"
+  when: firewall_rb_backend == 'firewalld'
+  become: true
+
+# Summary fact
+- name: Set firewall rollback summary fact
+  ansible.builtin.set_fact:
+    firewall_rb_summary:
+      backend: "{{ firewall_rb_backend }}"
+      scored_ports: "{{ firewall_rb_scored_ports }}"
+      firewalld_zone: "{{ firewall_rb_firewalld_zone if firewall_rb_backend == 'firewalld' else omit }}"
+      sysctl_reset: "{{ firewall_rb_reset_sysctl }}"

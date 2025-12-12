@@ -1,0 +1,10 @@
+---
+- name: Configure Palo Alto firewall (NAT + policies)
+  hosts: palo_firewalls
+  gather_facts: no
+
+  collections:
+    - paloaltonetworks.panos
+
+  roles:
+    - paloalto_firewall

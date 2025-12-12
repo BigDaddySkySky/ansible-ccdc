@@ -1,0 +1,6 @@
+---
+galaxy_info:
+  author: MWCCDC Team
+  description: Read-only firewall preflight checks
+  license: MIT
+dependencies: []

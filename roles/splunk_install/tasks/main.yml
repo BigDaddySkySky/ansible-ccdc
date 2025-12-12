@@ -1,0 +1,105 @@
+---
+# SPLUNK INSTALLATION
+
+- name: Ensure splunk group exists
+  ansible.builtin.group:
+    name: "{{ splunk_group }}"
+    state: present
+
+- name: Ensure splunk user exists
+  ansible.builtin.user:
+    name: "{{ splunk_user }}"
+    group: "{{ splunk_group }}"
+    shell: /bin/bash
+    create_home: false
+    system: true
+
+- name: Download Splunk package
+  ansible.builtin.get_url:
+    url: "{{ splunk_pkg_url }}"
+    dest: "/tmp/{{ splunk_pkg_url | basename }}"
+    mode: '0644'
+    validate_certs: false
+
+- name: Install Splunk (Debian/Ubuntu)
+  ansible.builtin.apt:
+    deb: "/tmp/{{ splunk_pkg_url | basename }}"
+    state: present
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Install Splunk (RedHat/Fedora)
+  ansible.builtin.command: >
+    rpm -Uvh /tmp/{{ splunk_pkg_url | basename }}
+  args:
+    creates: "{{ splunk_home }}/bin/splunk"
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Ensure Splunk home ownership
+  ansible.builtin.file:
+    path: "{{ splunk_home }}"
+    state: directory
+    owner: "{{ splunk_user }}"
+    group: "{{ splunk_group }}"
+    recurse: true
+  become: true
+
+- name: Ensure system/local directory exists
+  ansible.builtin.file:
+    path: "{{ splunk_home }}/etc/system/local"
+    state: directory
+    owner: "{{ splunk_user }}"
+    group: "{{ splunk_group }}"
+    mode: '0755'
+  become: true
+
+- name: Seed admin password
+  ansible.builtin.copy:
+    dest: "{{ splunk_home }}/etc/system/local/user-seed.conf"
+    content: |
+      [user_info]
+      USERNAME = admin
+      PASSWORD = {{ vault_splunk_admin_password }}
+    owner: "{{ splunk_user }}"
+    group: "{{ splunk_group }}"
+    mode: '0600'
+  become: true
+
+- name: Accept license and start Splunk
+  ansible.builtin.command:
+    cmd: "{{ splunk_home }}/bin/splunk start --accept-license --answer-yes --no-prompt"
+  become: true
+  become_user: "{{ splunk_user }}"
+  register: splunk_start
+  changed_when: true
+
+- name: Enable Splunk boot-start
+  ansible.builtin.command:
+    cmd: "{{ splunk_home }}/bin/splunk enable boot-start -user {{ splunk_user }} --accept-license --answer-yes --no-prompt"
+  args:
+    creates: /etc/systemd/system/Splunkd.service
+  become: true
+
+- name: Open Splunk ports in firewalld
+  ansible.posix.firewalld:
+    port: "{{ item }}/tcp"
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: "{{ splunk_firewalld_zone }}"
+  loop: "{{ splunk_ports }}"
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Open Splunk ports in ufw
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ splunk_ports }}"
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Restart Splunk if needed
+  ansible.builtin.meta: flush_handlers

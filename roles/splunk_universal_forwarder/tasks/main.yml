@@ -1,0 +1,142 @@
+---
+# ========== Detect forwarder user ==========
+
+- name: Check if splunk user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: splunk
+  register: splunk_user_check
+  failed_when: false
+
+- name: Check if splunkfwd user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: splunkfwd
+  register: splunkfwd_user_check
+  failed_when: false
+
+- name: Set forwarder user fact
+  ansible.builtin.set_fact:
+    forwarder_user: >-
+      {{ 'splunkfwd' if splunkfwd_user_check.ansible_facts.getent_passwd.splunkfwd is defined
+         else ('splunk' if splunk_user_check.ansible_facts.getent_passwd.splunk is defined
+         else splunk_forwarder_user_default) }}
+
+- name: Show which service account we'll use
+  ansible.builtin.debug:
+    msg: "Using Splunk forwarder user: {{ forwarder_user }}"
+
+# ========== Install UF if needed ==========
+
+- name: Set Splunk Forwarder package URL
+  ansible.builtin.set_fact:
+    splunk_forwarder_url: >-
+      {{ splunk_forwarder_rpm_url if ansible_os_family == 'RedHat'
+         else splunk_forwarder_deb_url }}
+
+- name: Set Splunk Forwarder package filename
+  ansible.builtin.set_fact:
+    splunk_forwarder_pkg: "{{ splunk_forwarder_url | basename }}"
+
+- name: Download Splunk Universal Forwarder (if not already downloaded)
+  ansible.builtin.get_url:
+    url: "{{ splunk_forwarder_url }}"
+    dest: "/tmp/{{ splunk_forwarder_pkg }}"
+    mode: '0644'
+    validate_certs: false
+    timeout: 300
+  when: not (splunk_forwarder_home is exists)
+  become: true
+
+- name: Install Splunk Universal Forwarder (Debian)
+  ansible.builtin.apt:
+    deb: "/tmp/{{ splunk_forwarder_pkg }}"
+    state: present
+  when:
+    - ansible_os_family == "Debian"
+    - not (splunk_forwarder_home is exists)
+  become: true
+
+- name: Install Splunk Universal Forwarder (RedHat)
+  ansible.builtin.command: >
+    rpm -Uvh /tmp/{{ splunk_forwarder_pkg }}
+  args:
+    creates: "{{ splunk_forwarder_home }}/bin/splunk"
+  when:
+    - ansible_os_family == "RedHat"
+    - not (splunk_forwarder_home is exists)
+  become: true
+
+# ========== Ensure ownership is correct ==========
+
+- name: Ensure forwarder directory owned by forwarder user
+  ansible.builtin.file:
+    path: "{{ splunk_forwarder_home }}"
+    state: directory
+    owner: "{{ forwarder_user }}"
+    group: "{{ forwarder_user }}"
+    recurse: true
+  become: true
+
+# ========== Enable + start via systemd (boot-start one-time) ==========
+
+- name: Enable Splunk Forwarder boot-start (one-time)
+  ansible.builtin.command: >
+    {{ splunk_forwarder_home }}/bin/splunk enable boot-start
+    -user {{ forwarder_user }}
+    --accept-license --answer-yes --no-prompt
+  args:
+    creates: /etc/systemd/system/SplunkForwarder.service
+  become: true
+
+- name: Ensure SplunkForwarder service is running
+  ansible.builtin.service:
+    name: SplunkForwarder
+    state: started
+    enabled: true
+  become: true
+
+# ========== Configure outputs.conf ==========
+
+- name: Ensure local config dir exists
+  ansible.builtin.file:
+    path: "{{ splunk_forwarder_home }}/etc/system/local"
+    state: directory
+    owner: "{{ forwarder_user }}"
+    group: "{{ forwarder_user }}"
+    mode: '0755'
+  become: true
+
+- name: Deploy outputs.conf for forwarder
+  ansible.builtin.template:
+    src: outputs.conf.j2
+    dest: "{{ splunk_forwarder_home }}/etc/system/local/outputs.conf"
+    owner: "{{ forwarder_user }}"
+    group: "{{ forwarder_user }}"
+    mode: '0600'
+  notify: restart splunk forwarder
+  become: true
+
+# ========== Configure inputs.conf (per OS) ==========
+
+- name: Deploy inputs.conf for Ubuntu / Debian
+  ansible.builtin.template:
+    src: inputs_debian.conf.j2
+    dest: "{{ splunk_forwarder_home }}/etc/system/local/inputs.conf"
+    owner: "{{ forwarder_user }}"
+    group: "{{ forwarder_user }}"
+    mode: '0600'
+  when: ansible_os_family == "Debian"
+  notify: restart splunk forwarder
+  become: true
+
+- name: Deploy inputs.conf for Fedora / RedHat
+  ansible.builtin.template:
+    src: inputs_redhat.conf.j2
+    dest: "{{ splunk_forwarder_home }}/etc/system/local/inputs.conf"
+    owner: "{{ forwarder_user }}"
+    group: "{{ forwarder_user }}"
+    mode: '0600'
+  when: ansible_os_family == "RedHat"
+  notify: restart splunk forwarder
+  become: true

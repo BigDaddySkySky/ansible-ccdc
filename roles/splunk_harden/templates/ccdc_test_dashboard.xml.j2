@@ -1,0 +1,17 @@
+<dashboard>
+  <label>CCDC Test Dashboard</label>
+  <description>Sanity check dashboard deployed by Ansible.</description>
+
+  <row>
+    <panel>
+      <title>Internal Events (Last 15 Minutes)</title>
+      <table>
+        <search>
+          <query>index=_internal | head 20</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+        </search>
+      </table>
+    </panel>
+  </row>
+</dashboard>

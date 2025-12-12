@@ -1,0 +1,149 @@
+---
+# ============================================
+# SPLUNK APPLICATION HARDENING (SAFE MODE)
+# ============================================
+# Purpose:
+#   - Open Splunk ports in firewalld
+#   - Enable receiver on 9997
+#   - Enable monitoring of key Linux logs
+#   - Deploy helpful saved searches
+#   - Enable Splunk boot-start
+# ============================================
+
+- name: Display Splunk hardening header
+  ansible.builtin.debug:
+    msg: "Hardening Splunk (safe mode) on {{ inventory_hostname }}..."
+
+# ------------------------------------------------
+# FIREWALLD PORTS
+# ------------------------------------------------
+- name: Open Splunk firewall ports in firewalld
+  ansible.posix.firewalld:
+    port: "{{ item.port }}/tcp"
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: public
+  loop:
+    - { port: 8089, comment: "Splunk Management" }
+    - { port: 9997, comment: "Splunk Log Receiver" }
+  become: true
+
+# ------------------------------------------------
+# INPUTS: MONITOR KEY LINUX LOGS + LISTENER 9997
+# ------------------------------------------------
+- name: Ensure Splunk inputs for key logs and receiver
+  ansible.builtin.ini_file:
+    path: /opt/splunk/etc/system/local/inputs.conf
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    owner: splunk
+    group: splunk
+    mode: '0644'
+  loop:
+    # --- auth log (CentOS/Rocky) ---
+    - { section: "monitor:///var/log/secure", option: "disabled",    value: "0" }
+    - { section: "monitor:///var/log/secure", option: "index",       value: "main" }
+    - { section: "monitor:///var/log/secure", option: "sourcetype",  value: "linux_secure" }
+
+    # --- generic messages/syslog ---
+    - { section: "monitor:///var/log/messages", option: "disabled",   value: "0" }
+    - { section: "monitor:///var/log/messages", option: "index",      value: "main" }
+    - { section: "monitor:///var/log/messages", option: "sourcetype", value: "syslog" }
+
+    # --- audit logs (if present) ---
+    - { section: "monitor:///var/log/audit/audit.log", option: "disabled",   value: "0" }
+    - { section: "monitor:///var/log/audit/audit.log", option: "index",      value: "main" }
+    - { section: "monitor:///var/log/audit/audit.log", option: "sourcetype", value: "linux_audit" }
+
+    # --- Splunk TCP receiver (non-SSL) ---
+    - { section: "splunktcp:9997", option: "disabled", value: "0" }
+  become: true
+  notify: restart splunk
+
+# ------------------------------------------------
+# SAVED SEARCHES FOR TEAM USE
+# ------------------------------------------------
+- name: Ensure search app local directory exists
+  ansible.builtin.file:
+    path: /opt/splunk/etc/apps/search/local
+    state: directory
+    owner: splunk
+    group: splunk
+    mode: '0755'
+  become: true
+
+- name: Deploy team saved searches
+  ansible.builtin.template:
+    src: savedsearches.conf.j2
+    dest: /opt/splunk/etc/apps/search/local/savedsearches.conf
+    owner: splunk
+    group: splunk
+    mode: '0644'
+  become: true
+  notify: restart splunk
+
+- name: Ensure search app views directory exists
+  ansible.builtin.file:
+    path: /opt/splunk/etc/apps/search/local/data/ui/views
+    state: directory
+    owner: splunk
+    group: splunk
+    mode: '0755'
+  become: true
+
+- name: Ensure search app views directory exists
+  ansible.builtin.file:
+    path: /opt/splunk/etc/apps/search/local/data/ui/views
+    state: directory
+    owner: splunk
+    group: splunk
+    mode: '0755'
+  become: true
+
+- name: Deploy CCDC test dashboard
+  ansible.builtin.template:
+    src: ccdc_test_dashboard.xml.j2
+    dest: /opt/splunk/etc/apps/search/local/data/ui/views/ccdc_test_dashboard.xml
+    owner: splunk
+    group: splunk
+    mode: '0644'
+  become: true
+  notify: restart splunk
+
+
+- name: Deploy CCDC overview dashboard
+  ansible.builtin.template:
+    src: ccdc_overview.xml.j2
+    dest: /opt/splunk/etc/apps/search/local/data/ui/views/ccdc_overview.xml
+    owner: splunk
+    group: splunk
+    mode: '0644'
+  become: true
+  notify: restart splunk
+
+# ------------------------------------------------
+# ENABLE BOOT-START
+# ------------------------------------------------
+- name: Enable Splunk to start at boot
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk enable boot-start -user splunk --accept-license --answer-yes --no-prompt
+  become: true
+  # This command is idempotent; it will just re-affirm boot-start
+
+# ------------------------------------------------
+# APPLY CHANGES & SUMMARY
+# ------------------------------------------------
+- name: Flush handlers to restart Splunk if needed
+  ansible.builtin.meta: flush_handlers
+
+- name: Display Splunk hardening summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Splunk hardening (safe mode) complete!"
+      - "   • Firewalld: 8089 (mgmt) + 9997 (receiver) open"
+      - "   • Inputs: /var/log/secure, /var/log/messages, /var/log/audit/audit.log"
+      - "   • Receiver: splunktcp:9997 enabled"
+      - "   • Saved searches deployed to app=search"
+      - "   • Boot-start enabled for user 'splunk'"

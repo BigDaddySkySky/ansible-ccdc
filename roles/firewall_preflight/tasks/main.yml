@@ -1,0 +1,86 @@
+---
+# FIREWALL PREFLIGHT (READ-ONLY)
+
+- name: Detect firewall backend
+  ansible.builtin.set_fact:
+    firewall_preflight_backend: >-
+      {{ 'firewalld' if (ansible_facts.packages['firewalld'] is defined or (ansible_facts.services|default({})).get('firewalld.service')) else
+         'ufw' if (ansible_facts.packages['ufw'] is defined or (ansible_facts.services|default({})).get('ufw.service')) else
+         'none' }}
+
+- name: Get firewalld default zone
+  ansible.builtin.command: firewall-cmd --get-default-zone
+  register: firewall_preflight_default_zone_cmd
+  changed_when: false
+  failed_when: false
+  when: firewall_preflight_backend == 'firewalld'
+
+- name: Set firewalld default zone fact
+  ansible.builtin.set_fact:
+    firewall_preflight_default_zone: "{{ firewall_preflight_default_zone_cmd.stdout | default('public') }}"
+  when: firewall_preflight_backend == 'firewalld'
+
+- name: Check firewalld state
+  ansible.builtin.command: firewall-cmd --state
+  register: firewall_preflight_firewalld_state
+  changed_when: false
+  failed_when: false
+  when: firewall_preflight_backend == 'firewalld'
+
+- name: Check ufw status
+  community.general.ufw:
+    state: status
+  register: firewall_preflight_ufw_status
+  when: firewall_preflight_backend == 'ufw'
+  changed_when: false
+  failed_when: false
+
+- name: Detect IP forwarding (IPv4)
+  ansible.builtin.command: sysctl -n net.ipv4.ip_forward
+  register: firewall_preflight_ip_forward
+  changed_when: false
+  failed_when: false
+
+- name: Detect IP forwarding (IPv6)
+  ansible.builtin.command: sysctl -n net.ipv6.conf.all.forwarding
+  register: firewall_preflight_ip6_forward
+  changed_when: false
+  failed_when: false
+
+- name: Define scored ports list
+  ansible.builtin.set_fact:
+    firewall_preflight_scored_ports:
+      - { port: 22, proto: tcp }
+      - { port: 80, proto: tcp }
+      - { port: 443, proto: tcp }
+      - { port: 25, proto: tcp }
+      - { port: 110, proto: tcp }
+      - { port: 21, proto: tcp }
+      - { port: 53, proto: udp }
+
+- name: Check firewalld open ports
+  ansible.builtin.command: "firewall-cmd --zone={{ firewall_preflight_default_zone | default('public') }} --list-ports"
+  register: firewall_preflight_firewalld_ports
+  changed_when: false
+  failed_when: false
+  when: firewall_preflight_backend == 'firewalld'
+
+- name: Check ufw rules
+  ansible.builtin.command: ufw status numbered
+  register: firewall_preflight_ufw_rules
+  changed_when: false
+  failed_when: false
+  when: firewall_preflight_backend == 'ufw'
+
+- name: Summarize preflight facts
+  ansible.builtin.set_fact:
+    firewall_preflight:
+      backend: "{{ firewall_preflight_backend }}"
+      firewalld:
+        default_zone: "{{ firewall_preflight_default_zone | default(omit) }}"
+        state: "{{ firewall_preflight_firewalld_state.stdout | default('unknown') }}"
+        open_ports: "{{ firewall_preflight_firewalld_ports.stdout.split() if firewall_preflight_firewalld_ports.stdout is defined else [] }}"
+      ufw:
+        raw_rules: "{{ firewall_preflight_ufw_rules.stdout_lines | default([]) }}"
+      ip_forward_ipv4: "{{ firewall_preflight_ip_forward.stdout | default('0') }}"
+      ip_forward_ipv6: "{{ firewall_preflight_ip6_forward.stdout | default('0') }}"

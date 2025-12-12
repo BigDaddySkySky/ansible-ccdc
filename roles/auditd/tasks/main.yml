@@ -1,0 +1,53 @@
+---
+# ============================================
+# AUDITD MONITORING ROLE - MAIN TASKS (SPRINT 4)
+# ============================================
+# NOTE: Pre-flight and Validation are handled
+# by common_preflight and common_validation
+# ============================================
+
+- name: Display auditd monitoring header
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "📊 Auditd Monitoring: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================
+# Installation
+# ============================================
+
+- name: Include installation tasks
+  ansible.builtin.include_tasks: install.yml
+  when: auditd_enabled | bool
+
+# ============================================
+# Configuration
+# ============================================
+
+- name: Include configuration tasks
+  ansible.builtin.include_tasks: configure.yml
+  when: auditd_enabled | bool
+
+# ============================================
+# Discord Integration (Optional)
+# ============================================
+
+- name: Include Discord alert configuration
+  ansible.builtin.include_tasks: discord_alerts.yml
+  when:
+    - auditd_enabled | bool
+    - auditd_enable_discord_alerts | bool
+    - vault_discord_webhook_url is defined
+    - vault_discord_webhook_url != ""
+
+# ============================================
+# Summary
+# ============================================
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "✅ Auditd Monitoring Complete: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

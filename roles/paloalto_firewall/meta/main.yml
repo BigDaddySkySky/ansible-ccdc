@@ -1,0 +1,7 @@
+---
+# Meta for paloalto_firewall
+galaxy_info:
+  author: MWCCDC-Team
+  description: paloalto_firewall role scaffolding
+  license: MIT
+dependencies: []

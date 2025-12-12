@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: detect-aws-credentials
+        stages: [manual]
+        args: ["--allow-missing-credentials"]
+  - repo: https://github.com/ansible/ansible-lint.git
+    rev: v6.22.1
+    hooks:
+      - id: ansible-lint
+        additional_dependencies: []
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        files: "\\.(yml|yaml)$"

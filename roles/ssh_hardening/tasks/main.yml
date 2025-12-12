@@ -1,0 +1,47 @@
+---
+# ============================================
+# SSH HARDENING ROLE - MAIN TASKS (SPRINT 4)
+# ============================================
+# NOTE: Pre-flight and Validation are handled
+# by common_preflight and common_validation
+# ============================================
+
+- name: Display SSH hardening header
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "🔐 SSH Hardening: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================
+# Root Account Hardening (User settings)
+# ============================================
+
+- name: Include root hardening tasks
+  ansible.builtin.include_tasks: root_hardening.yml
+
+# ============================================
+# SSH Configuration (File settings)
+# ============================================
+
+- name: Include SSH daemon configuration tasks
+  ansible.builtin.include_tasks: sshd_config.yml
+
+# ============================================
+# Fail2ban Installation & Configuration
+# ============================================
+
+- name: Include fail2ban tasks
+  ansible.builtin.include_tasks: fail2ban.yml
+  when: ssh_hardening_enable_fail2ban | bool
+
+# ============================================
+# Summary
+# ============================================
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "✅ SSH Hardening Complete: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

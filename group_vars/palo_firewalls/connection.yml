@@ -1,0 +1,12 @@
+---
+ansible_connection: httpapi
+ansible_network_os: paloaltonetworks.panos.panos
+
+ansible_httpapi_use_ssl: true
+ansible_httpapi_validate_certs: false
+ansible_httpapi_port: 443
+
+ansible_user: "{{ vault_palo_admin_user }}"
+ansible_password: "{{ vault_palo_admin_password }}"
+
+ansible_host: "{{ hostvars[inventory_hostname].ansible_host | default{inventory_hostname}} }"

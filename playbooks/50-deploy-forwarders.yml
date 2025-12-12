@@ -1,0 +1,25 @@
+---
+# ============================================
+# PLAYBOOK: INSTALL SPLUNK UNIVERSAL FORWARDERS
+# ============================================
+- hosts: linux_servers:!splunk_vm
+
+- name: Install and configure Splunk Universal Forwarders
+  hosts: linux_servers:!splunk_vm
+  become: true
+  gather_facts: false   # disable automatic fact gathering
+
+  pre_tasks:
+    - name: Load host-specific vault variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+
+    - name: Set ansible_become_password from vault
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ vault_host_password }}"
+
+    - name: Gather facts (after become password is set)
+      ansible.builtin.setup:
+
+  roles:
+    - splunk_universal_forwarder

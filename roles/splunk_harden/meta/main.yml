@@ -1,0 +1,7 @@
+---
+# Meta for splunk_harden
+galaxy_info:
+  author: MWCCDC-Team
+  description: splunk_harden role scaffolding
+  license: MIT
+dependencies: []

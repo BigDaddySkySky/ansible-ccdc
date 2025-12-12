@@ -1,0 +1,25 @@
+---
+- name: Enable EPEL repository (RHEL/CentOS/Oracle only)
+  ansible.builtin.command:
+    cmd: dnf install -y epel-release
+  become: true
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution != "Fedora"
+  register: epel_install
+  changed_when: "'Nothing to do' not in epel_install.stdout"
+  failed_when: epel_install.rc != 0
+
+- name: Install fail2ban (RedHat/Fedora)
+  ansible.builtin.command:
+    cmd: dnf install -y fail2ban
+  become: true
+  when: ansible_os_family == "RedHat"
+  register: fail2ban_dnf
+  changed_when: "'Nothing to do' not in fail2ban_dnf.stdout"
+  failed_when: fail2ban_dnf.rc != 0
+
+- name: Display fail2ban installation result
+  ansible.builtin.debug:
+    msg: "{{ '✅ fail2ban installed' if (fail2ban_dnf is changed) else '✅ fail2ban already installed' }}"
+  when: ansible_os_family == "RedHat"

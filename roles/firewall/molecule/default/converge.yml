@@ -1,0 +1,12 @@
+---
+- name: Converge firewall role (check mode)
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    ansible_check_mode: true
+    firewall_backend: ufw
+    firewall_enable_logging: false
+    firewall_enable_syn_protection: false
+  roles:
+    - role: firewall

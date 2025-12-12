@@ -1,0 +1,148 @@
+---
+# ============================================
+# CRITICAL PATH HARDENING PLAYBOOK (SPRINT 4.1)
+# ============================================
+# Purpose: Master playbook for full-stack hardening
+# Runs: Pre-flight -> SSH -> Firewall -> Auditd -> Validation & Reporting
+# ============================================
+
+- name: 1. Pre-Flight Checks (Localhost)
+  hosts: localhost
+  gather_facts: false
+  become: false
+
+  tasks:
+    - name: Display header
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════════╗"
+          - "║   CRITICAL PATH HARDENING (SPRINT 4)     ║"
+          - "╚══════════════════════════════════════════╝"
+          - ""
+          - "⚠️  This will apply the FULL hardening stack:"
+          - "  1. SSH Hardening"
+          - "  2. Firewall Configuration"
+          - "  3. Auditd Monitoring"
+          - ""
+          - "Targets: {{ groups['all'] | join(', ') }}"
+          - "Prerequisites: Passwords rotated, SSH keys deployed"
+
+    - name: Pause for confirmation
+      ansible.builtin.pause:
+        prompt: |
+
+          ⚠️  LAST CHANCE TO ABORT!
+
+          Have you created VM snapshots?
+          Without snapshots, you cannot rollback if locked out!
+
+          Press ENTER to continue, or Ctrl+C to abort
+      when: confirm is not defined or confirm != "yes"
+
+- name: 2. Apply Full Hardening Stack & Report Summary
+  hosts: all
+  gather_facts: true
+
+  pre_tasks:
+    - name: Load global vault variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+
+    - name: Load host-specific vault variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+
+    - name: Set ansible_become_password from vault
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ vault_host_password }}"
+
+  roles:
+    - role: common_preflight
+      tags: [always]
+
+    - role: ssh_hardening
+      tags: [ssh]
+
+    - role: firewall
+      tags: [firewall]
+
+    - role: auditd
+      tags: [auditd]
+
+    - role: common_validation
+      tags: [always]
+
+  post_tasks:
+    - name: Gather facts from localhost for timestamp
+      ansible.builtin.setup:
+      delegate_to: localhost
+      run_once: true
+
+    - name: Calculate Results
+      ansible.builtin.set_fact:
+        total_hosts_list: "{{ ansible_play_hosts_all }}"
+        successful_hosts_list: "{{ ansible_play_hosts }}"
+        failed_hosts_list: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
+      run_once: true
+      delegate_to: localhost
+      become: false
+
+    - name: Format Results
+      ansible.builtin.set_fact:
+        total_count: "{{ total_hosts_list | length }}"
+        success_count: "{{ successful_hosts_list | length }}"
+        failed_count: "{{ failed_hosts_list | length }}"
+        success_string: "{{ successful_hosts_list | join(', ') }}"
+        failed_string: "{{ failed_hosts_list | join(', ') }}"
+      run_once: true
+      delegate_to: localhost
+      become: false
+
+    - name: Load global vault for notification
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+      run_once: true
+      delegate_to: localhost
+      become: false
+
+    - name: Send Discord notification
+      ansible.builtin.include_role:
+        name: common_notify
+      vars:
+        discord_title: "🛡️ Critical Path Hardening Complete"
+        discord_description: |
+          Full stack hardening (SSH, Firewall, Auditd) has been applied.
+
+          **Total Hosts:** {{ total_count }}
+          **✅ Successful:** {{ success_count }}
+          **❌ Failed:** {{ failed_count }}
+
+          **Successful:** {{ success_string if success_string else 'None' }}
+          **Failed:** {{ failed_string if failed_string else 'None' }}
+        discord_color: "{{ '3066993' if failed_count == 0 else '15158332' }}"
+        discord_webhook_url: "{{ vault_discord_webhook_url }}"
+      run_once: true
+      when:
+        - vault_discord_webhook_url is defined
+        - "'YOUR_WEBHOOK' not in vault_discord_webhook_url"
+
+    - name: Display final summary
+      ansible.builtin.debug:
+        msg:
+          - ""
+          - "╔══════════════════════════════════════════╗"
+          - "║   CRITICAL PATH COMPLETE                 ║"
+          - "╚══════════════════════════════════════════╝"
+          - ""
+          - "Total hosts: {{ total_count }}"
+          - "✅ Successful: {{ success_count }}"
+          - "❌ Failed: {{ failed_count }}"
+          - ""
+          - "Next steps:"
+          - "  1. Test all scored services manually (curl, telnet, etc.)"
+          - "  2. Check audit logs: ansible all -m command -a 'ausearch -ts recent' -b"
+          - "  3. Create new VM snapshots: 'Post-Critical-Path'"
+          - "  4. Commit changes: git commit -m 'Sprint 4: Critical path consolidated'"
+      run_once: true
+      delegate_to: localhost
+      become: false

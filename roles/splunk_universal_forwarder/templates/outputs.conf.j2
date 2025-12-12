@@ -1,0 +1,8 @@
+[tcpout]
+defaultGroup = indexer
+
+[tcpout:indexer]
+server = {{ splunk_indexer_host }}:{{ splunk_indexer_port }}
+
+[indexAndForward]
+index = false

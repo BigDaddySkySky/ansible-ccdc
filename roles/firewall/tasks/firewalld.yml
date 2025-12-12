@@ -1,0 +1,208 @@
+---
+# ============================================
+# FIREWALLD CONFIGURATION (RedHat/Fedora)
+# ============================================
+# Configure firewalld for scored services
+# ============================================
+
+- name: Install firewalld
+  ansible.builtin.command:
+    cmd: dnf install -y firewalld
+  become: true
+  when: ansible_os_family == "RedHat"
+  register: firewalld_install
+  changed_when: "'Nothing to do' not in firewalld_install.stdout"
+  failed_when: firewalld_install.rc != 0
+
+- name: Display firewalld installation result
+  ansible.builtin.debug:
+    msg: "✅ firewalld installed"
+
+- name: Ensure firewalld is enabled and started
+  ansible.builtin.systemd:
+    name: firewalld
+    enabled: true
+    state: started
+  become: true
+
+# ============================================
+# Configure Default Zone
+# ============================================
+
+- name: Set default zone
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_default_zone }}"
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+
+- name: Get default zone
+  ansible.builtin.command: "firewall-cmd --get-default-zone"
+  register: default_zone
+  changed_when: false
+  become: true
+
+- name: Display default zone
+  ansible.builtin.debug:
+    msg: "✅ Default zone: {{ default_zone.stdout }}"
+
+# ============================================
+# Remove Default Services (clean slate)
+# ============================================
+
+- name: Get list of currently enabled services
+  ansible.builtin.command: "firewall-cmd --zone={{ firewalld_default_zone }} --list-services"
+  register: current_services
+  changed_when: false
+  become: true
+
+- name: Remove pre-configured services
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_default_zone }}"
+    service: "{{ item }}"
+    state: disabled
+    permanent: true
+    immediate: true
+  loop: "{{ current_services.stdout.split() }}"
+  when: current_services.stdout != ""
+  become: true
+
+# ============================================
+# Allow Scored Services
+# ============================================
+
+- name: Allow scored services (by port)
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_default_zone }}"
+    port: "{{ item.port }}/{{ item.proto }}"
+    state: enabled
+    permanent: true
+    immediate: true
+  loop: "{{ firewall_scored_services }}"
+  become: true
+
+- name: Display allowed services
+  ansible.builtin.debug:
+    msg:
+      - "Allowed services:"
+      - "{{ firewall_scored_services | map(attribute='name') | map('regex_replace', '^(.*)$', '  • \\1 ({{ item.port }}/{{ item.proto }})') | list }}"
+
+# ============================================
+# Allow Additional Services (host-specific)
+# ============================================
+
+- name: Allow additional services
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_default_zone }}"
+    port: "{{ item.port }}/{{ item.proto }}"
+    state: enabled
+    permanent: true
+    immediate: true
+  loop: "{{ firewall_additional_services }}"
+  when: firewall_additional_services | length > 0
+  become: true
+
+# ============================================
+# Allow from Scoring Engine IPs
+# ============================================
+
+- name: Add scoring engine IPs to trusted sources
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_default_zone }}"
+    source: "{{ item }}"
+    state: enabled
+    permanent: true
+    immediate: true
+  loop: "{{ firewall_scoring_ips }}"
+  when: firewall_scoring_ips | length > 0
+  become: true
+
+- name: Display scoring IP allowances
+  ansible.builtin.debug:
+    msg:
+      - "Allowed scoring IPs:"
+      - "{{ firewall_scoring_ips | map('regex_replace', '^(.*)$', '  • \\1') | list }}"
+  when: firewall_scoring_ips | length > 0
+
+# ============================================
+# Rate Limiting (Rich Rules)
+# ============================================
+
+- name: Enable SSH rate limiting with rich rule
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_default_zone }}"
+    rich_rule: 'rule service name="ssh" limit value="{{ firewall_ssh_rate_limit }}" accept'
+    state: enabled
+    permanent: true
+    immediate: true
+  when: firewall_enable_rate_limiting | bool
+  become: true
+
+- name: Display rate limiting status
+  ansible.builtin.debug:
+    msg: "{{ '✅ Rate limiting enabled for SSH (' ~ firewall_ssh_rate_limit ~ ')' if firewall_enable_rate_limiting else 'ℹ️  Rate limiting disabled' }}"
+
+# ============================================
+# Logging Configuration
+# ============================================
+
+- name: Configure firewalld logging (runtime)
+  ansible.builtin.command: "firewall-cmd --set-log-denied={{ 'all' if firewall_log_denied else 'off' }}"
+  when: firewall_enable_logging | bool
+  changed_when: true
+  become: true
+
+- name: Make firewalld logging configuration permanent
+  ansible.builtin.command: "firewall-cmd --runtime-to-permanent"
+  when: firewall_enable_logging | bool
+  changed_when: true
+  become: true
+
+- name: Reload firewalld to apply logging changes
+  ansible.builtin.systemd:
+    name: firewalld
+    state: reloaded
+  when: firewall_enable_logging | bool
+  become: true
+
+- name: Display logging status
+  ansible.builtin.debug:
+    msg: "{{ '✅ Logging enabled' if firewall_enable_logging else 'ℹ️  Logging disabled' }}"
+
+# ============================================
+# Verify Configuration
+# ============================================
+
+- name: Get firewalld status
+  ansible.builtin.command: "firewall-cmd --state"
+  register: firewalld_state
+  changed_when: false
+  become: true
+
+- name: Get active zones
+  ansible.builtin.command: "firewall-cmd --get-active-zones"
+  register: active_zones
+  changed_when: false
+  become: true
+
+- name: Get list of allowed services/ports
+  ansible.builtin.command: "firewall-cmd --zone={{ firewalld_default_zone }} --list-all"
+  register: firewalld_config
+  changed_when: false
+  become: true
+
+- name: Display firewalld configuration
+  ansible.builtin.debug:
+    msg: "{{ firewalld_config.stdout_lines }}"
+
+- name: Display firewalld configuration summary
+  ansible.builtin.debug:
+    msg:
+      - ""
+      - "Firewalld configuration complete:"
+      - "  • Status: {{ firewalld_state.stdout | upper }}"
+      - "  • Default zone: {{ firewalld_default_zone }}"
+      - "  • Services allowed: {{ firewall_scored_services | length }}"
+      - "{{ '  • Rate limiting: SSH (' ~ firewall_ssh_rate_limit ~ ')' if firewall_enable_rate_limiting else '' }}"
+      - "{{ '  • Logging: ENABLED' if firewall_enable_logging else '  • Logging: DISABLED' }}"

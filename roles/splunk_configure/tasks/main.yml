@@ -1,0 +1,127 @@
+---
+# ============================================
+# SPLUNK APPLICATION CONFIGURATION
+# ============================================
+# Purpose: Accept license, change password, open firewall
+# ============================================
+
+- name: Display Splunk config header
+  ansible.builtin.debug:
+    msg: "Configuring Splunk application on {{ inventory_hostname }}..."
+
+- name: Open Splunk UI port (8000/tcp) in firewalld
+  ansible.posix.firewalld:
+    port: 8000/tcp
+    state: enabled
+    permanent: true
+    immediate: true
+    zone: public
+  become: true
+
+- name: Stop Splunk completely
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk stop
+  become: true
+  become_user: splunk
+  register: splunk_stop
+  changed_when: true
+  failed_when: false
+
+- name: Kill any lingering Splunk processes
+  ansible.builtin.shell: |
+    killall -9 splunkd splunk || true
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Remove ALL user-related state files to force fresh initialization
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /opt/splunk/etc/passwd
+    - /opt/splunk/etc/system/local/user-seed.conf
+    - /opt/splunk/var/lib/splunk/kvstore/mongo/splunk.users.bson
+  become: true
+
+- name: Ensure system/local directory exists
+  ansible.builtin.file:
+    path: /opt/splunk/etc/system/local
+    state: directory
+    owner: splunk
+    group: splunk
+    mode: '0755'
+  become: true
+
+- name: Create user-seed.conf to set initial admin password
+  ansible.builtin.copy:
+    dest: /opt/splunk/etc/system/local/user-seed.conf
+    content: |
+      [user_info]
+      USERNAME = admin
+      PASSWORD = {{ vault_splunk_admin_password }}
+    mode: '0600'
+    owner: splunk
+    group: splunk
+  become: true
+
+- name: Ensure correct file ownership for Splunk
+  ansible.builtin.file:
+    path: /opt/splunk
+    state: directory
+    owner: splunk
+    group: splunk
+    recurse: true
+  become: true
+
+- name: Accept Splunk license and start (will read user-seed.conf)
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
+  become: true
+  become_user: splunk
+  changed_when: true
+  register: license_result
+
+- name: Display start output for debugging
+  ansible.builtin.debug:
+    var: license_result.stdout_lines
+
+- name: Wait for Splunkd (port 8089) to be ready
+  ansible.builtin.wait_for:
+    port: 8089
+    host: "{{ ansible_host | default('127.0.0.1') }}"
+    state: started
+    delay: 10
+    timeout: 120
+  become: false
+
+- name: Verify Splunk admin password works
+  ansible.builtin.uri:
+    url: "https://127.0.0.1:8089/services/server/info"
+    method: GET
+    user: admin
+    password: "{{ vault_splunk_admin_password }}"
+    force_basic_auth: yes
+    validate_certs: no
+    status_code: 200
+  register: verify_result
+  changed_when: false
+
+- name: Verify Splunk is running
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk status
+  become: true
+  become_user: splunk
+  changed_when: false
+  register: splunk_status
+
+- name: Display Splunk configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Splunk configuration complete!"
+      - "   • Firewall: Port 8000/tcp OPEN"
+      - "   • License: Accepted"
+      - "   • Admin password: Set via seed-passwd"
+      - "   • Status: {{ splunk_status.stdout }}"
+      - "   • Access UI: http://{{ ansible_host }}:8000"
+      - "   • Login: admin / [vault password]"

@@ -1,0 +1,54 @@
+---
+# ============================================
+# FIREWALL HARDENING ROLE - MAIN TASKS (SPRINT 4)
+# ============================================
+# NOTE: Pre-flight and Validation are handled
+# by common_preflight and common_validation
+# ============================================
+
+- name: Display firewall hardening header
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "🔥 Firewall Hardening: {{ inventory_hostname }}"
+      - "Backend: {{ firewall_backend }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================
+# Kernel Security Settings
+# ============================================
+
+- name: Include kernel hardening tasks
+  ansible.builtin.include_tasks: kernel_hardening.yml
+  when: firewall_enable_syn_protection | bool
+
+# ============================================
+# UFW Configuration (Debian/Ubuntu)
+# ============================================
+
+- name: Include UFW configuration tasks
+  ansible.builtin.include_tasks: ufw.yml
+  when:
+    - firewall_backend == "ufw"
+    - firewall_enabled | bool
+
+# ============================================
+# Firewalld Configuration (RedHat/Fedora)
+# ============================================
+
+- name: Include firewalld configuration tasks
+  ansible.builtin.include_tasks: firewalld.yml
+  when:
+    - firewall_backend == "firewalld"
+    - firewall_enabled | bool
+
+# ============================================
+# Summary
+# ============================================
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "✅ Firewall Hardening Complete: {{ inventory_hostname }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

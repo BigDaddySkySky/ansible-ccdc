@@ -1,0 +1,87 @@
+# ============================================
+# TEAM SAVED SEARCHES - DEPLOYED BY ANSIBLE
+# App: search
+# Path: /opt/splunk/etc/apps/search/local/savedsearches.conf
+# ============================================
+
+# --- BASIC AUTH & ACCESS ---
+
+[Failed SSH Logins - last 15 minutes]
+search = index=* ("Failed password" OR "authentication failure") (sshd OR "pam_unix")
+dispatch.earliest_time = -15m
+dispatch.latest_time = now
+
+[Successful SSH Logins - last 15 minutes]
+search = index=* ("Accepted password" OR "Accepted publickey") (sshd OR "pam_unix")
+dispatch.earliest_time = -15m
+dispatch.latest_time = now
+
+[SSH Failures by Source - last 30 minutes]
+search = index=* sourcetype=linux_secure ("Failed password" OR "authentication failure") \
+        | rex "from (?<src_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)" \
+        | stats count BY src_ip user \
+        | sort - count
+dispatch.earliest_time = -30m
+dispatch.latest_time = now
+
+[Potential SSH Brute Force - last 30 minutes]
+search = index=* sourcetype=linux_secure ("Failed password" OR "authentication failure") \
+        | rex "from (?<src_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)" \
+        | stats count BY src_ip \
+        | where count>=10 \
+        | sort - count
+dispatch.earliest_time = -30m
+dispatch.latest_time = now
+
+# --- PRIV ESC / SUDO / USER MGMT ---
+
+[Sudo Activity - last 60 minutes]
+search = index=* (sourcetype=linux_secure OR sourcetype=syslog) ("sudo:" OR "COMMAND=")
+dispatch.earliest_time = -60m
+dispatch.latest_time = now
+
+[New Local Users - last 24 hours]
+search = index=* ("useradd" OR "new user" OR "useradd[" OR "groupadd")
+dispatch.earliest_time = -24h
+dispatch.latest_time = now
+
+[Password / Group Changes - last 24 hours]
+search = index=* ("passwd:" OR "chpasswd" OR "groupmod" OR "usermod")
+dispatch.earliest_time = -24h
+dispatch.latest_time = now
+
+# --- AUDITD / POLICY ENFORCEMENT ---
+
+[Auditd - Denied Actions - last 60 minutes]
+search = index=* sourcetype=linux_audit ("denied" OR "AVC" OR "apparmor" OR "seccomp")
+dispatch.earliest_time = -60m
+dispatch.latest_time = now
+
+[Auditd - Changes to /etc - last 24 hours]
+search = index=* sourcetype=linux_audit "name=\"/etc/" OR "name=\"/etc/passwd" OR "name=\"/etc/shadow"
+dispatch.earliest_time = -24h
+dispatch.latest_time = now
+
+# --- SYSTEM HEALTH / NOISE ---
+
+[System Reboots - last 24 hours]
+search = index=* ("Starting system logger" OR "Restarting systemd" OR "systemd[1]: Startup finished" OR "reboot")
+dispatch.earliest_time = -24h
+dispatch.latest_time = now
+
+[Service Failures - last 60 minutes]
+search = index=* ("Failed to start" OR "failed with result" OR "Service hold-off time over")
+dispatch.earliest_time = -60m
+dispatch.latest_time = now
+
+# --- SPLUNK HEALTH ---
+
+[Splunk Internal Errors - last 60 minutes]
+search = index=_internal (log_level=ERROR OR log_level=FATAL)
+dispatch.earliest_time = -60m
+dispatch.latest_time = now
+
+[Splunk License Warnings - last 24 hours]
+search = index=_internal source=*license_usage.log* (WARN OR ERROR)
+dispatch.earliest_time = -24h
+dispatch.latest_time = now

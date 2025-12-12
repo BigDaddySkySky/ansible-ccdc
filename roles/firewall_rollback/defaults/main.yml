@@ -1,0 +1,16 @@
+---
+# Scored ports to reopen
+firewall_rb_scored_ports:
+  - { port: 22, proto: tcp }
+  - { port: 80, proto: tcp }
+  - { port: 443, proto: tcp }
+  - { port: 25, proto: tcp }
+  - { port: 110, proto: tcp }
+  - { port: 21, proto: tcp }
+  - { port: 53, proto: udp }
+
+# Firewalld zone to use when reopening
+firewall_rb_firewalld_zone: public
+
+# Whether to revert sysctl hardening
+firewall_rb_reset_sysctl: true

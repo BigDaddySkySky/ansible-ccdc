@@ -1,0 +1,7 @@
+---
+# Meta for common_validation
+galaxy_info:
+  author: MWCCDC-Team
+  description: common_validation role scaffolding
+  license: MIT
+dependencies: []

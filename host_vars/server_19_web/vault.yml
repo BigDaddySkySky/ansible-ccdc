@@ -1,0 +1,4 @@
+---
+# Placeholder secrets for server_19_web; replace with ansible-vault encrypted values.
+vault_host_password: "CHANGE_ME"
+vault_default_password: "CHANGE_ME"

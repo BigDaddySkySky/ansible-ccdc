@@ -1,0 +1,7 @@
+---
+# Meta for common_preflight
+galaxy_info:
+  author: MWCCDC-Team
+  description: common_preflight role scaffolding
+  license: MIT
+dependencies: []

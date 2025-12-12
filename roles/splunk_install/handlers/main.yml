@@ -1,0 +1,6 @@
+---
+- name: restart splunk
+  ansible.builtin.command:
+    cmd: "{{ splunk_home }}/bin/splunk restart --accept-license --answer-yes --no-prompt"
+  become: true
+  become_user: "{{ splunk_user }}"

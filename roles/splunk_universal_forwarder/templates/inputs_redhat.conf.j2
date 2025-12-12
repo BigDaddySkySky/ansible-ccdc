@@ -1,0 +1,14 @@
+[monitor:///var/log/secure]
+disabled = 0
+index = main
+sourcetype = linux_secure
+
+[monitor:///var/log/messages]
+disabled = 0
+index = main
+sourcetype = syslog
+
+[monitor:///var/log/audit/audit.log]
+disabled = 0
+index = main
+sourcetype = linux_audit

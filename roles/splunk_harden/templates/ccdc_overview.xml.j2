@@ -1,0 +1,17 @@
+<dashboard>
+  <label>CCDC Overview</label>
+  <description>Simple sanity-check overview dashboard.</description>
+
+  <row>
+    <panel>
+      <title>Recent Internal Events (Last 10)</title>
+      <table>
+        <search>
+          <query>index=_internal | head 10</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+        </search>
+      </table>
+    </panel>
+  </row>
+</dashboard>

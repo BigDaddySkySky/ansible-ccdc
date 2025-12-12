@@ -1,0 +1,10 @@
+---
+- name: Converge ssh_hardening role (check mode)
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    ansible_check_mode: true
+    ssh_hardening_force_no_keys: true
+  roles:
+    - role: ssh_hardening
