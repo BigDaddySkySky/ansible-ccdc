@@ -1,0 +1,68 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible ansible-lint yamllint pre-commit
+
+      - name: ansible-lint
+        run: ansible-lint
+
+      - name: yamllint
+        run: yamllint .
+
+      - name: pre-commit
+        run: pre-commit run --all-files
+
+      - name: Syntax check playbooks
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          playbooks=(playbooks/*.yml)
+          if [ ${#playbooks[@]} -eq 0 ]; then
+            echo "No playbooks found in playbooks/; failing."
+            exit 1
+          fi
+          for pb in "${playbooks[@]}"; do
+            echo "Syntax checking $pb"
+            ansible-playbook "$pb" --syntax-check
+          done
+
+      - name: Validate vault files encrypted
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mapfile -t vault_files < <(find group_vars host_vars -type f \( -name "*vault*" -o -path "*vault*" \) 2>/dev/null)
+          if [ ${#vault_files[@]} -eq 0 ]; then
+            echo "No vault files found; skipping validation."
+            exit 0
+          fi
+          failed=0
+          for vf in "${vault_files[@]}"; do
+            first_line=$(head -n1 "$vf" || true)
+            if [[ "$first_line" != \$ANSIBLE_VAULT* ]]; then
+              echo "Vault file not encrypted: $vf"
+              failed=1
+            else
+              echo "Vault file encrypted: $vf"
+            fi
+          done
+          exit $failed
