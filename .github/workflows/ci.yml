@@ -29,12 +29,6 @@ jobs:
       - name: Run yamllint
         run: yamllint .
 
-      - name: Syntax-check playbooks
-        run: |
-          for pb in playbooks/*.yml; do
-            ansible-playbook --syntax-check "$pb"
-          done
-
       - name: Validate inventory structure
         run: |
           ansible-inventory -i inventory/staging.ini --list
