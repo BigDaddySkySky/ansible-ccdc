@@ -31,18 +31,27 @@ jobs:
       - name: pre-commit
         run: pre-commit run --all-files
 
+      - name: Create dummy inventory
+        run: |
+          echo -e "all:\n  hosts:\n    localhost:" > dummy_inventory.yml
+
       - name: Syntax check playbooks
         run: |
           set -euo pipefail
           shopt -s nullglob
+
+          # Create dummy inventory so Ansible can load vars/roles
+          echo -e "all:\n  hosts:\n    localhost:" > dummy_inventory.yml
+
           playbooks=(playbooks/*.yml)
           if [ ${#playbooks[@]} -eq 0 ]; then
             echo "No playbooks found in playbooks/; failing."
             exit 1
           fi
+
           for pb in "${playbooks[@]}"; do
             echo "Syntax checking $pb"
-            ansible-playbook "$pb" --syntax-check
+            ansible-playbook --inventory dummy_inventory.yml --syntax-check "$pb"
           done
 
       - name: Validate vault files encrypted
