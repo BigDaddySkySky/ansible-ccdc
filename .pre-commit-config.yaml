@@ -9,11 +9,12 @@ repos:
         args: ["--allow-missing-credentials"]
 
   - repo: https://github.com/ansible/ansible-lint.git
-    rev: v25.12.1
+    rev: v24.2.0
     hooks:
       - id: ansible-lint
         language: python
-        additional_dependencies: []
+        additional_dependencies:
+          - ansible-core==2.16.6
 
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.35.1
