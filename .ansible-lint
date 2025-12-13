@@ -9,3 +9,6 @@ skip_list:
 
 enable_list:
   - yaml
+
+exclude_paths:
+  - playbooks/
