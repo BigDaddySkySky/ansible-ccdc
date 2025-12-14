@@ -1,3 +1,0 @@
-# Placeholder secrets for server_22_FTP; replace with ansible-vault encrypted values.
-vault_host_password: "CHANGE_ME"
-vault_default_password: "CHANGE_ME"
