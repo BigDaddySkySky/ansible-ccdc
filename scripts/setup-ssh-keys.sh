@@ -17,7 +17,7 @@ INVENTORY="${1:-inventory/range.ini}"
 KEY_NAME="${2:-ccdc_rsa}"
 KEY_PATH="$HOME/.ssh/$KEY_NAME"
 
-# Which inventory groups to target (edit if you want)
+# Which inventory groups to target
 TARGET_GROUPS=("linux_servers" "security_tools" "unix_servers" "attack_tools")
 
 # Dependencies
