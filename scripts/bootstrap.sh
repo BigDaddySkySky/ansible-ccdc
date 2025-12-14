@@ -67,9 +67,9 @@ case "$ENV" in
         ;;
     fedora)
         if [[ $VERBOSE -eq 1 ]]; then
-            sudo dnf install -y python3 python3-pip sshpass git ansible-core
+            sudo dnf install -y python3.11 python3.11-pip sshpass git ansible-core
         else
-            sudo dnf install -y -q python3 python3-pip sshpass git > /dev/null 2>&1
+            sudo dnf install -y -q python3.11 python3.11-pip sshpass git > /dev/null 2>&1
         fi
         ;;
 esac
@@ -92,7 +92,7 @@ if [[ -d .venv ]]; then
 fi
 
 if [[ ! -d .venv ]]; then
-    python3 -m venv .venv
+    python3.11 -m venv .venv
 fi
 
 source .venv/bin/activate
