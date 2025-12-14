@@ -1,50 +1,43 @@
 # ============================================
-# PLAYBOOK: BOOTSTRAP SSH KEYS
-# ============================================
-# Purpose: Deploys SSH keys to new VMs using their default passwords
-# Replaces: scripts/setup-ssh-keys.sh
-# Targets: [new_vms]
+# PLAYBOOK: BOOTSTRAP SSH KEYS (RANGE)
 # ============================================
 
-- name: Deploy SSH keys to new VMs
-  hosts: new_vms
+- name: Deploy SSH keys to SSH-capable hosts
+  hosts: linux_servers:security_tools:unix_servers
   gather_facts: false
 
   tasks:
     - name: Display bootstrap target
       ansible.builtin.debug:
-        msg: "Bootstrapping SSH key onto {{ inventory_hostname }} using its default password."
+        msg: "Bootstrapping SSH key onto {{ inventory_hostname }} ({{ ansible_user }}@{{ ansible_host }})"
+
+    - name: Ensure ~/.ssh exists
+      ansible.builtin.file:
+        path: "~/.ssh"
+        state: directory
+        mode: "0700"
 
     - name: Deploy SSH key
       ansible.posix.authorized_key:
         user: "{{ ansible_user }}"
-        key: "{{ lookup('file', '~/.ssh/ccdc_rsa.pub') }}"
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/ccdc_rsa.pub') }}"
         state: present
-      register: key_deploy
-      notify: Display result
 
-  handlers:
-    - name: Display result
+    - name: Confirm
       ansible.builtin.debug:
-        msg: "✅ SSH key successfully deployed to {{ inventory_hostname }}"
+        msg: "✅ SSH key deployed to {{ inventory_hostname }}"
 
 - name: Bootstrap Complete
   hosts: localhost
   gather_facts: false
   become: false
-
   tasks:
     - name: Display next steps
       ansible.builtin.debug:
         msg:
-          - "╔══════════════════════════════════════════╗"
-          - "║   SSH KEY BOOTSTRAP COMPLETE             ║"
-          - "╚══════════════════════════════════════════╝"
+          - "✅ SSH key bootstrap complete."
           - ""
-          - "✅ SSH keys have been deployed to all hosts in the [new_vms] group."
-          - ""
-          - "⚠️  CRITICAL NEXT STEP:"
-          - "   1. Open 'inventory/staging.ini'"
-          - "   2. REMOVE the 'ansible_password=...' from the splunk_vm and ubuntu_wkst_vm lines."
-          - ""
-          - "After you remove the passwords, you can run the rest of the automation stack."
+          - "Next:"
+          - "1) Set private_key_file in ansible.cfg to your key (optional)"
+          - "2) Test key auth: ansible -i inventory/range.ini linux_servers -m ping"
+          - "3) If FreeBSD failed, root SSH login may be disabled—handle separately."
