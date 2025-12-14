@@ -1,30 +1,25 @@
-# Inventory Guide
+# Practice Range Inventory
 
 Purpose
-- Keep staging lab and competition inventories separated and competition-legal.
+- Single inventory for the Cyber Teams practice range (10.250.x.x) covering Linux/Unix servers, Windows boxes, security tools, and firewalls.
+- Acts as the template for future competition inventories; keep hostnames stable to match `host_vars/*/vault.yml` and playbook limits.
 
-When to Use
-- Edit `production.ini` on competition morning with real IPs; use `staging.ini` for VMware lab testing.
+File
+- `range.ini`: canonical practice inventory with inline group vars for default credentials/become behavior; commented hosts mark optional lab systems (Splunk, VyOS).
 
-Variables Required
-- Host IPs per scored host; group memberships (`linux_servers`, `palo_firewalls`, `critical_services`).
-- `all:vars` flags: `staging_environment`, `team_number`, `competition_name`.
+Layout (range.ini)
+- Linux/Unix: `ubuntu` (10.250.20.20), `oracle_linux` (10.250.20.30), `free_bsd` (10.250.20.10).
+- Security tools: `kali` (10.250.40.100), `wazu` (10.250.40.110), `sec_onion` (10.250.40.120); `attack_tools` and `ids_tools` point here; `security_stack` is the IDS child group.
+- Windows: `win_19_web` (10.250.30.15), `win_22_dns` (10.250.30.25), `win_10` (10.250.30.35).
+- Network: `pafw` (10.250.20.254), `ftd` (10.250.30.254); grouped under `firewalls`; VyOS placeholder is commented.
+- Group vars in-file: Linux/security/attack tools use `vault_default_password` with sudo enabled; Unix (FreeBSD) is root-only with `ansible_become=false`.
 
-Dependencies
-- Vault secrets for host passwords; SSH keys already deployed.
-
-Steps
-1) Copy `inventory/staging.ini` to `inventory/production.ini`.
-2) Fill real IPs; do NOT change hostnames or subnets from White Team packet.
-3) Remove `ansible_password` entries once keys + vault passwords are active.
-4) Use `--limit` with groups (`critical_services`, `palo_firewalls`) during runs.
+Usage
+- Point Ansible at the range: `ansible-inventory -i inventory/range.ini --graph` then `ansible all -i inventory/range.ini -m ping --limit linux_servers`.
+- Override the default inventory in `ansible.cfg` by passing `-i inventory/range.ini` or exporting `ANSIBLE_INVENTORY=inventory/range.ini`.
+- When adding hosts, reuse existing groups so limits (`--limit servers`, `--limit firewalls`) stay valid and create matching `host_vars/<host>/vault.yml` entries.
+- For new competitions, copy `range.ini` as a starting point and swap IPs without changing hostnames/group names.
 
 Validation
-- `ansible-inventory -i inventory/production.ini --graph`.
-- `ansible-playbook -i inventory/production.ini playbooks/01-connectivity-check.yml`.
-
-White Team Visibility
-- Operates only on provided IPs; no topology changes.
-
-Inject Impact
-- Clean inventory enables fast targeting for inject-specific hosts without hitting the wrong box.
+- `ansible-inventory -i inventory/range.ini --graph`
+- `ansible-playbook -i inventory/range.ini playbooks/01-connectivity-check.yml`
