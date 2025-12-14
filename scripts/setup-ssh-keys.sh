@@ -1,199 +1,168 @@
 #!/usr/bin/env bash
-# SSH Key Setup for CCDC Automation
-# Sets up passwordless SSH from control node to all VMs
+# Inventory-driven SSH key setup (range-safe)
+# - Reads hosts from an Ansible inventory
+# - Uses host_vars/<host>/vault.yml (ansible-vault) for password
+# - Copies a key to each reachable host using ssh-copy-id
+# - DOES NOT edit ansible.cfg or group_vars
 
 set -euo pipefail
 
+BLUE='\033[0;34m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}╔══════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   SSH Key Setup for CCDC                 ║${NC}"
-echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}"
-echo ""
-
-# Configuration
-KEY_NAME="ccdc_rsa"
+INVENTORY="${1:-inventory/range.ini}"
+KEY_NAME="${2:-ccdc_rsa}"
 KEY_PATH="$HOME/.ssh/$KEY_NAME"
-VM_USER="sysadmin"
 
-# VM Passwords
-declare -A VM_PASSWORDS=(
-    ["ubuntu_ecom_vm"]="changeme"
-    ["fedora_webmail_vm"]="changeme"
-    ["splunk_vm"]="changemenow"
-)
+# Which inventory groups to target (edit if you want)
+TARGET_GROUPS=("linux_servers" "security_tools" "unix_servers" "attack_tools")
 
-# VM hosts (update these with your actual IPs)
-declare -A VMS=(
-    ["ubuntu_ecom_vm"]="172.20.242.104"
-    ["fedora_webmail_vm"]="172.20.242.101"
-    ["splunk_vm"]="172.20.242.20"
-)
+# Dependencies
+need() { command -v "$1" >/dev/null 2>&1 || { echo -e "${RED}Missing dependency:${NC} $1"; exit 1; }; }
 
-# Check sshpass is available
-if ! command -v sshpass &>/dev/null; then
-    echo -e "${RED}✗${NC} sshpass not found"
-    echo "Installing sshpass..."
+need ansible
+need ansible-inventory
+need ssh
+need ssh-copy-id
+need ssh-keygen
 
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get install -y sshpass
-    elif command -v pacman &>/dev/null; then
-        sudo pacman -S --noconfirm sshpass
-    else
-        echo -e "${RED}Cannot install sshpass automatically${NC}"
-        echo "Please install manually: sudo apt-get install sshpass"
-        exit 1
-    fi
-
-    echo -e "${GREEN}✓${NC} sshpass installed"
-fi
-
-# Step 1: Generate SSH key if doesn't exist
-echo -e "${YELLOW}Step 1: Generating SSH key...${NC}"
-if [[ -f "$KEY_PATH" ]]; then
-    echo -e "${YELLOW}⚠${NC} Key already exists: $KEY_PATH"
-    read -p "Overwrite? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Using existing key"
-    else
-        rm -f "$KEY_PATH" "$KEY_PATH.pub"
-        ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc-automation"
-        echo -e "${GREEN}✓${NC} New key generated"
-    fi
-else
-    ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc-automation"
-    echo -e "${GREEN}✓${NC} SSH key generated: $KEY_PATH"
-fi
-
-# Step 2: Test password SSH to each VM
-echo ""
-echo -e "${YELLOW}Step 2: Testing password SSH to VMs...${NC}"
-REACHABLE_VMS=()
-UNREACHABLE_VMS=()
-
-for vm_name in "${!VMS[@]}"; do
-    vm_ip="${VMS[$vm_name]}"
-    vm_pass="${VM_PASSWORDS[$vm_name]}"
-    echo -n "  Testing $vm_name ($vm_ip)... "
-    if sshpass -p "$vm_pass" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 "$VM_USER@$vm_ip" 'exit' 2>/dev/null; then
-        echo -e "${GREEN}✓ Reachable${NC}"
-        REACHABLE_VMS+=("$vm_name:$vm_ip")
-    else
-        echo -e "${RED}✗ Unreachable${NC}"
-        UNREACHABLE_VMS+=("$vm_name:$vm_ip")
-    fi
-done
-
-if [[ ${#REACHABLE_VMS[@]} -eq 0 ]]; then
-    echo ""
-    echo -e "${RED}✗ No VMs are reachable!${NC}"
+if ! command -v sshpass >/dev/null 2>&1; then
+  echo -e "${YELLOW}sshpass not found.${NC} Installing..."
+  if command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y sshpass
+  elif command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get install -y sshpass
+  elif command -v yum >/dev/null 2>&1; then
+    sudo yum install -y sshpass
+  else
+    echo -e "${RED}Cannot auto-install sshpass. Install it manually.${NC}"
     exit 1
+  fi
 fi
 
-# Step 3: Copy SSH key to reachable VMs
-echo ""
-echo -e "${YELLOW}Step 3: Copying SSH key to VMs...${NC}"
-for vm_entry in "${REACHABLE_VMS[@]}"; do
-    vm_name="${vm_entry%%:*}"
-    vm_ip="${vm_entry##*:}"
-    vm_pass="${VM_PASSWORDS[$vm_name]}"
-    echo -n "  Copying to $vm_name ($vm_ip)... "
-    if sshpass -p "$vm_pass" ssh-copy-id -i "$KEY_PATH.pub" -o StrictHostKeyChecking=no "$VM_USER@$vm_ip" >/dev/null 2>&1; then
-        echo -e "${GREEN}✓ Success${NC}"
-    else
-        echo -e "${RED}✗ Failed${NC}"
-    fi
+echo -e "${BLUE}Using inventory:${NC} $INVENTORY"
+echo -e "${BLUE}Using key:${NC} $KEY_PATH"
+
+# 1) Generate key if missing
+if [[ -f "$KEY_PATH" ]]; then
+  echo -e "${GREEN}✓${NC} Key exists: $KEY_PATH"
+else
+  echo -e "${YELLOW}Generating SSH key...${NC}"
+  ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc-range-automation"
+  echo -e "${GREEN}✓${NC} Key generated"
+fi
+
+# 2) Ask for vault password once (so we can read vaulted vars)
+# (If your ansible.cfg has vault_password_file, this won't prompt.)
+echo -e "${YELLOW}Loading inventory (this may prompt for vault password)...${NC}"
+
+# 3) Build host list from groups
+HOSTS=()
+for grp in "${TARGET_GROUPS[@]}"; do
+  # This prints hosts in that group; ignore errors if group doesn't exist
+  while IFS= read -r h; do
+    [[ -n "$h" ]] && HOSTS+=("$h")
+  done < <(ansible-inventory -i "$INVENTORY" --graph "$grp" 2>/dev/null | awk '/^\s+\|--/ {print $2}' || true)
 done
 
-# Step 4: Test key-based SSH
-echo ""
-echo -e "${YELLOW}Step 4: Testing key-based SSH...${NC}"
-SUCCESS_VMS=()
-FAILED_VMS=()
+# Deduplicate
+mapfile -t HOSTS < <(printf "%s\n" "${HOSTS[@]}" | awk '!seen[$0]++')
 
-for vm_entry in "${REACHABLE_VMS[@]}"; do
-    vm_name="${vm_entry%%:*}"
-    vm_ip="${vm_entry##*:}"
+if [[ ${#HOSTS[@]} -eq 0 ]]; then
+  echo -e "${RED}No hosts found from target groups in inventory.${NC}"
+  echo "Groups tried: ${TARGET_GROUPS[*]}"
+  exit 1
+fi
 
-    echo -n "  Testing $vm_name ($vm_ip)... "
+echo -e "${BLUE}Targets:${NC} ${HOSTS[*]}"
 
-    if ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no "$VM_USER@$vm_ip" 'echo "Key auth works"' >/dev/null 2>&1; then
-        echo -e "${GREEN}✓ Key auth works${NC}"
-        SUCCESS_VMS+=("$vm_name")
-    else
-        echo -e "${RED}✗ Key auth failed${NC}"
-        FAILED_VMS+=("$vm_name")
-    fi
+# Helper: get a host var via ansible-inventory host dump
+get_host_var() {
+  local host="$1"
+  local var="$2"
+  ansible-inventory -i "$INVENTORY" --host "$host" \
+    | python3 - <<'PY' "$var"
+import json,sys
+var=sys.argv[1]
+data=json.load(sys.stdin)
+print(data.get(var,""))
+PY
+}
+
+REACHABLE=()
+FAILED=()
+
+# 4) Copy key to each host
+for host in "${HOSTS[@]}"; do
+  ip="$(get_host_var "$host" "ansible_host")"
+  user="$(get_host_var "$host" "ansible_user")"
+  pass="$(get_host_var "$host" "vault_default_password")"
+
+  if [[ -z "$ip" || -z "$user" ]]; then
+    echo -e "${YELLOW}Skipping ${host}:${NC} missing ansible_host or ansible_user"
+    continue
+  fi
+
+  # Some hosts may not have a password var (e.g., if not vaulted yet)
+  if [[ -z "$pass" ]]; then
+    echo -e "${YELLOW}Skipping ${host}:${NC} missing vault_default_password (host_vars not set?)"
+    continue
+  fi
+
+  echo -n "Copying key to ${host} (${user}@${ip})... "
+
+  # Quick connectivity test with password auth
+  if ! sshpass -p "$pass" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+      -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+      "${user}@${ip}" "echo ok" >/dev/null 2>&1; then
+    echo -e "${RED}✗ unreachable${NC}"
+    FAILED+=("$host")
+    continue
+  fi
+
+  # Copy key
+  if sshpass -p "$pass" ssh-copy-id -i "${KEY_PATH}.pub" -o StrictHostKeyChecking=no "${user}@${ip}" >/dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC}"
+    REACHABLE+=("$host")
+  else
+    echo -e "${RED}✗ copy failed${NC}"
+    FAILED+=("$host")
+  fi
 done
 
-# Step 5: Update ansible.cfg
-echo ""
-echo -e "${YELLOW}Step 5: Updating ansible.cfg...${NC}"
+echo
+echo -e "${BLUE}Key copy complete.${NC}"
+echo "  Success: ${#REACHABLE[@]}  Failed: ${#FAILED[@]}"
 
-cp ansible.cfg ansible.cfg.backup.$(date +%s)
+# 5) Verify key auth
+echo
+echo -e "${YELLOW}Verifying key-based SSH...${NC}"
+BADKEY=()
+for host in "${REACHABLE[@]}"; do
+  ip="$(get_host_var "$host" "ansible_host")"
+  user="$(get_host_var "$host" "ansible_user")"
 
-if grep -q "private_key_file" ansible.cfg; then
-    sed -i "s|#*private_key_file.*|private_key_file = $KEY_PATH|" ansible.cfg
+  echo -n "Testing ${host}... "
+  if ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+      "${user}@${ip}" "echo key_ok" >/dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC}"
+  else
+    echo -e "${RED}✗${NC}"
+    BADKEY+=("$host")
+  fi
+done
+
+echo
+if [[ ${#BADKEY[@]} -gt 0 ]]; then
+  echo -e "${YELLOW}Some hosts did not accept key auth:${NC} ${BADKEY[*]}"
+  echo "Common causes: root SSH disabled, password auth disabled, sshd config, or wrong user."
 else
-    sed -i "/
-
-\[defaults\]
-
-/a private_key_file = $KEY_PATH" ansible.cfg
+  echo -e "${GREEN}All tested hosts accept key auth.${NC}"
 fi
 
-if ! grep -q "host_key_checking.*False" ansible.cfg; then
-    sed -i "/
-
-\[defaults\]
-
-/a host_key_checking = False" ansible.cfg
-fi
-
-echo -e "${GREEN}✓${NC} ansible.cfg updated"
-
-# Step 6: Update group_vars
-echo ""
-echo -e "${YELLOW}Step 6: Updating group_vars...${NC}"
-
-if [[ -f "group_vars/linux_servers/connection.yml" ]]; then
-    sed -i 's/^ansible_password:/#ansible_password:/' group_vars/linux_servers/connection.yml
-    sed -i 's/^ansible_become_password:/#ansible_become_password:/' group_vars/linux_servers/connection.yml
-
-    if ! grep -q "# Using SSH key authentication" group_vars/linux_servers/connection.yml; then
-        cat >> group_vars/linux_servers/connection.yml <<'EOF'
-
-# Using SSH key authentication (no password needed)
-# SSH key: ~/.ssh/ccdc_rsa
-# To re-enable password auth, uncomment lines above
-EOF
-    fi
-fi   # <-- this was missing
-
-# Step 7: Test with Ansible
-echo ""
-echo -e "${YELLOW}Step 7: Testing Ansible connectivity...${NC}"
-if ansible all -m ping >/dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} Ansible can connect to all hosts!"
-    ansible all -m ping
-else
-    echo -e "${YELLOW}⚠${NC} Some hosts unreachable, running detailed test..."
-    ansible all -m ping
-fi
-
-# Summary
-echo ""
-echo -e "${BLUE}╔══════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   SSH KEY SETUP COMPLETE                 ║${NC}"
-echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}"
-echo ""
-echo "Results:"
-echo "  Total VMs: ${#VMS[@]}"
-echo "  Reachable: ${#REACHABLE_VMS[@]}"
-echo "  Key auth working: ${#SUCCESS_VMS[@]}"
-echo ""
+echo
+echo -e "${BLUE}Next step:${NC} set this in ansible.cfg (range branch) if you want:"
+echo "  private_key_file = $KEY_PATH"
