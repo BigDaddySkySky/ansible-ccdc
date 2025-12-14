@@ -1,22 +1,33 @@
 ---
 competition_team_number: 21
 
+# Practice range defaults (replace with vault for competition use)
+vault_default_password: "password"
+
 # Net 1 (servers)
 linux_lan_cidr: 10.250.20.0/24
-ecom_private_ip: 10.250.20.20
-webmail_private_ip: 10.250.20.30
+ubuntu_private_ip: 10.250.20.4
+oracle_private_ip: 10.250.20.30
 freebsd_private_ip: 10.250.20.10
 
+# Compatibility aliases for firewall role
+ecom_private_ip: 10.250.20.4
+webmail_private_ip: 10.250.20.30
+
 # Security net
-# Uncomment when Splunk is actually present
-# splunk_private_ip: 10.250.40.130
+security_net_cidr: 10.250.40.0/24
+kali_private_ip: 10.250.40.100
+wazu_private_ip: 10.250.40.110
+sec_onion_private_ip: 10.250.40.120
+splunk_private_ip: 10.250.40.130
 
 # Windows net
 win_lan_cidr: 10.250.30.0/24
-win_web_private_ip: 10.250.30.15
-ad_private_ip: 10.250.30.25
-win_wks_private_ip: 10.250.30.35
+win_web_private_ip: 10.250.30.3   # WinServer 2019 (web)
+ad_private_ip: 10.250.30.5        # WinServer 2022 (DNS/DC)
+win_wks_private_ip: 10.250.30.7   # Win10 workstation
 
-# Firewall mgmt IPs (for later automation / documentation)
+# Firewall/router mgmt IPs
 palo_mgmt_ip: 10.250.20.254
 ftd_mgmt_ip: 10.250.30.254
+vyos_inside_ip: 10.250.10.2
