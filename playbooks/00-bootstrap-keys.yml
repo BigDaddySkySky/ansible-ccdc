@@ -5,6 +5,9 @@
 - name: Deploy SSH keys to SSH-capable hosts
   hosts: linux_servers:security_tools:unix_servers
   gather_facts: false
+  become: false
+  var_files:
+    - group_vars/all/competition.yml
 
   tasks:
     - name: Display bootstrap target
