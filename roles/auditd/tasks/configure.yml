@@ -157,6 +157,26 @@
     group: root
   become: true
 
+- name: Count audit rules (best effort)
+  ansible.builtin.shell: |
+    set -o pipefail
+    if [ -f /etc/audit/audit.rules ]; then
+      grep -Evc '^\s*($|#)' /etc/audit/audit.rules
+    elif ls /etc/audit/rules.d/*.rules >/dev/null 2>&1; then
+      cat /etc/audit/rules.d/*.rules | grep -Evc '^\s*($|#)'
+    else
+      echo 0
+    fi
+  args:
+    executable: /bin/bash
+  register: rules_count_cmd
+  changed_when: false
+  failed_when: false
+
+- name: Set rules_count fact
+  ansible.builtin.set_fact:
+    rules_count: "{{ (rules_count_cmd.stdout | default('0')) | int }}"
+
 - name: Display configuration summary
   ansible.builtin.debug:
     msg:
