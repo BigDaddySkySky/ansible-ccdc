@@ -32,8 +32,8 @@
 
           ⚠️  LAST CHANCE TO ABORT!
 
-          Have you created VM snapshots?
-          Without snapshots, you cannot rollback if locked out!
+          There is a possiblity of lockout,
+          backup any necessary data!
 
           Press ENTER to continue, or Ctrl+C to abort
       when: confirm is not defined or confirm != "yes"
@@ -43,17 +43,30 @@
   gather_facts: true
 
   pre_tasks:
-    - name: Load global vault variables
+    - name: Check if global vault exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+      register: global_vault
+
+    - name: Load global vault variables (if present)
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+      when: global_vault.stat.exists
 
-    - name: Load host-specific vault variables
+    - name: Check if host vault exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+      register: host_vault
+
+    - name: Load host-specific vault variables (if present)
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+      when: host_vault.stat.exists
 
-    - name: Set ansible_become_password from vault
+    - name: Use host vault password for sudo if defined, otherwise keep inventory value
       ansible.builtin.set_fact:
         ansible_become_password: "{{ vault_host_password }}"
+      when: vault_host_password is defined
 
   roles:
     - role: common_preflight
