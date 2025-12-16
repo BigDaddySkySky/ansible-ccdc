@@ -1,0 +1,14 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart integrity monitor service
+  ansible.builtin.systemd:
+    name: integrity-monitor.service
+    state: restarted
+
+- name: Restart integrity monitor timer
+  ansible.builtin.systemd:
+    name: integrity-monitor.timer
+    state: restarted

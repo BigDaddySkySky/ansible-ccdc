@@ -8,7 +8,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: daemon-reload
+  notify: Reload systemd daemon
 
 - name: Deploy integrity monitor timer unit
   ansible.builtin.template:
@@ -17,7 +17,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: daemon-reload
+  notify: Reload systemd daemon
 
 - name: Ensure integrity monitor timer is enabled and started
   ansible.builtin.systemd:
