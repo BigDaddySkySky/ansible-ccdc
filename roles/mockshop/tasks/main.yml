@@ -21,14 +21,15 @@
     group: www-data
     mode: "0755"
 
-- name: Clone or update mockshop repository
-  ansible.builtin.git:
-    repo: "{{ mockshop_repo_url | default('https://github.com/example/mockshop.git') }}"
-    dest: /var/www/mockshop
-    version: "{{ mockshop_repo_version | default('main') }}"
-    force: false
-    update: true
-    accept_hostkey: true
+- name: Sync mockshop application from control node
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/mockshop/"
+    dest: /var/www/mockshop/
+    delete: yes
+    recursive: yes
+    rsync_opts:
+      - "--exclude=.git"
+      - "--exclude=.integrity"
   notify: Reload apache2
 
 - name: Ensure data directories are writable by www-data
