@@ -1,0 +1,9 @@
+<VirtualHost *:80>
+    DocumentRoot /var/www/mockshop/public
+    <Directory /var/www/mockshop/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+    ErrorLog ${APACHE_LOG_DIR}/mockshop_error.log
+    CustomLog ${APACHE_LOG_DIR}/mockshop_access.log combined
+</VirtualHost>

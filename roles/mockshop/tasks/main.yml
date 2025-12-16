@@ -1,0 +1,76 @@
+---
+# Deploys the mockshop PHP app with Apache and required PHP extensions.
+
+- name: Install Apache and PHP packages
+  ansible.builtin.package:
+    name:
+      - apache2
+      - git
+      - php
+      - php-json
+      - php-mbstring
+      - php-xml
+      - php-sqlite3
+    state: present
+
+- name: Ensure mockshop root directory exists
+  ansible.builtin.file:
+    path: /var/www/mockshop
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Clone or update mockshop repository
+  ansible.builtin.git:
+    repo: "{{ mockshop_repo_url | default('https://github.com/example/mockshop.git') }}"
+    dest: /var/www/mockshop
+    version: "{{ mockshop_repo_version | default('main') }}"
+    force: false
+    update: true
+    accept_hostkey: true
+  notify: Reload apache2
+
+- name: Ensure data directories are writable by www-data
+  ansible.builtin.file:
+    path: "/var/www/mockshop/{{ item }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0775"
+  loop:
+    - data
+    - data/logs
+
+- name: Deploy mockshop Apache vhost
+  ansible.builtin.template:
+    src: mockshop.conf.j2
+    dest: /etc/apache2/sites-available/mockshop.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload apache2
+
+- name: Enable mockshop site
+  ansible.builtin.command: a2ensite mockshop.conf
+  args:
+    creates: /etc/apache2/sites-enabled/mockshop.conf
+  notify: Reload apache2
+
+- name: Disable default Apache site
+  ansible.builtin.command: a2dissite 000-default.conf
+  args:
+    removes: /etc/apache2/sites-enabled/000-default.conf
+  notify: Reload apache2
+
+- name: Ensure Apache modules for rewrite are enabled
+  ansible.builtin.command: a2enmod rewrite
+  args:
+    creates: /etc/apache2/mods-enabled/rewrite.load
+  notify: Reload apache2
+
+- name: Ensure Apache is running
+  ansible.builtin.service:
+    name: apache2
+    state: started
+    enabled: true

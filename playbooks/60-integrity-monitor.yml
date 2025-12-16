@@ -1,0 +1,10 @@
+---
+# Passive integrity monitoring for competition blue-team hosts.
+# Scans arbitrary paths, installs auditd watches, and sets a timer to auto-run.
+
+- name: Deploy integrity monitoring
+  hosts: webservers
+  become: true
+  roles:
+    - auditd
+    - integrity_monitor

@@ -1,0 +1,16 @@
+[Unit]
+Description=Integrity monitor checksum scan
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ integrity_monitor_script }}
+User=root
+Group=root
+Nice=10
+IOSchedulingClass=2
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

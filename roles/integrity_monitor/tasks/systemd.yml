@@ -1,0 +1,26 @@
+---
+# Installs and enables systemd service + timer for integrity monitoring.
+
+- name: Deploy integrity monitor service unit
+  ansible.builtin.template:
+    src: integrity-monitor.service.j2
+    dest: /etc/systemd/system/integrity-monitor.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: daemon-reload
+
+- name: Deploy integrity monitor timer unit
+  ansible.builtin.template:
+    src: integrity-monitor.timer.j2
+    dest: /etc/systemd/system/integrity-monitor.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: daemon-reload
+
+- name: Ensure integrity monitor timer is enabled and started
+  ansible.builtin.systemd:
+    name: integrity-monitor.timer
+    enabled: true
+    state: started

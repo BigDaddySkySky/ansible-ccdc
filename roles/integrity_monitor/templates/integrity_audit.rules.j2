@@ -1,0 +1,4 @@
+-w /etc/audit/rules.d/integrity_monitor.rules -p rwa -k integrity-monitor-self
+{% for path in integrity_monitor_audit_paths %}
+-w {{ path }} -p rwa -k integrity-monitor
+{% endfor %}

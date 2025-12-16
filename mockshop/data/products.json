@@ -1,0 +1,30 @@
+[
+  {
+    "id": "p100",
+    "name": "Cyber Hoodie",
+    "description": "Lightweight hoodie with mockshop logo for chilly SOC nights.",
+    "price": 39.99,
+    "image": "/assets/images/products/hoodie.jpg"
+  },
+  {
+    "id": "p200",
+    "name": "Blue Team Mug",
+    "description": "Ceramic mug to keep you caffeinated while defending the network.",
+    "price": 14.5,
+    "image": "/assets/images/products/mug.jpg"
+  },
+  {
+    "id": "p300",
+    "name": "Lockpick Starter Kit",
+    "description": "Practice set for lock sport enthusiasts and curious defenders.",
+    "price": 29.0,
+    "image": "/assets/images/products/lockpick.jpg"
+  },
+  {
+    "id": "p400",
+    "name": "USB Data Blocker",
+    "description": "Charge devices safely at conferences with this data blocker.",
+    "price": 9.99,
+    "image": "/assets/images/products/datablocker.jpg"
+  }
+]

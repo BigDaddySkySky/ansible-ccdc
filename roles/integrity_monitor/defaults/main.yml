@@ -1,0 +1,11 @@
+---
+# Default configuration for the generic integrity monitoring role.
+
+integrity_monitor_paths: []
+integrity_monitor_audit_paths: []
+integrity_monitor_baseline_dir: "/var/lib/integrity_monitor"
+integrity_monitor_log: "/var/log/integrity_monitor.log"
+integrity_monitor_script: "/usr/local/bin/integrity-check.sh"
+integrity_monitor_interval: "5m"
+# Optional: write the discord webhook to /etc/integrity_monitor/discord_webhook
+integrity_monitor_discord_webhook: "{{ discord_webhook_url | default(omit) }}"

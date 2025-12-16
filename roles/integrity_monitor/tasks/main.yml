@@ -1,0 +1,61 @@
+---
+# Sets up passive integrity monitoring with auditd + periodic checksum scans.
+
+- name: Include system packages required for hashing and runtime
+  ansible.builtin.package:
+    name:
+      - coreutils
+      - findutils
+      - curl
+    state: present
+
+- name: Ensure baseline directory exists
+  ansible.builtin.file:
+    path: "{{ integrity_monitor_baseline_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Ensure integrity monitor log exists
+  ansible.builtin.file:
+    path: "{{ integrity_monitor_log }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Write discord webhook file if provided
+  when: integrity_monitor_discord_webhook is defined
+  ansible.builtin.copy:
+    dest: /etc/integrity_monitor/discord_webhook
+    content: "{{ integrity_monitor_discord_webhook }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Deploy auditd rules for integrity monitoring
+  ansible.builtin.template:
+    src: integrity_audit.rules.j2
+    dest: /etc/audit/rules.d/integrity_monitor.rules
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart auditd
+
+- name: Deploy integrity check script
+  ansible.builtin.template:
+    src: integrity-check.sh.j2
+    dest: "{{ integrity_monitor_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Include systemd setup
+  ansible.builtin.include_tasks: systemd.yml
+
+- name: Run integrity check once to seed baseline
+  ansible.builtin.command: "{{ integrity_monitor_script }}"
+  register: integrity_seed_run
+  changed_when: false
+  failed_when: false

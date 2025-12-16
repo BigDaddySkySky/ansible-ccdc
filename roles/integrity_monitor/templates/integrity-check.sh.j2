@@ -1,0 +1,77 @@
+#!/bin/sh
+# Periodic checksum-based integrity checker (generic/passive).
+# Weaknesses by design: simple checksum storage, optional webhook.
+
+set -eu
+
+BASELINE_DIR="{{ integrity_monitor_baseline_dir }}"
+LOG_FILE="{{ integrity_monitor_log }}"
+WEBHOOK_FILE="/etc/integrity_monitor/discord_webhook"
+
+PATHS="$(cat <<'EOF'
+{% for p in integrity_monitor_paths -%}
+{{ p }}
+{% endfor -%}
+EOF
+)"
+
+log_msg() {
+    echo "$(date -Is) $1" >> "$LOG_FILE"
+}
+
+send_alert() {
+    msg="$1"
+    if [ -f "$WEBHOOK_FILE" ]; then
+        webhook="$(cat "$WEBHOOK_FILE")"
+        if [ -n "$webhook" ]; then
+            curl -s -X POST -H 'Content-Type: application/json' \
+                -d "{\"content\":\"${msg}\"}" "$webhook" >/dev/null 2>&1 || true
+        fi
+    fi
+    log_msg "$msg"
+}
+
+ensure_dirs() {
+    mkdir -p "$BASELINE_DIR"
+    touch "$LOG_FILE"
+}
+
+checksum_target() {
+    target="$1"
+    sha256sum "$target" 2>/dev/null | awk '{print $1}'
+}
+
+ensure_dirs
+
+OLD_IFS="$IFS"
+IFS='
+'
+for pattern in $PATHS; do
+    [ -z "$pattern" ] && continue
+    for target in $pattern; do
+        # Expand directories into files
+        if [ -d "$target" ]; then
+            find "$target" -type f 2>/dev/null
+        elif [ -e "$target" ]; then
+            echo "$target"
+        fi
+    done | while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        [ -e "$file" ] || continue
+        checksum="$(checksum_target "$file")" || checksum=""
+        [ -n "$checksum" ] || continue
+        baseline_name=$(echo "$file" | sed 's#/#_#g').sha256
+        baseline_file="$BASELINE_DIR/$baseline_name"
+        if [ ! -f "$baseline_file" ]; then
+            echo "$checksum" > "$baseline_file"
+            log_msg "BASELINE CREATED $file"
+            continue
+        fi
+        stored="$(cat "$baseline_file" 2>/dev/null || true)"
+        if [ "$checksum" != "$stored" ]; then
+            echo "$checksum" > "$baseline_file"
+            send_alert "Integrity Alert: $file changed on $(hostname)"
+        fi
+    done
+done
+IFS="$OLD_IFS"

@@ -1,0 +1,6 @@
+---
+- name: Deploy MockShop
+  hosts: webservers
+  become: true
+  roles:
+    - mockshop

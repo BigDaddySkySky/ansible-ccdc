@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic integrity monitor scan
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec={{ integrity_monitor_interval }}
+Unit=integrity-monitor.service
+
+[Install]
+WantedBy=timers.target
