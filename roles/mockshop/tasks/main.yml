@@ -23,7 +23,7 @@
 
 - name: Sync mockshop application from control node
   ansible.posix.synchronize:
-    src: "{{ playbook_dir }}/mockshop/"
+    src: "{{ playbook_dir }}/../mockshop/"
     dest: /var/www/mockshop/
     delete: yes
     recursive: yes
