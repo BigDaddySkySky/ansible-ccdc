@@ -21,15 +21,14 @@
     group: www-data
     mode: "0755"
 
-- name: Sync mockshop application from control node
-  ansible.posix.synchronize:
-    src: "{{ playbook_dir }}/../mockshop/"
+- name: Copy mockshop from control node
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/mockshop/"
     dest: /var/www/mockshop/
-    delete: yes
-    recursive: yes
-    rsync_opts:
-      - "--exclude=.git"
-      - "--exclude=.integrity"
+    owner: www-data
+    group: www-data
+    mode: "0644"
+    remote_src: no
 
 - name: Ensure data directories are writable by www-data
   ansible.builtin.file:
