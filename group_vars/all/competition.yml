@@ -6,7 +6,7 @@ vault_default_password: "password"
 
 # Net 1 (servers)
 linux_lan_cidr: 10.250.20.0/24
-ubuntu_private_ip: 10.250.20.4
+ubuntu_private_ip: 10.250.20.20
 oracle_private_ip: 10.250.20.30
 freebsd_private_ip: 10.250.20.10
 
@@ -31,3 +31,5 @@ win_wks_private_ip: 10.250.30.7   # Win10 workstation
 palo_mgmt_ip: 10.250.20.254
 ftd_mgmt_ip: 10.250.30.254
 vyos_inside_ip: 10.250.10.2
+
+integrity_monitor_discord_webhook: "{{ vault_discord_webhook_url }}"

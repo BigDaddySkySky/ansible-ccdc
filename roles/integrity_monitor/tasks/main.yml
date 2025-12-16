@@ -25,6 +25,14 @@
     group: root
     mode: "0640"
 
+- name: Ensure integrity monitor config directory exists
+  ansible.builtin.file:
+    path: /etc/integrity_monitor
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
 - name: Write discord webhook file if provided
   when: integrity_monitor_discord_webhook is defined
   ansible.builtin.copy:
