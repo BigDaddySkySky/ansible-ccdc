@@ -30,7 +30,6 @@
     rsync_opts:
       - "--exclude=.git"
       - "--exclude=.integrity"
-  notify: Reload apache2
 
 - name: Ensure data directories are writable by www-data
   ansible.builtin.file:
