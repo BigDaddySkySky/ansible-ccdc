@@ -3,6 +3,24 @@
 # SSHD_CONFIG HARDENING
 # ============================================
 
+- name: Check for authorized_keys for the remote user
+  ansible.builtin.stat:
+    path: "/home/{{ ansible_user }}/.ssh/authorized_keys"
+  register: authorized_keys_stat
+  become: true
+  when: ssh_hardening_disable_password_auth | bool
+
+- name: Refuse to disable password auth when no authorized_keys present
+  ansible.builtin.fail:
+    msg: >-
+      Refusing to set PasswordAuthentication no because
+      /home/{{ ansible_user }}/.ssh/authorized_keys does not exist.
+      Set ssh_hardening_force_no_keys=true to override (dangerous).
+  when:
+    - ssh_hardening_disable_password_auth | bool
+    - not ssh_hardening_force_no_keys | bool
+    - not authorized_keys_stat.stat.exists
+
 - name: Apply SSHD configuration settings
   ansible.builtin.lineinfile:
     path: "{{ ssh_hardening_config_path }}"
