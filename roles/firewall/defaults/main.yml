@@ -25,27 +25,27 @@ firewall_scored_services:
     port: 22
     proto: tcp
     comment: "SSH - Required for management"
- 
+
   - name: http
     port: 80
     proto: tcp
     comment: "HTTP - Web server (scored)"
- 
+
   - name: https
     port: 443
     proto: tcp
     comment: "HTTPS - Secure web (scored)"
- 
+
   - name: smtp
     port: 25
     proto: tcp
     comment: "SMTP - Mail submission (scored)"
- 
+
   - name: pop3
     port: 110
     proto: tcp
     comment: "POP3 - Mail retrieval (scored)"
- 
+
   - name: ftp
     port: 21
     proto: tcp
@@ -78,7 +78,7 @@ firewall_whiteteam_ips: []
 # ============================================
 
 # Enable rate limiting for web services
-firewall_enable_rate_limiting: true
+firewall_enable_rate_limiting: false
 
 # HTTP/HTTPS rate limit (connections per minute)
 firewall_http_rate_limit: "30/minute"
@@ -91,7 +91,7 @@ firewall_ssh_rate_limit: "10/minute"
 # ============================================
 
 # Enable firewall logging
-firewall_enable_logging: true
+firewall_enable_logging: false
 
 # Log level (low/medium/high for ufw, notice/info/debug for firewalld)
 firewall_log_level: "{{ 'low' if ansible_os_family == 'Debian' else 'notice' }}"
@@ -119,7 +119,7 @@ firewall_default_forward: deny
 firewall_block_icmp: false
 
 # Enable SYN flood protection (Linux kernel setting)
-firewall_enable_syn_protection: true
+firewall_enable_syn_protection: false
 
 # ============================================
 # UFW-Specific Settings
