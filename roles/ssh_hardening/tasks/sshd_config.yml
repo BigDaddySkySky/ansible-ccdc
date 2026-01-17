@@ -50,6 +50,6 @@
     - { regexp: '#?MACs',                    line: 'MACs {{ ssh_hardening_macs | join(",") }}' }
     - { regexp: '#?KexAlgorithms',           line: 'KexAlgorithms {{ ssh_hardening_kex_algorithms | join(",") }}' }
 
-  notify: restart sshd
+  notify: reload sshd
   become: true
   when: item.condition is not defined or item.condition | bool
