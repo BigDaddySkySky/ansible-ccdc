@@ -37,24 +37,43 @@
           Without snapshots, you cannot rollback if locked out!
 
           Press ENTER to continue, or Ctrl+C to abort
-      when: confirm is not defined or confirm != "yes"
+      when: (confirm | default('no') | lower) != 'yes'
 
 - name: 2. Apply Full Hardening Stack & Report Summary
   hosts: all
   gather_facts: true
 
   pre_tasks:
-    - name: Load global vault variables
+    - name: Load global secrets (repo or local)
       ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+        file: "{{ item }}"
+      loop:
+        - "{{ playbook_dir }}/../group_vars/all/vault.local.yml"
+        - "{{ playbook_dir }}/../group_vars/all/vault.yml"
+      ignore_errors: true
+      no_log: true
 
-    - name: Load host-specific vault variables
+    - name: Load host secrets (repo or local)
       ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+        file: "{{ item }}"
+      loop:
+        - "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.local.yml"
+        - "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+      ignore_errors: true
+      no_log: true
+
+    - name: Ensure vault_host_password is available
+      ansible.builtin.assert:
+        that:
+          - vault_host_password is defined
+          - vault_host_password | length > 0
+        fail_msg: "vault_host_password is missing. Provide host_vars/<host>/vault.local.yml or host_vars/<host>/vault.yml"
+      no_log: true
 
     - name: Set ansible_become_password from vault
       ansible.builtin.set_fact:
         ansible_become_password: "{{ vault_host_password }}"
+      no_log: true
 
   roles:
     - role: common_preflight
@@ -81,8 +100,8 @@
     - name: Calculate Results
       ansible.builtin.set_fact:
         total_hosts_list: "{{ ansible_play_hosts_all }}"
-        successful_hosts_list: "{{ ansible_play_hosts }}"
-        failed_hosts_list: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
+        completed_hosts_list: "{{ ansible_play_hosts }}"
+        missing_hosts_list: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
       run_once: true
       delegate_to: localhost
       become: false
@@ -90,17 +109,10 @@
     - name: Format Results
       ansible.builtin.set_fact:
         total_count: "{{ total_hosts_list | length }}"
-        success_count: "{{ successful_hosts_list | length }}"
-        failed_count: "{{ failed_hosts_list | length }}"
-        success_string: "{{ successful_hosts_list | join(', ') }}"
-        failed_string: "{{ failed_hosts_list | join(', ') }}"
-      run_once: true
-      delegate_to: localhost
-      become: false
-
-    - name: Load global vault for notification
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+        completed_count: "{{ completed_hosts_list | length }}"
+        missing_count: "{{ missing_hosts_list | length }}"
+        completed_string: "{{ completed_hosts_list | join(', ') }}"
+        missing_string: "{{ missing_hosts_list | join(', ') }}"
       run_once: true
       delegate_to: localhost
       become: false
@@ -114,17 +126,20 @@
           Full stack hardening (SSH, Firewall, Auditd) has been applied.
 
           **Total Hosts:** {{ total_count }}
-          **✅ Successful:** {{ success_count }}
-          **❌ Failed:** {{ failed_count }}
+          **✅ Completed:** {{ completed_count }}
+          **❌ Missing:** {{ missing_count }}
 
-          **Successful:** {{ success_string if success_string else 'None' }}
-          **Failed:** {{ failed_string if failed_string else 'None' }}
-        discord_color: "{{ '3066993' if failed_count == 0 else '15158332' }}"
-        discord_webhook_url: "{{ vault_discord_webhook_url }}"
+          **Completed:** {{ completed_string if completed_string else 'None' }}
+          **Missing:** {{ missing_string if missing_string else 'None' }}
+        discord_color: "{{ '3066993' if missing_count == 0 else '15158332' }}"
+        discord_webhook_effective: "{{ vault_discord_webhook_url | default(lookup('env','DISCORD_WEBHOOK_URL'), true) }}"
+        discord_webhook_url: "{{ discord_webhook_effective }}"
       run_once: true
       when:
-        - vault_discord_webhook_url is defined
-        - "'YOUR_WEBHOOK' not in vault_discord_webhook_url"
+        - discord_webhook_effective is defined
+        - discord_webhook_effective | length > 0
+        - "'YOUR_WEBHOOK' not in discord_webhook_effective"
+
 
     - name: Display final summary
       ansible.builtin.debug:
@@ -135,8 +150,8 @@
           - "╚══════════════════════════════════════════╝"
           - ""
           - "Total hosts: {{ total_count }}"
-          - "✅ Successful: {{ success_count }}"
-          - "❌ Failed: {{ failed_count }}"
+          - "✅ Completed: {{ completed_count }}"
+          - "❌ Missing: {{ missing_count }}"
           - ""
           - "Next steps:"
           - "  1. Test all scored services manually (curl, telnet, etc.)"
