@@ -22,6 +22,8 @@ ssh_hardening_config_path: /etc/ssh/sshd_config
 # Lock root account (disable password login entirely)
 ssh_hardening_lock_root_account: true
 
+ssh_hardening_set_root_nologin: false
+
 # ============================================
 # SSH Authentication Settings
 # ============================================

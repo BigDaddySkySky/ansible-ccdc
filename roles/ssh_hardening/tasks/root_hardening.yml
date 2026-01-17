@@ -22,7 +22,9 @@
   ansible.builtin.user:
     name: root
     shell: /bin/nologin
-  when: root_shell_before.stdout != "/bin/nologin"
+  when:
+    - ssh_hardening_set_root_nologin | bool
+    - root_shell_before.stdout != "/bin/nologin"
   register: root_shell_change
   become: true
 
@@ -36,6 +38,7 @@
   changed_when: false
   check_mode: false
   failed_when: root_shell_after.stdout != "/bin/nologin"
+  when: ssh_hardening_set_root_nologin | bool
   become: true
 
 - name: Lock root account (disable password login)
