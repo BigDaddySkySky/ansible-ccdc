@@ -135,6 +135,10 @@ ufw_before_rules: []
 # Firewalld-Specific Settings
 # ============================================
 
+# Start/enable firewalld if it is not already running
+# Critical-path safe default: false (do not surprise-enable a firewall)
+firewall_manage_firewalld_service: false
+
 # Default zone for firewalld
 firewalld_default_zone: public
 
