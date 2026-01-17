@@ -115,13 +115,15 @@
 # Allow from Scoring Engine IPs
 # ============================================
 
-- name: Allow traffic from scoring engine IPs
+- name: Allow traffic from scoring engine IPs (optional)
   community.general.ufw:
     rule: allow
     from_ip: "{{ item }}"
-    comment: "Scoring engine access"
+    comment: "Scoring engine access (all ports)"
   loop: "{{ firewall_scoring_ips }}"
-  when: firewall_scoring_ips | length > 0
+  when:
+    - firewall_all_all_from_scoring_ips | bool
+    - firewall_scoring_ips | length > 0
   become: true
 
 - name: Display scoring IP allowances
