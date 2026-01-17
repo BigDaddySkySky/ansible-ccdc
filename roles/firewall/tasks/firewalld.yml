@@ -104,7 +104,7 @@
 # Allow from Scoring Engine IPs
 # ============================================
 
-- name: Add scoring engine IPs to trusted sources
+- name: Allow all traffic from scoring engine IPs (optional)
   ansible.posix.firewalld:
     zone: "{{ firewalld_default_zone }}"
     source: "{{ item }}"
@@ -112,7 +112,9 @@
     permanent: true
     immediate: true
   loop: "{{ firewall_scoring_ips }}"
-  when: firewall_scoring_ips | length > 0
+  when:
+    - firewall_allow_all_from_scoring_ips | bool
+    - firewall_scoring_ips | length > 0
   become: true
 
 - name: Display scoring IP allowances
