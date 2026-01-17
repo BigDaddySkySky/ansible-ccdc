@@ -115,13 +115,9 @@ echo -e "${GREEN}✓${NC} Ansible installed ($(ansible --version | head -1))"
 
 # Install Ansible collections
 echo ""
-echo -e "${YELLOW}Installing Ansible collections...${NC}"
+echo -e "${YELLOW}Installing Ansible collections from requirements.yml...${NC}"
 
-if [[ $VERBOSE -eq 1 ]]; then
-    ansible-galaxy collection install ansible.posix community.general
-else
-    ansible-galaxy collection install ansible.posix community.general > /dev/null 2>&1
-fi
+ansible-galaxy collection install -r requirements.yml --force
 
 echo -e "${GREEN}✓${NC} Collections installed"
 
