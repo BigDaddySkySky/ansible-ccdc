@@ -25,32 +25,32 @@ firewall_scored_services:
     port: 22
     proto: tcp
     comment: "SSH - Required for management"
-  
+ 
   - name: http
     port: 80
     proto: tcp
     comment: "HTTP - Web server (scored)"
-  
+ 
   - name: https
     port: 443
     proto: tcp
     comment: "HTTPS - Secure web (scored)"
-  
+ 
   - name: smtp
     port: 25
     proto: tcp
     comment: "SMTP - Mail submission (scored)"
-  
+ 
   - name: pop3
     port: 110
     proto: tcp
     comment: "POP3 - Mail retrieval (scored)"
-  
+ 
   - name: ftp
     port: 21
     proto: tcp
     comment: "FTP - File transfer (scored)"
-  
+
   - name: dns
     port: 53
     proto: udp
@@ -63,11 +63,12 @@ firewall_additional_services: []
 # Scoring Engine / White Team Access
 # ============================================
 
-# Allow traffic from scoring engine IPs
-# Update these with actual competition IPs
-firewall_scoring_ips:
-  - "172.31.0.0/16"      # Common CCDC scoring range
-  - "192.168.0.0/16"     # Local network range
+# If true, allow ALL ports from scoring IP ranges (generally NOT needed).
+# Keep false unless White Team explicitly requires it.
+firewall_allow_all_from_scoring_ips: false
+
+# Only populate if you are told exact scoring/judge subnets.
+firewall_scoring_ips: []
 
 # Allow traffic from White Team (if specified)
 firewall_whiteteam_ips: []
