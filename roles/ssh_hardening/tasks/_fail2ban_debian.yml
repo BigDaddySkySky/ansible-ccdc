@@ -12,4 +12,4 @@
 - name: Display fail2ban installation result
   ansible.builtin.debug:
     msg: "{{ '✅ fail2ban installed' if (fail2ban_apt is changed) else '✅ fail2ban already installed' }}"
-    when: ansible_os_family == "Debian"
+  when: ansible_os_family == "Debian"
