@@ -2,36 +2,53 @@
 # ============================================
 # PLAYBOOK: BOOTSTRAP SSH KEYS
 # ============================================
-# Purpose: Deploys SSH keys to new VMs using their default passwords
-# Replaces: scripts/setup-ssh-keys.sh
-# Targets: [new_vms]
+# Purpose:
+#   - Deploy SSH public key to all Linux hosts
+#   - Used once at the beginning of the competition
+# Assumptions:
+#   - 'sysadmin' user exists on all hosts
+#   - Password auth is temporarily enabled
 # ============================================
 
-- name: Deploy SSH keys to new VMs
-  hosts: new_vms
+- name: Deploy SSH keys to all Linux hosts
+  hosts: all
   gather_facts: false
+
+  vars:
+    bootstrap_pubkey_path: "{{ lookup('env','HOME') }}/.ssh/ccdc_rsa.pub"
 
   tasks:
     - name: Display bootstrap target
       ansible.builtin.debug:
-        msg: "Bootstrapping SSH key onto {{ inventory_hostname }} using its default password."
+        msg:
+          - "Bootstrapping SSH key onto {{ inventory_hostname }}"
+          - "  • user: sysadmin"
+          - "  • key: {{ bootstrap_pubkey_path }}"
+
+    - name: Verify public key exists on control node
+      ansible.builtin.stat:
+        path: "{{ bootstrap_pubkey_path }}"
+      register: pubkey_stat
+      delegate_to: localhost
+      run_once: true
+
+    - name: Fail if public key is missing
+      ansible.builtin.fail:
+        msg: "Public key not found: {{ bootstrap_pubkey_path }}"
+      when: not pubkey_stat.stat.exists
+      delegate_to: localhost
+      run_once: true
 
     - name: Deploy SSH key
       ansible.posix.authorized_key:
-        user: "{{ ansible_user }}"
-        key: "{{ lookup('file', '~/.ssh/ccdc_rsa.pub') }}"
+        user: sysadmin
+        key: "{{ lookup('file', bootstrap_pubkey_path) }}"
         state: present
-      register: key_deploy
-
-    - name: Display result
-      ansible.builtin.debug:
-        msg: "✅ SSH key successfully deployed to {{ inventory_hostname }}"
-      when: key_deploy is changed
+        manage_dir: true
 
 - name: Bootstrap Complete
   hosts: localhost
   gather_facts: false
-  become: false
 
   tasks:
     - name: Display next steps
@@ -41,10 +58,7 @@
           - "║   SSH KEY BOOTSTRAP COMPLETE             ║"
           - "╚══════════════════════════════════════════╝"
           - ""
-          - "✅ SSH keys have been deployed to all hosts in the [new_vms] group."
-          - ""
-          - "⚠️  CRITICAL NEXT STEP:"
-          - "   1. Open 'inventory/staging.ini'"
-          - "   2. REMOVE the 'ansible_password=...' from the splunk_vm and ubuntu_wkst_vm lines."
-          - ""
-          - "After you remove the passwords, you can run the rest of the automation stack."
+          - "Next steps:"
+          - "  1) Remove ansible_password from inventory"
+          - "  2) Run connectivity check"
+          - "  3) Run 04-critical-path.yml"
