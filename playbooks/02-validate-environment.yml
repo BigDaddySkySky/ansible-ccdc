@@ -76,7 +76,7 @@
   serial: 1  # Check one at a time for clearer output
 
   tasks:
-    - name: Ping test
+    - name: Ping validation
       ansible.builtin.ping:
       register: ping_result
 

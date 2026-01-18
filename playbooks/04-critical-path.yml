@@ -2,7 +2,7 @@
 # ============================================
 # CRITICAL PATH HARDENING PLAYBOOK (SPRINT 4.1)
 # ============================================
-# Purpose: Master playbook for full-stack hardening
+# Purpose: Master playbook for full-stack competition hardening
 # Runs: Pre-flight -> SSH -> Firewall -> Auditd -> Validation & Reporting
 # ============================================
 
@@ -33,8 +33,9 @@
 
           ⚠️  LAST CHANCE TO ABORT!
 
-          Have you created VM snapshots?
-          Without snapshots, you cannot rollback if locked out!
+          Competition safety gate before hardening.
+          Have you created VM snapshots in your own practice environment?
+          Without snapshots there, you cannot rollback if locked out!
 
           Press ENTER to continue, or Ctrl+C to abort
       when: (confirm | default('no') | lower) != 'yes'
@@ -149,9 +150,9 @@
           - "❌ Missing: {{ missing_count }}"
           - ""
           - "Next steps:"
-          - "  1. Test all scored services manually (curl, telnet, etc.)"
+          - "  1. Validate scored services manually (curl, telnet, etc.)"
           - "  2. Check audit logs: ansible all -m command -a 'ausearch -ts recent' -b"
-          - "  3. Create new VM snapshots: 'Post-Critical-Path'"
+          - "  3. Create new VM snapshots in your practice environment: 'Post-Critical-Path'"
           - "  4. Commit changes: git commit -m 'Sprint 4: Critical path consolidated'"
       run_once: true
       delegate_to: localhost

@@ -1,10 +1,10 @@
 ---
-- name: Hello World - SSH Test
+- name: Hello World - SSH Validation
   hosts: all
   gather_facts: false
 
   tasks:
-    - name: Test SSH connectivity
+    - name: Validate SSH connectivity
       ansible.builtin.ping:
       register: ping_result
 
@@ -23,7 +23,7 @@
       ansible.builtin.debug:
         msg:
           - "╔══════════════════════════════════════════╗"
-          - "║   SSH TEST COMPLETE                      ║"
+          - "║   SSH VALIDATION COMPLETE                ║"
           - "╚══════════════════════════════════════════╝"
           - ""
           - "✅ All hosts reachable via SSH!"
