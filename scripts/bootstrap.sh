@@ -117,7 +117,14 @@ echo -e "${GREEN}✓${NC} Ansible installed ($(ansible --version | head -1))"
 echo ""
 echo -e "${YELLOW}Installing Ansible collections from requirements.yml...${NC}"
 
-ansible-galaxy collection install -r requirements.yml --force
+REQ_YML="requirements.yml"
+if [[ -f "$REQ_YML" ]]; then
+    ansible-galaxy collection install -r "$REQ_YML" --force
+    echo -e "${GREEN}✓${NC} Collections installed"
+else
+    echo -e "${YELLOW}⚠ No requirements.yml found — skipping galaxy collection install${NC}"
+    echo -e "${YELLOW}  Tip: create requirements.yml to pin community.general / ansible.posix, etc.${NC}"
+fi
 
 echo -e "${GREEN}✓${NC} Collections installed"
 
