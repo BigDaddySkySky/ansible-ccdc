@@ -1,13 +1,13 @@
 ---
 # ============================================
-# ENVIRONMENT VALIDATION
+# COMPETITION ENVIRONMENT CHECKS
 # ============================================
-# Purpose: Pre-flight checks before running automation
+# Purpose: Pre-change verification before competition-impacting automation
 # Runtime: 1-2 minutes
 # Safe: YES (read-only, no changes)
 # ============================================
 
-- name: Validate Local Control Node
+- name: Verify control node for competition operations
   hosts: localhost
   gather_facts: true
 
@@ -16,7 +16,7 @@
       ansible.builtin.debug:
         msg:
           - "╔══════════════════════════════════════════╗"
-          - "║   ENVIRONMENT VALIDATION                 ║"
+          - "║   COMPETITION ENVIRONMENT CHECKS         ║"
           - "╚══════════════════════════════════════════╝"
 
     - name: Check Ansible version
@@ -69,14 +69,14 @@
       ansible.builtin.debug:
         msg: "{{ '✅' if sshpass_check.rc == 0 else '⚠️' }} sshpass: {{ 'installed' if sshpass_check.rc == 0 else 'missing (SSH may fail)' }}"
 
-- name: Validate Remote Hosts (Priority-Based)
+- name: Verify Remote Hosts for competition operations (priority-based)
   hosts: all
   gather_facts: true
   ignore_unreachable: true
   serial: 1  # Check one at a time for clearer output
 
   tasks:
-    - name: Ping validation
+    - name: Ping availability check
       ansible.builtin.ping:
       register: ping_result
 
@@ -112,7 +112,7 @@
           - "{{ 'Disk: ' + disk_check.stdout + '% used' if ping_result is success else '' }}"
           - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-- name: Final Summary
+- name: Final competition check summary
   hosts: localhost
   gather_facts: false
 
@@ -122,12 +122,12 @@
         total: "{{ groups['all'] | length }}"
         reachable: "{{ ansible_play_hosts_all | length }}"
 
-    - name: Display summary
+    - name: Display competition readiness summary
       ansible.builtin.debug:
         msg:
           - ""
           - "╔══════════════════════════════════════════╗"
-          - "║   VALIDATION COMPLETE                    ║"
+          - "║   COMPETITION CHECKS COMPLETE            ║"
           - "╚══════════════════════════════════════════╝"
           - ""
           - "Total hosts: {{ total }}"

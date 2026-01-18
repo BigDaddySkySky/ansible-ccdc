@@ -1,18 +1,18 @@
 ---
 # ============================================
-# COMMON POST-HARDENING VALIDATION
+# COMMON POST-HARDENING COMPETITION CHECKS
 # ============================================
-# Purpose: Check host state after all hardening
+# Purpose: Availability-preserving checks after hardening during competition
 # ============================================
 
-- name: Display validation header
+- name: Display competition check header
   ansible.builtin.debug:
     msg:
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      - "🧪 Common Validation: {{ inventory_hostname }}"
+      - "🛡️  Competition Checks: {{ inventory_hostname }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-- name: Validate SSH connectivity from localhost (post-hardening)
+- name: Confirm SSH connectivity from localhost (post-hardening)
   ansible.builtin.wait_for:
     host: "{{ ansible_host }}"
     port: 22
@@ -31,7 +31,7 @@
     fail_msg: "❌ CRITICAL: SSH connectivity FAILED after hardening!"
     success_msg: "✅ SSH connectivity confirmed (post-hardening)"
 
-- name: Validate basic web service (if firewall role was run)
+- name: Confirm basic web service availability (if firewall role was run)
   ansible.builtin.uri:
     url: "http://{{ ansible_host }}"
     status_code: [200, 301, 302, 403, 404] # Any web response is OK
@@ -40,10 +40,10 @@
   failed_when: false
   when: "'firewall' in ansible_run_tags"
 
-- name: Display validation summary
+- name: Display competition check summary
   ansible.builtin.debug:
     msg:
-      - "✅ Validation checks passed for {{ inventory_hostname }}"
+      - "✅ Competition-safe checks passed for {{ inventory_hostname }}"
       - "   • SSH Access: OK"
       - "{{ '   • HTTP Access: ' ~ ('OK' if http_test.status > 0 else 'N/A or FAILED') if 'firewall' in ansible_run_tags else '' }}"
       - "   • Host is hardened and reachable."

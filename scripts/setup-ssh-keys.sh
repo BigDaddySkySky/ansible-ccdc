@@ -220,7 +220,7 @@ if [[ ${#SUCCESS_VMS[@]} -gt 0 ]]; then
     echo "  1. Validate hello-world:"
     echo "     ansible-playbook playbooks/00-hello-world.yml"
     echo ""
-    echo "  2. Create VM snapshots in your own practice environment (VMware → Snapshot)"
+    echo "  2. If available from prior local preparation, create VM snapshots (VMware → Snapshot)"
     echo ""
     echo "  3. Run password rotation (for sudo):"
     echo "     ansible-playbook playbooks/03-rotate-passwords.yml -e 'confirm=yes'"

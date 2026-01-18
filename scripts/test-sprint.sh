@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sprint 0.5 Validation Script
+# Sprint 0.5 Competition Readiness Checks
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ PASS=0
 FAIL=0
 
 echo -e "${YELLOW}╔══════════════════════════════════════════╗${NC}"
-echo -e "${YELLOW}║   Validating Sprint ${SPRINT} Deliverables        ║${NC}"
+echo -e "${YELLOW}║   Competition Readiness: Sprint ${SPRINT}         ║${NC}"
 echo -e "${YELLOW}╚══════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -118,16 +118,16 @@ fi
 echo ""
 echo -e "${YELLOW}══════════════════════════════════════════${NC}"
 if [[ $FAIL -eq 0 ]]; then
-    echo -e "${GREEN}✅ All tests passed! ($PASS/$((PASS+FAIL)))${NC}"
+    echo -e "${GREEN}✅ All readiness checks passed! ($PASS/$((PASS+FAIL)))${NC}"
     echo ""
     echo "Sprint 0.5 is complete! Next steps:"
     echo ""
-    echo "  1. Create a VM in VMware Workstation (practice environment)"
+    echo "  1. Create a VM in VMware Workstation as part of your prior local preparation"
     echo "     → See docs/VM-SETUP.md for step-by-step"
     echo ""
     echo "  2. Update inventory/staging.ini with VM IP"
     echo ""
-    echo "  3. Validate hello-world:"
+    echo "  3. Verify hello-world connectivity:"
     echo "     ansible-playbook playbooks/00-hello-world.yml"
     echo ""
     echo "  4. Push to GitHub:"
@@ -138,7 +138,7 @@ if [[ $FAIL -eq 0 ]]; then
     echo "  5. Start Sprint 1 when ready"
     exit 0
 else
-    echo -e "${RED}❌ Some tests failed ($FAIL failures, $PASS passes)${NC}"
+    echo -e "${RED}❌ Some readiness checks failed ($FAIL failures, $PASS passes)${NC}"
     echo ""
     echo "Fix the issues above before proceeding."
     exit 1

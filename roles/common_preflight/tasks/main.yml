@@ -33,11 +33,11 @@
     fail_msg: "❌ Unsupported OS family: {{ ansible_os_family }}"
     success_msg: "✅ Supported OS: {{ ansible_distribution }}"
 
-- name: Ping validation (check basic connectivity)
+- name: Ping check for competition reachability
   ansible.builtin.ping:
   register: ping_result
 
-- name: Validate sudo access (whoami)
+- name: Confirm sudo access for competition changes (whoami)
   ansible.builtin.command: whoami
   become: true
   changed_when: false
@@ -57,4 +57,4 @@
       - "✅ Pre-flight checks passed for {{ inventory_hostname }}"
       - "   • OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
       - "   • Sudo: OK"
-      - "   • Ready for hardening."
+      - "   • Ready for competition hardening."

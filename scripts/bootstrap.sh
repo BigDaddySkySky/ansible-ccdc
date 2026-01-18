@@ -27,7 +27,7 @@ echo ""
 if [[ -n "${CODESPACES:-}" ]]; then
     ENV="codespaces"
     echo -e "${GREEN}✓${NC} Detected: GitHub Codespaces"
-    echo -e "${YELLOW}⚠ Note: Cannot run VMs in Codespaces (validate on your local practice environment)${NC}"
+    echo -e "${YELLOW}⚠ Note: Cannot run VMs in Codespaces (use prior local preparation for VM work)${NC}"
 elif [[ -f /etc/arch-release ]]; then
     ENV="arch"
     echo -e "${GREEN}✓${NC} Detected: Arch Linux"
@@ -224,12 +224,12 @@ echo "     ./scripts/test-sprint.sh"
 echo ""
 
 if [[ "$ENV" != "codespaces" ]]; then
-    echo "  2. Create VMware VMs in your own practice environment (see docs/VM-SETUP.md)"
+    echo "  2. Create VMware VMs as part of your prior local preparation (see docs/VM-SETUP.md)"
     echo ""
-    echo "  3. Validate hello-world:"
+    echo "  3. Verify hello-world connectivity:"
     echo "     ansible-playbook playbooks/00-hello-world.yml"
 else
-    echo "  2. Exit Codespaces and validate on your local practice environment"
+    echo "  2. Exit Codespaces and use your prior local preparation for VM work"
 fi
 
 echo ""
