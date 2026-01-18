@@ -12,7 +12,7 @@
       - "🧪 Common Validation: {{ inventory_hostname }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-- name: Test SSH connectivity from localhost (post-hardening)
+- name: Validate SSH connectivity from localhost (post-hardening)
   ansible.builtin.wait_for:
     host: "{{ ansible_host }}"
     port: 22
@@ -31,7 +31,7 @@
     fail_msg: "❌ CRITICAL: SSH connectivity FAILED after hardening!"
     success_msg: "✅ SSH connectivity confirmed (post-hardening)"
 
-- name: Test basic web service (if firewall role was run)
+- name: Validate basic web service (if firewall role was run)
   ansible.builtin.uri:
     url: "http://{{ ansible_host }}"
     status_code: [200, 301, 302, 403, 404] # Any web response is OK

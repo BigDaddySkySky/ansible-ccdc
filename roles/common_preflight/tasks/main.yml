@@ -33,11 +33,11 @@
     fail_msg: "❌ Unsupported OS family: {{ ansible_os_family }}"
     success_msg: "✅ Supported OS: {{ ansible_distribution }}"
 
-- name: Ping test (check basic connectivity)
+- name: Ping validation (check basic connectivity)
   ansible.builtin.ping:
   register: ping_result
 
-- name: Test sudo access (whoami)
+- name: Validate sudo access (whoami)
   ansible.builtin.command: whoami
   become: true
   changed_when: false
@@ -48,7 +48,7 @@
     that:
       - sudo_test.rc == 0
       - sudo_test.stdout == 'root'
-    fail_msg: "❌ Sudo test failed! (User: {{ ansible_user }}, Output: {{ sudo_test.stdout }})"
+    fail_msg: "❌ Sudo validation failed! (User: {{ ansible_user }}, Output: {{ sudo_test.stdout }})"
     success_msg: "✅ Sudo access confirmed ({{ ansible_user }} -> root)"
 
 - name: Display pre-flight summary

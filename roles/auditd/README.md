@@ -251,7 +251,7 @@ auditd_compress_evidence: true
         auditd_enable_discord_alerts: false
 ```
 
-## Testing
+## Validation
 
 ### Pre-Deployment Checks
 
@@ -262,7 +262,7 @@ ansible-playbook playbooks/01-validate-environment.yml
 # Check disk space
 ansible all -m shell -a "df -h /var/log" -b
 
-# Create VM snapshots
+# Create VM snapshots in your practice environment
 # VMware → Right-click VM → Snapshot → "Pre-Auditd-Monitoring"
 ```
 
@@ -286,30 +286,30 @@ ansible all -m stat -a "path=/var/log/audit/audit.log" -b
 ansible all -m command -a "ausearch -ts recent | head -20" -b
 ```
 
-### Generate Test Events
+### Generate Validation Events
 
 ```bash
-# Test file integrity monitoring
-ansible HOST -m command -a "touch /etc/test-audit-file" -b
+# Validate file integrity monitoring
+ansible HOST -m command -a "touch /etc/validation-audit-file" -b
 ansible HOST -m command -a "ausearch -k file_integrity" -b
 
-# Test privilege escalation detection
+# Validate privilege escalation detection
 ansible HOST -m command -a "sudo ls /root" -b
 ansible HOST -m command -a "ausearch -k sudo_execution" -b
 
-# Test authentication monitoring
+# Validate authentication monitoring
 ssh sysadmin@HOST  # Trigger SSH login event
 ansible HOST -m command -a "ausearch -k sshd_execution" -b
 ```
 
-### Discord Webhook Test
+### Discord Webhook Validation
 
 ```bash
-# Check if test alert was sent (during deployment)
+# Check if validation alert was sent (during deployment)
 # Look for "Auditd Monitoring Active" message in Discord
 
 # Manually trigger alert
-ansible HOST -m command -a "/usr/local/bin/ccdc-audit-alerts/send-discord-alert.py 'Test Alert' 'Manual test from Ansible'" -b
+ansible HOST -m command -a "/usr/local/bin/ccdc-audit-alerts/send-discord-alert.py 'Validation Alert' 'Manual validation from Ansible'" -b
 ```
 
 ## Troubleshooting
@@ -323,7 +323,7 @@ ansible HOST -m command -a "/usr/local/bin/ccdc-audit-alerts/send-discord-alert.
 # Check service logs
 ansible HOST -m command -a "journalctl -u auditd -n 50" -b
 
-# Test configuration
+# Validate configuration
 ansible HOST -m command -a "auditd -t" -b
 
 # Restore backup
@@ -371,13 +371,13 @@ auditd_rate_limit: 1000       # Limit events/sec
 
 **Fix:**
 ```bash
-# Test webhook manually
-ansible HOST -m shell -a "/usr/local/bin/ccdc-audit-alerts/send-discord-alert.py 'Test' 'Manual test'" -b
+# Validate webhook manually
+ansible HOST -m shell -a "/usr/local/bin/ccdc-audit-alerts/send-discord-alert.py 'Validation' 'Manual validation'" -b
 
 # Check webhook URL
 ansible-vault view group_vars/all/vault.yml | grep discord
 
-# Test network connectivity
+# Validate network connectivity
 ansible HOST -m uri -a "url=https://discord.com/api status_code=200" -b
 
 # Check script permissions
@@ -406,7 +406,7 @@ auditd_rate_limit: 500
 ### First 5 Minutes (After SSH/Firewall)
 
 ```bash
-# 1. Create snapshots
+# 1. Create snapshots in your practice environment
 # VMware → Snapshot → "Pre-Auditd"
 
 # 2. Deploy auditd

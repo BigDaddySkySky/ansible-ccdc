@@ -24,7 +24,7 @@ Comprehensive host-based firewall configuration role for CCDC competition enviro
 - ✅ Pre-flight checks (ensures SSH remains accessible)
 - ✅ SSH connectivity validation
 - ✅ Comprehensive post-configuration validation
-- ✅ Rollback-friendly (VM snapshots recommended)
+- ✅ Rollback-friendly (VM snapshots recommended in your practice environment)
 
 ## Requirements
 
@@ -228,7 +228,7 @@ firewall_block_icmp: false
         firewall_enable_syn_protection: true
 ```
 
-## Testing
+## Validation
 
 ### Pre-Hardening Checks
 
@@ -236,10 +236,10 @@ firewall_block_icmp: false
 # Verify SSH access
 ansible all -m ping
 
-# Create VM snapshots (VMware)
+# Create VM snapshots in your practice environment (VMware)
 # → Right-click VM → Snapshot → "Pre-Firewall-Hardening"
 
-# Test current service accessibility
+# Validate current service accessibility
 curl http://192.168.1.250
 telnet 192.168.1.250 25
 ```
@@ -251,10 +251,10 @@ telnet 192.168.1.250 25
 ansible all -m command -a "ufw status" -b          # Ubuntu
 ansible all -m command -a "firewall-cmd --state" -b # Fedora
 
-# Test SSH still works
+# Validate SSH still works
 ansible all -m ping
 
-# Test scored services
+# Validate scored services
 curl http://192.168.1.250                    # HTTP
 curl https://192.168.1.250                   # HTTPS
 telnet 192.168.1.250 25                      # SMTP
@@ -276,10 +276,10 @@ ansible HOST -m command -a "journalctl -u firewalld -n 50" -b
 **Cause:** SSH not properly allowed in firewall rules
 
 **Fix:**
-1. Revert VM to snapshot
+1. Revert VM to a snapshot in your practice environment
 2. Verify SSH is in `firewall_scored_services`
 3. Run playbook with verbose output: `-vv`
-4. Re-test connectivity before locking yourself out
+4. Re-validate connectivity before locking yourself out
 
 ### Problem: Scored Services Unreachable
 
@@ -338,13 +338,13 @@ ansible HOST -m command -a "journalctl -u firewalld | tail -50" -b
 # 1. Ensure SSH hardening is complete
 ansible-playbook playbooks/04-ssh-hardening.yml
 
-# 2. Create firewall snapshots
+# 2. Create firewall snapshots in your practice environment
 # (VMware → Snapshot → "Pre-Firewall")
 
 # 3. Run firewall hardening
 ansible-playbook playbooks/05-firewall-hardening.yml
 
-# 4. Immediately test all scored services
+# 4. Immediately validate all scored services
 ./scripts/test-scored-services.sh
 ```
 

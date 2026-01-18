@@ -84,7 +84,7 @@
     group: root
   become: true
 
-- name: Test Discord webhook connectivity
+- name: Validate Discord webhook connectivity
   ansible.builtin.shell: |
     /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py \
       "Auditd Monitoring Active" \
@@ -94,9 +94,9 @@
   failed_when: false
   become: true
 
-- name: Display Discord test result
+- name: Display Discord validation result
   ansible.builtin.debug:
-    msg: "{{ '✅ Discord webhook test successful' if discord_test.rc == 0 else '⚠️  Discord webhook test failed (check webhook URL)' }}"
+    msg: "{{ '✅ Discord webhook validation successful' if discord_test.rc == 0 else '⚠️  Discord webhook validation failed (check webhook URL)' }}"
 
 - name: Create audit monitor cron job (hourly event summary)
   ansible.builtin.cron:
@@ -141,4 +141,4 @@
       - "Discord integration complete:"
       - "  • Alert script: /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py"
       - "  • Hourly summary: ENABLED"
-      - "{{ '  • Test alert: SENT' if discord_test.rc == 0 else '  • Test alert: FAILED' }}"
+      - "{{ '  • Validation alert: SENT' if discord_test.rc == 0 else '  • Validation alert: FAILED' }}"

@@ -167,7 +167,7 @@ ssh_hardening_kex_algorithms:
         ssh_hardening_enable_fail2ban: false
 ```
 
-## Testing
+## Validation
 
 ### Pre-Hardening Checks
 
@@ -175,17 +175,17 @@ ssh_hardening_kex_algorithms:
 # Verify SSH keys are in place
 ansible all -m command -a "ls -la /home/sysadmin/.ssh/authorized_keys"
 
-# Test SSH connectivity
+# Validate SSH connectivity
 ansible all -m ping
 
-# Create VM snapshot (VMware)
+# Create VM snapshot in your practice environment (VMware)
 # → Right-click VM → Snapshot → "Pre-SSH-Hardening"
 ```
 
 ### Post-Hardening Validation
 
 ```bash
-# Test SSH access with keys
+# Validate SSH access with keys
 ssh -i ~/.ssh/ccdc_rsa sysadmin@192.168.1.250
 
 # Verify root login disabled
@@ -205,7 +205,7 @@ ansible-playbook playbooks/01-validate-environment.yml
 **Cause:** SSH keys not deployed before disabling password auth
 
 **Fix:**
-1. Revert VM to snapshot
+1. Revert VM to a snapshot in your practice environment
 2. Run `./scripts/setup-ssh-keys.sh` first
 3. Re-run SSH hardening
 
@@ -246,7 +246,7 @@ ansible HOST -m systemd -a "name=sshd state=restarted" -b
 # 1. Deploy SSH keys to all reachable hosts
 ./scripts/setup-ssh-keys.sh
 
-# 2. Create snapshots of all VMs
+# 2. Create snapshots of all VMs in your practice environment
 # (VMware → Snapshot → "Pre-Hardening")
 
 # 3. Run SSH hardening
@@ -259,7 +259,7 @@ ansible-playbook playbooks/00-hello-world.yml
 ### If Hardening Fails
 
 ```bash
-# Revert to snapshot immediately
+# Revert to a snapshot in your practice environment immediately
 # VMware → Snapshot → Revert to "Pre-Hardening"
 
 # Fix the issue (check logs)
