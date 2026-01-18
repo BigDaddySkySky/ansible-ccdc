@@ -27,7 +27,7 @@ echo ""
 if [[ -n "${CODESPACES:-}" ]]; then
     ENV="codespaces"
     echo -e "${GREEN}✓${NC} Detected: GitHub Codespaces"
-    echo -e "${YELLOW}⚠ Note: Cannot run VMs in Codespaces (test on local machine)${NC}"
+    echo -e "${YELLOW}⚠ Note: Cannot run VMs in Codespaces (validate on your local practice environment)${NC}"
 elif [[ -f /etc/arch-release ]]; then
     ENV="arch"
     echo -e "${GREEN}✓${NC} Detected: Arch Linux"
@@ -213,23 +213,23 @@ if [[ "$ENV" == "codespaces" ]]; then
     echo -e "${YELLOW}Codespaces Limitations:${NC}"
     echo "  - Cannot run VMs here"
     echo "  - Use for editing playbooks only"
-    echo "  - Test on local machine (Arch/Windows)"
+    echo "  - Validate on local practice workstation (Arch/Windows)"
     echo ""
 fi
 
 echo "Virtual environment activated! Next steps:"
 echo ""
-echo "  1. Test sprint deliverables:"
+echo "  1. Validate sprint deliverables:"
 echo "     ./scripts/test-sprint.sh"
 echo ""
 
 if [[ "$ENV" != "codespaces" ]]; then
-    echo "  2. Create VMware VMs (see docs/VM-SETUP.md)"
+    echo "  2. Create VMware VMs in your own practice environment (see docs/VM-SETUP.md)"
     echo ""
-    echo "  3. Test hello-world:"
+    echo "  3. Validate hello-world:"
     echo "     ansible-playbook playbooks/00-hello-world.yml"
 else
-    echo "  2. Exit Codespaces and test on local machine"
+    echo "  2. Exit Codespaces and validate on your local practice environment"
 fi
 
 echo ""

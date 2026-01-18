@@ -67,13 +67,13 @@ fi
 
 # Step 2: Test password SSH to each VM
 echo ""
-echo -e "${YELLOW}Step 2: Testing password SSH to VMs...${NC}"
+echo -e "${YELLOW}Step 2: Validating password SSH to VMs...${NC}"
 REACHABLE_VMS=()
 UNREACHABLE_VMS=()
 
 for vm_name in "${!VMS[@]}"; do
     vm_ip="${VMS[$vm_name]}"
-    echo -n "  Testing $vm_name ($vm_ip)... "
+    echo -n "  Checking $vm_name ($vm_ip)... "
     
     if sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 "$VM_USER@$vm_ip" 'exit' 2>/dev/null; then
         echo -e "${GREEN}✓ Reachable${NC}"
@@ -117,7 +117,7 @@ done
 
 # Step 4: Test key-based SSH
 echo ""
-echo -e "${YELLOW}Step 4: Testing key-based SSH...${NC}"
+echo -e "${YELLOW}Step 4: Validating key-based SSH...${NC}"
 SUCCESS_VMS=()
 FAILED_VMS=()
 
@@ -125,7 +125,7 @@ for vm_entry in "${REACHABLE_VMS[@]}"; do
     vm_name="${vm_entry%%:*}"
     vm_ip="${vm_entry##*:}"
     
-    echo -n "  Testing $vm_name ($vm_ip)... "
+    echo -n "  Checking $vm_name ($vm_ip)... "
     
     if ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no "$VM_USER@$vm_ip" 'echo "Key auth works"' >/dev/null 2>&1; then
         echo -e "${GREEN}✓ Key auth works${NC}"
@@ -186,7 +186,7 @@ fi
 
 # Step 7: Test with Ansible
 echo ""
-echo -e "${YELLOW}Step 7: Testing Ansible connectivity...${NC}"
+echo -e "${YELLOW}Step 7: Validating Ansible connectivity...${NC}"
 if ansible all -m ping >/dev/null 2>&1; then
     echo -e "${GREEN}✓${NC} Ansible can connect to all hosts!"
     ansible all -m ping
@@ -217,10 +217,10 @@ if [[ ${#SUCCESS_VMS[@]} -gt 0 ]]; then
     printf '  - %s\n' "${SUCCESS_VMS[@]}"
     echo ""
     echo "Next steps:"
-    echo "  1. Test hello-world:"
+    echo "  1. Validate hello-world:"
     echo "     ansible-playbook playbooks/00-hello-world.yml"
     echo ""
-    echo "  2. Create VM snapshots (VMware → Snapshot)"
+    echo "  2. Create VM snapshots in your own practice environment (VMware → Snapshot)"
     echo ""
     echo "  3. Run password rotation (for sudo):"
     echo "     ansible-playbook playbooks/03-rotate-passwords.yml -e 'confirm=yes'"

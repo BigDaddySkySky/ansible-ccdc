@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sprint 0.5 Testing Script
+# Sprint 0.5 Validation Script
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ PASS=0
 FAIL=0
 
 echo -e "${YELLOW}╔══════════════════════════════════════════╗${NC}"
-echo -e "${YELLOW}║   Testing Sprint ${SPRINT} Deliverables           ║${NC}"
+echo -e "${YELLOW}║   Validating Sprint ${SPRINT} Deliverables        ║${NC}"
 echo -e "${YELLOW}╚══════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -27,8 +27,8 @@ test_fail() {
     ((FAIL++))
 }
 
-# Test 1: Directory structure
-echo -e "${YELLOW}Test 1: Repository structure${NC}"
+# Check 1: Directory structure
+echo -e "${YELLOW}Check 1: Repository structure${NC}"
 for dir in inventory group_vars playbooks roles scripts docs; do
     if [[ -d "$dir" ]]; then
         test_pass "$dir/ exists"
@@ -37,9 +37,9 @@ for dir in inventory group_vars playbooks roles scripts docs; do
     fi
 done
 
-# Test 2: Required files
+# Check 2: Required files
 echo ""
-echo -e "${YELLOW}Test 2: Required files${NC}"
+echo -e "${YELLOW}Check 2: Required files${NC}"
 REQUIRED_FILES=(
     "README.md"
     "INVITATIONAL_POSTMORTEM.md"
@@ -59,9 +59,9 @@ for file in "${REQUIRED_FILES[@]}"; do
     fi
 done
 
-# Test 3: Script permissions
+# Check 3: Script permissions
 echo ""
-echo -e "${YELLOW}Test 3: Script permissions${NC}"
+echo -e "${YELLOW}Check 3: Script permissions${NC}"
 if [[ -x "scripts/bootstrap.sh" ]]; then
     test_pass "bootstrap.sh is executable"
 else
@@ -74,9 +74,9 @@ else
     test_fail "test-sprint.sh not executable"
 fi
 
-# Test 4: Git branch
+# Check 4: Git branch
 echo ""
-echo -e "${YELLOW}Test 4: Git configuration${NC}"
+echo -e "${YELLOW}Check 4: Git configuration${NC}"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 if [[ "$CURRENT_BRANCH" == "v2-rebuild" ]]; then
     test_pass "On v2-rebuild branch"
@@ -84,9 +84,9 @@ else
     test_fail "Not on v2-rebuild branch (current: $CURRENT_BRANCH)"
 fi
 
-# Test 5: Ansible syntax
+# Check 5: Ansible syntax
 echo ""
-echo -e "${YELLOW}Test 5: Playbook syntax${NC}"
+echo -e "${YELLOW}Check 5: Playbook syntax${NC}"
 if command -v ansible-playbook &>/dev/null; then
     for playbook in playbooks/*.yml; do
         if [[ -f "$playbook" ]]; then
@@ -101,9 +101,9 @@ else
     test_fail "ansible-playbook not found (run: ./scripts/bootstrap.sh)"
 fi
 
-# Test 6: Inventory validation
+# Check 6: Inventory validation
 echo ""
-echo -e "${YELLOW}Test 6: Inventory validation${NC}"
+echo -e "${YELLOW}Check 6: Inventory validation${NC}"
 if command -v ansible-inventory &>/dev/null; then
     if ansible-inventory -i inventory/staging.ini --list &>/dev/null; then
         test_pass "staging.ini is valid"
@@ -122,12 +122,12 @@ if [[ $FAIL -eq 0 ]]; then
     echo ""
     echo "Sprint 0.5 is complete! Next steps:"
     echo ""
-    echo "  1. Create a VM in VMware Workstation"
+    echo "  1. Create a VM in VMware Workstation (practice environment)"
     echo "     → See docs/VM-SETUP.md for step-by-step"
     echo ""
     echo "  2. Update inventory/staging.ini with VM IP"
     echo ""
-    echo "  3. Test hello-world:"
+    echo "  3. Validate hello-world:"
     echo "     ansible-playbook playbooks/00-hello-world.yml"
     echo ""
     echo "  4. Push to GitHub:"

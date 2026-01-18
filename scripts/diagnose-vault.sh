@@ -101,7 +101,7 @@ echo -e "${YELLOW}═══ CHECK 4: Variable Loading Test ═══${NC}"
 
 # Test global variable
 echo ""
-echo "Testing: ansible localhost -m debug -a \"var=vault_default_password\""
+echo "Validating: ansible localhost -m debug -a \"var=vault_default_password\""
 if ansible localhost -m debug -a "var=vault_default_password" 2>&1 | grep -q "changeme"; then
     echo -e "${GREEN}✓${NC} vault_default_password loads correctly"
     ansible localhost -m debug -a "var=vault_default_password" 2>&1 | grep -A1 "vault_default_password" | sed 's/^/  /'
@@ -112,7 +112,7 @@ fi
 
 # Test host variable
 echo ""
-echo "Testing: ansible ubuntu_ecom_vm -m debug -a \"var=vault_host_password\""
+echo "Validating: ansible ubuntu_ecom_vm -m debug -a \"var=vault_host_password\""
 if ansible ubuntu_ecom_vm -m debug -a "var=vault_host_password" 2>&1 | grep -q "Ub2025"; then
     echo -e "${GREEN}✓${NC} vault_host_password loads correctly"
     ansible ubuntu_ecom_vm -m debug -a "var=vault_host_password" 2>&1 | grep -A1 "vault_host_password" | sed 's/^/  /'
