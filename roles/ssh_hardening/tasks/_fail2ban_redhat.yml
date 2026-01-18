@@ -1,6 +1,7 @@
 ---
 - name: Bootstrap python libdnf5 bindings (Fedora/RHEL)
-  ansible.builtin.raw: sudo dnf install -y python3-libdnf5
+  ansible.builtin.raw: dnf install -y python3-libdnf5
+  become: true
   changed_when: false
   when: ansible_os_family == "RedHat"
 
