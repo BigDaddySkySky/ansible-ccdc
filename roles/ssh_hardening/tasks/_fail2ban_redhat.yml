@@ -5,19 +5,18 @@
   changed_when: false
   when: ansible_os_family == "RedHat"
 
-- name: Enable EPEL repository (RedHat/Fedora)
-  ansible.builtin.dnf:
-    name: epel-release
-    state: present
+- name: Enable EPEL repository (RedHat/Fedora) via dnf CLI
+  ansible.builtin.raw: dnf install -y epel-release
+  become: true
+  changed_when: false
   when: ansible_os_family == "RedHat"
-  become: true
 
-- name: Install fail2ban (RedHat/Fedora)
-  ansible.builtin.dnf:
-    name: fail2ban
-    state: present
-  register: fail2ban_dnf
+- name: Install fail2ban (RedHat/Fedora) via dnf CLI
+  ansible.builtin.raw: dnf install -y fail2ban
   become: true
+  changed_when: false
+  when: ansible_os_family == "RedHat"
+
 
 - name: Display fail2ban installation result
   ansible.builtin.debug:
