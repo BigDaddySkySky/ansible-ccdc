@@ -14,10 +14,10 @@
 
 ### V2.0 Principles
 1. **Inject-First Design:** Every playbook solves a specific inject or failure scenario
-2. **Testability:** Every change is tested on VMs before competition
+2. **Validation:** Every change is validated on practice VMs before competition
 3. **Teammate Onboarding:** Any teammate can run automation in 5 minutes
 4. **Fail-Safe:** Automation never makes things worse
-5. **Incremental:** Work in sprints, test each sprint, merge when ready
+5. **Incremental:** Work in sprints, validate each sprint, merge when ready
 
 ## Quick Start (Competition Day)
 ```bash
@@ -31,16 +31,16 @@ ansible-playbook playbooks/01-validate-environment.yml
 ansible-playbook playbooks/XX-critical-path.yml  # (Sprint 3)
 ```
 
-## Quick Start (Development/Testing)
+## Quick Start (Practice/Qualification Prep)
 ```bash
 # 1. Set up VMs (see docs/VM-SETUP.md)
-# 2. Test against staging inventory
+# 2. Validate against staging inventory
 ansible-playbook -i inventory/staging.ini playbooks/00-hello-world.yml
 ```
 
 ## Repository Structure
 
-- `inventory/` - Host definitions (production vs staging)
+- `inventory/` - Host definitions (competition vs staging practice inventory)
 - `group_vars/` - Variables organized by logical group
 - `playbooks/` - Numbered by execution order
 - `roles/` - Reusable components (added in Sprint 4)
@@ -51,7 +51,7 @@ ansible-playbook -i inventory/staging.ini playbooks/00-hello-world.yml
 
 1. Work on `v2-rebuild` branch
 2. Complete one sprint at a time
-3. Test sprint deliverables: `./scripts/test-sprint.sh`
+3. Validate sprint deliverables: `./scripts/test-sprint.sh`
 4. Merge to main when sprint is validated
 
 ## Sprint Progress

@@ -81,7 +81,7 @@ Before running the SSH hardening playbook:
 ansible all -m command -a "ls -la ~/.ssh/authorized_keys"
 ```
 
-### 2. Create VM Snapshots
+### 2. Create VM Snapshots in your practice environment
 
 ```
 VMware Workstation:
@@ -94,16 +94,16 @@ VMware Workstation:
 ### 3. Verify Connectivity
 
 ```bash
-# Test basic connectivity
+# Validate basic connectivity
 ansible-playbook playbooks/00-hello-world.yml
 
 # Validate environment
 ansible-playbook playbooks/01-validate-environment.yml
 ```
 
-## 🧪 Testing
+## 🧪 Validation
 
-### Test on Single Host First
+### Validate on Single Host First
 
 ```bash
 # Dry run (see what would change)
@@ -286,7 +286,7 @@ After SSH hardening is complete:
 
 - **Role Documentation:** `roles/ssh_hardening/README.md`
 - **Sprint Documentation:** `docs/SPRINT-3.md`
-- **Testing Guide:** See "Testing" section in SPRINT-3.md
+- **Validation Guide:** See "Validation" section in SPRINT-3.md
 - **Troubleshooting:** See SPRINT-3.md for detailed solutions
 
 ## 🎉 Success Criteria
@@ -295,8 +295,8 @@ You'll know Sprint 3.1 is complete when:
 
 - ✅ SSH hardening role runs without errors
 - ✅ All VMs accessible via SSH keys
-- ✅ Root login disabled (test fails: `ssh root@HOST`)
-- ✅ Password auth disabled (test fails: `ssh sysadmin@HOST`)
+- ✅ Root login disabled (expect `ssh root@HOST` to fail)
+- ✅ Password auth disabled (expect `ssh sysadmin@HOST` to fail)
 - ✅ Fail2ban running (`fail2ban-client status sshd`)
 - ✅ VM snapshots created
 - ✅ Changes committed to git
@@ -308,11 +308,11 @@ If you encounter issues:
 1. Check the role README: `roles/ssh_hardening/README.md`
 2. Review Sprint 3 docs: `docs/SPRINT-3.md`
 3. Check Ansible logs: `ansible-playbook ... -vvv`
-4. Revert to snapshot and try again
+4. Revert to a snapshot in your practice environment and try again
 
 ## ⚠️ Important Notes
 
-- **Always test on snapshots first!** You cannot recover from lockout without snapshots.
+- **Always validate on snapshots in your practice environment first!** You cannot recover from lockout without snapshots during competition.
 - **SSH keys are mandatory** before disabling password auth
 - **Create backups** automatically before changes
 - **Validate immediately** after hardening completes

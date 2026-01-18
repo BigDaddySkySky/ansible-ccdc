@@ -75,7 +75,7 @@
 
 ---
 
-## 🧪 Testing & Validation
+## 🧪 Validation
 
 ### Prerequisites
 
@@ -86,28 +86,28 @@
 # 2. Verify connectivity
 ansible-playbook playbooks/00-hello-world.yml
 
-# 3. Create VM snapshots
+# 3. Create VM snapshots in your practice environment
 # VMware → Right-click VM → Snapshot → "Pre-SSH-Hardening"
 ```
 
-### Test 1: Dry Run (Check Mode)
+### Validation 1: Dry Run (Check Mode)
 
 ```bash
 # See what would change without applying
 ansible-playbook playbooks/04-ssh-hardening.yml --check
 ```
 
-### Test 2: Single Host
+### Validation 2: Single Host
 
 ```bash
-# Test on one VM first
+# Validate on one VM first
 ansible-playbook playbooks/04-ssh-hardening.yml --limit ubuntu_ecom_vm
 
 # Verify SSH still works
 ssh -i ~/.ssh/ccdc_rsa sysadmin@192.168.1.250
 ```
 
-### Test 3: All Hosts
+### Validation 3: All Hosts
 
 ```bash
 # Apply to all VMs
@@ -117,7 +117,7 @@ ansible-playbook playbooks/04-ssh-hardening.yml
 ansible all -m ping
 ```
 
-### Test 4: Validation Checks
+### Validation 4: Post-Change Checks
 
 ```bash
 # Check root shell
@@ -132,7 +132,7 @@ ansible all -m shell -a "grep '^PermitRootLogin no' /etc/ssh/sshd_config" -b
 ansible all -m command -a "fail2ban-client status sshd" -b
 # Expected: Jail status output
 
-# Test password auth is disabled
+# Validate password auth is disabled
 ssh sysadmin@192.168.1.250
 # Expected: Permission denied (publickey)
 ```
@@ -154,7 +154,7 @@ ssh sysadmin@192.168.1.250
 
 **Lines of Code:** ~850 lines across all role files
 
-**Testing Time:** ~3-5 minutes per host
+**Validation Time:** ~3-5 minutes per host
 
 ---
 

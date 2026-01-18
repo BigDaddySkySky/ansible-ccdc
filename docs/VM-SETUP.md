@@ -2,15 +2,15 @@
 
 ## Overview
 
-Test your V2.0 automation against VMware VMs that mirror the competition environment.
+Validate your V2.0 automation against VMware VMs that mirror the competition environment.
 
 ## Why VMs?
 
-1. **Repeatability:** Snapshot before testing, rollback if broken
+1. **Repeatability:** Snapshot in your practice environment before validation, rollback if broken
 2. **Safety:** Break VMs all you want, not your actual system
 3. **Reality Check:** Competition runs on real VMs, not localhost
 
-## Minimum VMs for Testing
+## Minimum VMs for Practice
 
 **Sprint 0.5 - 1:**
 - 1 Ubuntu 22.04 VM (ubuntu-ecom-vm)
@@ -20,7 +20,7 @@ Test your V2.0 automation against VMware VMs that mirror the competition environ
 - 1 Fedora 39 VM (fedora-webmail-vm)
 
 **Sprint 4+:**
-- Add 3rd VM for testing role isolation
+- Add 3rd VM for role isolation validation
 
 ## Step-by-Step: Create Ubuntu VM
 
@@ -78,7 +78,7 @@ ip addr show
 
 # Write down this IP! You'll need it for inventory.
 
-# Test SSH from your host machine
+# Validate SSH from your host machine
 # From your Windows/Linux host terminal:
 ssh ccdc@192.168.xxx.xxx
 # Password: changeme
@@ -97,7 +97,7 @@ ubuntu_ecom_vm ansible_host=192.168.xxx.xxx  # ← YOUR VM'S IP
 
 ### 6. Create VM Snapshot (CRITICAL!)
 
-**Before running ANY playbooks:**
+**Before running ANY playbooks in your practice environment:**
 
 1. VMware → VM → Snapshot → Take Snapshot
 2. Name: `Sprint 0.5 - Fresh Install`
@@ -109,10 +109,10 @@ ubuntu_ecom_vm ansible_host=192.168.xxx.xxx  # ← YOUR VM'S IP
 
 ### Common Tasks
 ```bash
-# Take snapshot (before testing)
+# Take snapshot (before validation in your practice environment)
 # GUI: VM → Snapshot → Take Snapshot
 
-# Revert to snapshot (if you broke something)
+# Revert to snapshot (if you broke something in practice)
 # GUI: VM → Snapshot → Revert to Snapshot
 
 # Clone VM (to create 2nd/3rd VMs)

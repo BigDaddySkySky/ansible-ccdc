@@ -17,7 +17,7 @@
 - [x] Control node setup (Kali WSL)
 - [x] 2 VMs created (Ubuntu 24.04 Ecom, Fedora 43 Webmail)
 - [x] SSH connectivity validated (both hosts reachable)
-- [x] `playbooks/00-hello-world.yml` - Basic connectivity test
+- [x] `playbooks/00-hello-world.yml` - Basic connectivity validation
 - [x] `playbooks/01-validate-environment.yml` - Pre-flight checks
 - [x] `playbooks/02-discover-hosts.yml` - Service discovery
 - [x] Services installed on VMs (Apache, MySQL, Postfix, Dovecot)
@@ -26,35 +26,35 @@
 
 ---
 
-## 🧪 Testing & Validation
+## 🧪 Validation
 
-### Test 1: Connectivity
+### Validation 1: Connectivity
 ```bash
 ansible-playbook playbooks/00-hello-world.yml
 # Expected: 2/2 hosts reachable
 ```
 
-### Test 2: Environment
+### Validation 2: Environment
 ```bash
 ansible-playbook playbooks/01-validate-environment.yml
 # Expected: Both hosts show "✅ READY"
 ```
 
-### Test 3: Discovery
+### Validation 3: Discovery
 ```bash
 ansible-playbook playbooks/02-discover-hosts.yml
 # Expected: Reports saved to /tmp/*_baseline.json
 ```
 
-### Test 4: Priority Groups
+### Validation 4: Priority Groups
 ```bash
-# Test targeting specific groups
+# Validate targeting specific groups
 ansible web_servers -m ping
 ansible mail_servers -m ping
 ansible critical_services -m ping
 ```
 
-### Test 5: Service Validation
+### Validation 5: Service Validation
 ```bash
 # From Kali WSL
 curl http://192.168.1.250  # Ubuntu Ecom - should return HTML
@@ -90,7 +90,7 @@ telnet 192.168.1.251 25    # Postfix SMTP - should connect
 
 ### What Worked Well
 - ✅ Kali WSL → VMware connectivity seamless (bridged networking)
-- ✅ Cross-distro testing caught Python version differences (3.12 vs 3.14)
+- ✅ Cross-distro validation caught Python version differences (3.12 vs 3.14)
 - ✅ Priority groups enable flexible targeting
 - ✅ Discovery playbook reveals security gaps before hardening
 
@@ -149,12 +149,12 @@ VMware → VM → Snapshot → Revert to "Sprint 1 - Services Baseline"
 - [x] Inventory contains priority groups
 - [x] Documentation complete
 - [x] Committed to `v2-rebuild` branch
-- [x] VM snapshots created
+- [x] VM snapshots created in your practice environment
 
 **Sprint 1 Status: COMPLETE ✅**
 
 **Date Completed:** {{ ansible_date_time.date }}  
-**Time Invested:** ~2 hours (VM setup + service install + testing)
+**Time Invested:** ~2 hours (VM setup + service install + validation)
 
 ---
 
@@ -171,7 +171,7 @@ Deliverables:
 - Enhanced inventory with priority groups
 - Generated baseline reports for both hosts
 
-Testing:
+Validation:
 - Hello-world: 2/2 reachable ✅
 - Environment validation: 2/2 ready ✅
 - Discovery: Reports generated ✅

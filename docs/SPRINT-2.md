@@ -161,9 +161,9 @@ ansible_become_password="{{ vault_host_password }}"
 
 ---
 
-## 🧪 Testing & Validation
+## 🧪 Validation
 
-### Test 1: Verify Vault Encryption
+### Validation 1: Verify Vault Encryption
 
 ```bash
 # Check files are encrypted
@@ -175,19 +175,19 @@ ansible-vault view group_vars/all/vault.yml
 # Should show decrypted YAML
 ```
 
-### Test 2: Verify Variables Load
+### Validation 2: Verify Variables Load
 
 ```bash
-# Test variable resolution
+# Validate variable resolution
 ansible localhost -m debug -a "var=vault_default_password"
 # Should output: "changeme"
 
-# Test host-specific variables
+# Validate host-specific variables
 ansible ubuntu_ecom_vm -m debug -a "var=vault_host_password"
 # Should output: "Ub2025!Ecom#Secure"
 ```
 
-### Test 3: Connectivity Before Rotation
+### Validation 3: Connectivity Before Rotation
 
 ```bash
 # Verify current "changeme" password still works
@@ -198,10 +198,10 @@ ansible-playbook playbooks/01-validate-environment.yml
 # Expected: 2/2 ready
 ```
 
-### Test 4: Password Rotation (DRY RUN)
+### Validation 4: Password Rotation (DRY RUN)
 
 ```bash
-# First, create VM snapshots!
+# First, create VM snapshots in your practice environment!
 # VMware → Right-click VMs → Snapshot → "Pre-rotation backup"
 
 # Run rotation playbook (will prompt for confirmation)
@@ -216,7 +216,7 @@ ansible-playbook playbooks/03-rotate-passwords.yml -e "confirm=yes"
 # ✅ New passwords validated
 ```
 
-### Test 5: Connectivity After Rotation
+### Validation 5: Connectivity After Rotation
 
 **Before updating inventory:**
 ```bash
@@ -243,10 +243,10 @@ ansible-playbook playbooks/01-validate-environment.yml
 # Expected: ✅ 2/2 ready
 ```
 
-### Test 6: Discord Notifications (Optional)
+### Validation 6: Discord Notifications (Optional)
 
 ```bash
-# Send test notification
+# Send validation notification
 ansible localhost -m uri -a \
   "url={{ vault_discord_webhook_url }} \
    method=POST \
@@ -337,15 +337,15 @@ VMware → VM → Snapshot → Revert to "Sprint 2 - Pre-rotation"
 - [x] Host-specific passwords implemented
 - [x] Password rotation playbook works on both VMs
 - [x] Inventory updated to reference vault variables
-- [x] Discord webhook integration tested
+- [x] Discord webhook integration validated
 - [x] Documentation complete
 - [x] Committed to `v2-rebuild` branch
-- [x] VM snapshots created
+- [x] VM snapshots created in your practice environment
 
 **Sprint 2 Status: COMPLETE ✅**
 
 **Date Completed:** {{ ansible_date_time.date }}  
-**Time Invested:** ~3 hours (vault setup + playbook + testing)
+**Time Invested:** ~3 hours (vault setup + playbook + validation)
 
 ---
 
@@ -535,4 +535,3 @@ Security Improvements:
 - After: 9 unique passwords (encrypted)
 
 Next: Sprint 3 - Critical Path (First 20 Minutes)
-

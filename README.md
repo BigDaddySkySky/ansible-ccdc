@@ -33,14 +33,14 @@ ansible-playbook playbooks/01-validate-environment.yml
 ansible-playbook playbooks/03-critical-path.yml --limit @reachable_hosts.txt
 ```
 
-## Quick Start (Local Testing with VMware)
+## Quick Start (Practice Run with VMware)
 ```bash
 # 1. Create VMs in VMware Workstation (see docs/VM-SETUP.md)
 # 2. Bootstrap
 ./scripts/bootstrap.sh
 source .venv/bin/activate
 
-# 3. Test against VMs
+# 3. Validate against VMs
 ansible-playbook -i inventory/staging.ini playbooks/00-hello-world.yml
 ```
 
@@ -48,12 +48,12 @@ ansible-playbook -i inventory/staging.ini playbooks/00-hello-world.yml
 ```
 ansible-ccdc-v2/
 ├── inventory/
-│   ├── staging.ini          # VMware VMs for testing
+│   ├── staging.ini          # VMware VMs for practice/qualification prep
 │   └── production.ini       # Competition network (filled in day-of)
 ├── group_vars/              # Variables by logical group
 │   └── all/                 # Global settings
 ├── playbooks/               # Numbered by execution order
-│   ├── 00-hello-world.yml   # Simplest connectivity test
+│   ├── 00-hello-world.yml   # Simplest connectivity validation
 │   ├── 01-validate-environment.yml  # What's reachable?
 │   └── 03-critical-path.yml # First 20 minutes (Sprint 3)
 ├── roles/                   # Reusable components (Sprint 4+)
@@ -66,7 +66,7 @@ ansible-ccdc-v2/
 ## Development Workflow
 
 1. Work on `v2-rebuild` branch (not `main`)
-2. Test changes in VMware VMs
+2. Validate changes in VMware practice VMs
 3. Complete one sprint at a time
 4. Run `./scripts/test-sprint.sh` to validate
 5. Push to GitHub: `git push origin v2-rebuild`
@@ -94,8 +94,8 @@ Based on invitational experience and time constraints:
 
 ## Tech Stack
 
-- **Local Dev:** VMware Workstation Pro (Windows/Arch dual-boot)
-- **Remote Dev:** GitHub Codespaces (editing only, no VMs)
+- **Local prep:** VMware Workstation Pro (Windows/Arch dual-boot)
+- **Remote editing:** GitHub Codespaces (editing only, no VMs)
 - **Competition:** Ubuntu-based control node
 - **Target Systems:** Ubuntu, Fedora, Debian Linux servers
 
