@@ -46,34 +46,29 @@
   pre_tasks:
     - name: Load global secrets (repo or local)
       ansible.builtin.include_vars:
-        file: "{{ item }}"
-      loop:
-        - "{{ playbook_dir }}/../group_vars/all/vault.local.yml"
-        - "{{ playbook_dir }}/../group_vars/all/vault.yml"
-      ignore_errors: true
+        file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
       no_log: true
 
     - name: Load host secrets (repo or local)
       ansible.builtin.include_vars:
-        file: "{{ item }}"
-      loop:
-        - "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.local.yml"
-        - "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
-      ignore_errors: true
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
       no_log: true
 
-    - name: Ensure vault_host_password is available
+    - name: Ensure a become password is available
       ansible.builtin.assert:
         that:
-          - vault_host_password is defined
-          - vault_host_password | length > 0
-        fail_msg: "vault_host_password is missing. Provide host_vars/<host>/vault.local.yml or host_vars/<host>/vault.yml"
+          - (vault_host_password is defined and vault_host_password | length > 0) or
+            (vault_default_password is defined and vault_default_password | length > 0)
+        fail_msg: >
+          Missing become password. Expected vault_host_password (host_vars/<host>/vault.yml)
+          or vault_default_password (group_vars/all/vault.yml).
       no_log: true
 
-    - name: Set ansible_become_password from vault
+    - name: Set ansible_become_password (prefer rotated)
       ansible.builtin.set_fact:
-        ansible_become_password: "{{ vault_host_password }}"
+        ansible_become_password: "{{ vault_host_password | default(vault_default_password) }}"
       no_log: true
+
 
   roles:
     - role: common_preflight
