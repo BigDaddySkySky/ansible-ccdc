@@ -1,4 +1,9 @@
 ---
+- name: Bootstrap python libdnf5 bindings (Fedora/RHEL)
+  ansible.builtin.raw: sudo dnf install -y python3-libdnf5
+  changed_when: false
+  when: ansible_os_family == "RedHat"
+
 - name: Enable EPEL repository (RedHat/Fedora)
   ansible.builtin.dnf:
     name: epel-release
