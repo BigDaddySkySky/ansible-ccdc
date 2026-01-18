@@ -158,7 +158,7 @@ inventory = inventory/staging.ini
 vault_password_file = ~/.vault_pass
 host_key_checking = False
 timeout = 10
-remote_user = ccdc
+remote_user = sysadmin
 forks = 10
 retry_files_enabled = False
 gathering = smart
@@ -179,6 +179,25 @@ ANSIBLECFG
     echo -e "${GREEN}✓${NC} ansible.cfg created"
 else
     echo -e "${GREEN}✓${NC} ansible.cfg already exists"
+fi
+
+# Set up SSH keypair for CCDC automation
+echo ""
+echo -e "${YELLOW}Setting up SSH keypair...${NC}"
+
+KEY_PATH="$HOME/.ssh/ccdc_rsa"
+
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+
+if [[ -f "$KEY_PATH" && -f "$KEY_PATH.pub" ]]; then
+    echo -e "${GREEN}✓${NC} SSH key already exists: $KEY_PATH"
+else
+    echo -e "${YELLOW}⚠ Generating SSH key: $KEY_PATH${NC}"
+    ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc@$(hostname)" >/dev/null 2>&1 || true
+    chmod 600 "$KEY_PATH" 2>/dev/null || true
+    chmod 644 "$KEY_PATH.pub" 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} SSH key generated: $KEY_PATH.pub"
 fi
 
 # Display summary
