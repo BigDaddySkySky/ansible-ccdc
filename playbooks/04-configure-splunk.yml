@@ -1,22 +1,9 @@
 ---
-# ============================================
-# PLAYBOOK: CONFIGURE SPLUNK
-# ============================================
-# Purpose: Finalize Splunk setup after hardening
-# ============================================
-
-- name: Configure Splunk application
+# Configure Splunk server (receiver + base configuration)
+- name: Configure Splunk server
   hosts: splunk
-  gather_facts: false
+  become: true
+  gather_facts: true
 
-  pre_tasks:
-    - name: Load host-specific vault variables
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
-    
-    - name: Set ansible_become_password from vault
-      ansible.builtin.set_fact:
-        ansible_become_password: "{{ vault_host_password }}"
-  
   roles:
     - splunk_configure
