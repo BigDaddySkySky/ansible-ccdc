@@ -1,139 +1,38 @@
 ---
-# ============================================
-# SPLUNK APPLICATION HARDENING
-# ============================================
-# Purpose: Enable SSL, set up log receiver
-# ============================================
+# Splunk hardening (Phase 2 safe)
+# Goal: Do not break forwarder ingestion. No TLS receiver changes here.
 
-- name: Display Splunk hardening header
-  ansible.builtin.debug:
-    msg: "Hardening Splunk application on {{ inventory_hostname }}..."
-
-- name: Open Splunk firewall ports in firewalld
-  ansible.posix.firewalld:
-    port: "{{ item.port }}/tcp"
-    state: enabled
-    permanent: true
-    immediate: true
-    zone: public
-  loop:
-    - { port: 8089, comment: "Splunk Management" }
-    - { port: 9997, comment: "Splunk Log Receiver" }
-  become: true
-
-- name: Create directory for self-signed certificates
-  ansible.builtin.file:
-    path: /opt/splunk/etc/auth/mycerts
-    state: directory
-    owner: splunk
-    group: splunk
-    mode: '0755'
-  become: true
-
-- name: Generate self-signed SSL certificate
+- name: Ensure Splunk is running
   ansible.builtin.command:
-    cmd: >
-      openssl req -x509 -nodes -newkey rsa:2048
-      -keyout /opt/splunk/etc/auth/mycerts/mySplunkKey.pem
-      -out /opt/splunk/etc/auth/mycerts/mySplunkCert.pem
-      -subj "/C=US/ST=Illinois/L=Chicago/O=CCDC/CN={{ ansible_host }}"
-    creates: /opt/splunk/etc/auth/mycerts/mySplunkKey.pem
+    cmd: /opt/splunk/bin/splunk status
   become: true
   become_user: splunk
-  notify: restart splunk
+  register: splunk_status
+  changed_when: false
+  failed_when: false
 
-# --- NEW TASK: Combine key and cert for Web UI ---
-- name: Combine key and cert for Web UI
-  ansible.builtin.shell:
-    cmd: "cat /opt/splunk/etc/auth/mycerts/mySplunkKey.pem /opt/splunk/etc/auth/mycerts/mySplunkCert.pem > /opt/splunk/etc/auth/mycerts/web_ui_key_and_cert.pem"
-    creates: /opt/splunk/etc/auth/mycerts/web_ui_key_and_cert.pem
+- name: Start Splunk if not running
+  ansible.builtin.command:
+    cmd: /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
   become: true
   become_user: splunk
-  notify: restart splunk
+  when: splunk_status.rc != 0
+  changed_when: true
 
-- name: Ensure certificate files have correct ownership
-  ansible.builtin.file:
-    path: /opt/splunk/etc/auth/mycerts/
-    owner: splunk
-    group: splunk
-    recurse: true
-  become: true
+# Validate receiver port is still enabled and listening
+- name: Verify receiver port 9997 is listening locally
+  ansible.builtin.wait_for:
+    host: "127.0.0.1"
+    port: 9997
+    state: started
+    delay: 2
+    timeout: 60
 
-# --- MODIFIED TASK: Point to combined file ---
-- name: Secure Splunk Web UI (port 8000) with SSL
-  ansible.builtin.ini_file:
-    path: /opt/splunk/etc/system/local/web.conf
-    section: settings
-    option: "{{ item.option }}"
-    value: "{{ item.value }}"
-    owner: splunk
-    group: splunk
-    mode: '0600'
-  loop:
-    - { option: 'enableSplunkWebSSL', value: 'true' }
-    - { option: 'privKeyPath', value: '/opt/splunk/etc/auth/mycerts/web_ui_key_and_cert.pem' }
-  become: true
-  notify: restart splunk
-
-# --- NEW TASK: Remove old/bad serverCert entry ---
-- name: Remove old serverCert line from web.conf
-  ansible.builtin.ini_file:
-    path: /opt/splunk/etc/system/local/web.conf
-    section: settings
-    option: serverCert
-    state: absent
-  become: true
-  notify: restart splunk
-
-- name: Enable Python HTTPS verification in splunk-launch.conf
-  ansible.builtin.lineinfile:
-    path: /opt/splunk/etc/splunk-launch.conf
-    regexp: "^PYTHONHTTPSVERIFY"
-    line: "PYTHONHTTPSVERIFY = 1"
-    create: true
-    owner: splunk
-    group: splunk
-    mode: '0644'
-  become: true
-  notify: restart splunk
-
-# --- MODIFIED TASK: Use absolute paths ---
-- name: Secure Splunk Management Port (port 8089) with SSL
-  ansible.builtin.ini_file:
-    path: /opt/splunk/etc/system/local/server.conf
-    section: sslConfig
-    option: "{{ item.option }}"
-    value: "{{ item.value }}"
-    owner: splunk
-    group: splunk
-    mode: '0600'
-  loop:
-    - { option: 'enableSplunkdSSL', value: 'true' }
-    - { option: 'sslKeysfile', value: '/opt/splunk/etc/auth/mycerts/mySplunkKey.pem' }
-    - { option: 'serverCert', value: '/opt/splunk/etc/auth/mycerts/mySplunkCert.pem' }
-  become: true
-  notify: restart splunk
-
-- name: Configure Splunk to receive logs on port 9997
-  ansible.builtin.ini_file:
-    path: /opt/splunk/etc/system/local/inputs.conf
-    section: splunktcp-ssl:9997
-    option: disabled
-    value: 0
-    owner: splunk
-    group: splunk
-    mode: '0600'
-  become: true
-  notify: restart splunk
-
-- name: Flush handlers to restart Splunk if changed
-  ansible.builtin.meta: flush_handlers
-
-- name: Display Splunk hardening summary
-  ansible.builtin.debug:
-    msg:
-      - "✅ Splunk hardening complete!"
-      - "   • Web UI (8000) is now using SSL (HTTPS)"
-      - "   • Management (8089) is now using SSL"
-      - "   • Log Receiver (9997) is enabled and firewalled"
-      - "   • Access UI: https://{{ ansible_host }}:8000"
+# Optional: ensure management is reachable locally (do not force TLS changes here)
+- name: Verify management port 8089 is listening locally
+  ansible.builtin.wait_for:
+    host: "127.0.0.1"
+    port: 8089
+    state: started
+    delay: 2
+    timeout: 60

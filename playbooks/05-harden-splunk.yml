@@ -1,22 +1,8 @@
 ---
-# ============================================
-# PLAYBOOK: HARDEN SPLUNK SERVICE
-# ============================================
-# Purpose: Enable SSL and configure log receiver
-# ============================================
-
 - name: Harden Splunk application service
   hosts: splunk
-  gather_facts: false
+  become: true
+  gather_facts: true
 
-  pre_tasks:
-    - name: Load host-specific vault variables
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
-    
-    - name: Set ansible_become_password from vault
-      ansible.builtin.set_fact:
-        ansible_become_password: "{{ vault_host_password }}"
-  
   roles:
     - splunk_harden
