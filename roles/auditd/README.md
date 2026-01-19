@@ -69,7 +69,7 @@ Comprehensive auditd-based intrusion detection and file integrity monitoring rol
 
 ```bash
 # Test on single host first
-ansible-playbook playbooks/06-auditd-monitoring.yml --limit ubuntu_ecom_vm
+ansible-playbook playbooks/06-auditd-monitoring.yml --limit ecom
 
 # Deploy to all hosts
 ansible-playbook playbooks/06-auditd-monitoring.yml

@@ -41,8 +41,8 @@ echo -e "${YELLOW}═══ CHECK 3: Vault File Status ═══${NC}"
 
 VAULT_FILES=(
     "group_vars/all/vault.yml"
-    "host_vars/ubuntu_ecom_vm/vault.yml"
-    "host_vars/fedora_webmail_vm/vault.yml"
+    "host_vars/ecom/vault.yml"
+    "host_vars/webmail/vault.yml"
 )
 
 for vault_file in "${VAULT_FILES[@]}"; do
@@ -112,13 +112,13 @@ fi
 
 # Test host variable
 echo ""
-echo "Validating: ansible ubuntu_ecom_vm -m debug -a \"var=vault_host_password\""
-if ansible ubuntu_ecom_vm -m debug -a "var=vault_host_password" 2>&1 | grep -q "Ub2025"; then
+echo "Validating: ansible ecom -m debug -a \"var=vault_host_password\""
+if ansible ecom -m debug -a "var=vault_host_password" 2>&1 | grep -q "Ub2025"; then
     echo -e "${GREEN}✓${NC} vault_host_password loads correctly"
-    ansible ubuntu_ecom_vm -m debug -a "var=vault_host_password" 2>&1 | grep -A1 "vault_host_password" | sed 's/^/  /'
+    ansible ecom -m debug -a "var=vault_host_password" 2>&1 | grep -A1 "vault_host_password" | sed 's/^/  /'
 else
     echo -e "${RED}✗ vault_host_password is UNDEFINED${NC}"
-    ansible ubuntu_ecom_vm -m debug -a "var=vault_host_password" 2>&1 | tail -5 | sed 's/^/  /'
+    ansible ecom -m debug -a "var=vault_host_password" 2>&1 | tail -5 | sed 's/^/  /'
 fi
 
 # Check 5: Inventory configuration
@@ -132,8 +132,8 @@ grep -A5 "\[linux_servers:vars\]" inventory/staging.ini | sed 's/^/  /'
 echo ""
 echo -e "${YELLOW}═══ CHECK 6: Ansible Variable Resolution ═══${NC}"
 echo ""
-echo "What Ansible sees for ubuntu_ecom_vm:"
-ansible-inventory --host ubuntu_ecom_vm 2>&1 | grep -E "(ansible_password|ansible_become_password|vault_)" | sed 's/^/  /'
+echo "What Ansible sees for ecom:"
+ansible-inventory --host ecom 2>&1 | grep -E "(ansible_password|ansible_become_password|vault_)" | sed 's/^/  /'
 
 # Summary
 echo ""

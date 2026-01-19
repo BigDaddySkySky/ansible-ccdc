@@ -140,7 +140,7 @@
     group: splunk
     mode: '0600'
   loop:
-    - { option: server, value: "{{ hostvars['splunk_vm']['ansible_host'] }}:9997" }
+    - { option: server, value: "{{ hostvars['splunk']['ansible_host'] }}:9997" }
   become: true
   notify: restart splunk forwarder
 
@@ -195,5 +195,5 @@
   ansible.builtin.debug:
     msg:
       - "✅ Splunk Universal Forwarder configured"
-      - "   • Forwarding to: {{ hostvars['splunk_vm']['ansible_host'] }}:9997"
+      - "   • Forwarding to: {{ hostvars['splunk']['ansible_host'] }}:9997"
       - "   • Monitoring: audit.log, {{ 'auth.log' if ansible_os_family == 'Debian' else 'secure' }}"

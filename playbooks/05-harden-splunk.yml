@@ -6,7 +6,7 @@
 # ============================================
 
 - name: Harden Splunk application service
-  hosts: splunk_vm
+  hosts: splunk
   gather_facts: false
 
   pre_tasks:

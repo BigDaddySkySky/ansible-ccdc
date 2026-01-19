@@ -9,7 +9,7 @@
 # ============================================
 # Usage:
 #   ansible-playbook playbooks/02-discover-hosts.yml
-#   ansible-playbook playbooks/02-discover-hosts.yml --limit ubuntu_ecom_vm
+#   ansible-playbook playbooks/02-discover-hosts.yml --limit ecom
 # ============================================
 
 - name: Host Discovery - Gather Intelligence

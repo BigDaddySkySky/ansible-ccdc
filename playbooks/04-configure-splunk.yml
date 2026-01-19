@@ -6,7 +6,7 @@
 # ============================================
 
 - name: Configure Splunk application
-  hosts: splunk_vm
+  hosts: splunk
   gather_facts: false
 
   pre_tasks:

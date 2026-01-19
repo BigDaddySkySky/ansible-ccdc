@@ -5,8 +5,8 @@
 # Purpose: Ensures the correct version (9.1.1) of Splunk is installed
 # ============================================
 
-- name: Install Splunk on splunk_vm
-  hosts: splunk_vm
+- name: Install Splunk on splunk
+  hosts: splunk
   gather_facts: false
 
   vars:
