@@ -8,11 +8,11 @@
 # - Only configures firewalld if it's already running OR you explicitly opt-in to start it
 # ============================================
 
-- name: Install firewalld
-  ansible.builtin.dnf:
-    name: firewalld
-    state: present
+- name: Install firewalld (Fedora/RHEL) via dnf CLI
+  ansible.builtin.raw: dnf install -y firewalld
   become: true
+  changed_when: false
+  when: ansible_os_family == "RedHat"
 
 - name: Check firewalld state
   ansible.builtin.command: firewall-cmd --state
