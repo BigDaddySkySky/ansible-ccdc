@@ -1,23 +1,29 @@
 ---
-- name: Bootstrap python libdnf5 bindings (Fedora/RHEL)
-  ansible.builtin.raw: dnf install -y python3-libdnf5
+- name: Install fail2ban (Fedora) via dnf CLI
+  ansible.builtin.raw: dnf install -y fail2ban
   become: true
+  register: fail2ban_install
   changed_when: false
-  when: ansible_os_family == "RedHat"
+  when: ansible_distribution == "Fedora"
 
-- name: Enable EPEL repository (RedHat/Fedora) via dnf CLI
+- name: Enable EPEL repository (RHEL family only) via dnf CLI
   ansible.builtin.raw: dnf install -y epel-release
   become: true
   changed_when: false
-  when: ansible_os_family == "RedHat"
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution != "Fedora"
 
-- name: Install fail2ban (RedHat/Fedora) via dnf CLI
+- name: Install fail2ban (RHEL family) via dnf CLI
   ansible.builtin.raw: dnf install -y fail2ban
   become: true
+  register: fail2ban_install
   changed_when: false
-  when: ansible_os_family == "RedHat"
-
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution != "Fedora"
 
 - name: Display fail2ban installation result
   ansible.builtin.debug:
-    msg: "{{ '✅ fail2ban installed' if (fail2ban_dnf is changed) else '✅ fail2ban already installed' }}"
+    msg: "✅ fail2ban install attempted on {{ inventory_hostname }} (dnf CLI)."
+  when: fail2ban_install is defined
