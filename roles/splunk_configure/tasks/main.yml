@@ -54,11 +54,11 @@
     url: "https://127.0.0.1:8089/services/authentication/users/admin"
     method: POST
     user: admin
-    password: "{{ splunk_default_admin_password }}"
+    password: "{{ vault_default_password }}"
     body_format: form-urlencoded
     body:
       password: "{{ vault_splunk_admin_password }}"
-      oldpassword: "{{ splunk_default_admin_password }}"
+      oldpassword: "{{ vault_default_password }}"
     force_basic_auth: true
     validate_certs: false
     status_code: 200
