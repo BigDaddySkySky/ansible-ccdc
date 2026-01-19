@@ -17,13 +17,15 @@
 
 - name: Install auditd packages (Fedora/RHEL) via dnf CLI
   ansible.builtin.raw: dnf install -y audit audit-libs
+  register: auditd_dnf_raw
   become: true
   changed_when: false
   when: ansible_os_family == "RedHat"
 
+
 - name: Display installation result
   ansible.builtin.debug:
-    msg: "{{ '✅ Auditd installed' if (auditd_apt is changed or auditd_dnf is changed) else '✅ Auditd already installed' }}"
+    msg: "✅ Auditd packages ensured on {{ inventory_hostname }}"
 
 - name: Ensure audit rules directory exists
   ansible.builtin.file:
@@ -38,6 +40,11 @@
   ansible.builtin.debug:
     msg:
       - "Auditd installation complete:"
-      - "  • Packages: {{ auditd_packages[ansible_os_family] | join(', ') }}"
+      - "  • Packages: {{ auditd_packages['Debian'] | join(', ') if ansible_os_family == 'Debian' else auditd_packages['RedHat'] | join(', ') }}"
       - "  • Rules directory: /etc/audit/rules.d"
-      - "  • Status: {{ 'Newly installed' if (auditd_apt is changed or auditd_dnf is changed) else 'Already present' }}"
+      - >-
+        Status: {{
+          'Newly installed/ensured'
+          if (auditd_apt.changed | default(false)) or (auditd_dnf_raw is defined)
+          else 'Already present'
+        }}
