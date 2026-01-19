@@ -34,8 +34,8 @@
 # ============================================
 
 # Monitor execution of programs with setuid bit
--a always,exit -F arch=b64 -S execve -F euid=0 -F uid>=1000 -F uid!=euid -k setuid_execution
--a always,exit -F arch=b32 -S execve -F euid=0 -F uid>=1000 -F uid!=euid -k setuid_execution
+-a always,exit -F arch=b64 -S execve -F euid=0 -F uid>=1000 -C uid!=euid -k setuid_execution
+-a always,exit -F arch=b32 -S execve -F euid=0 -F uid>=1000 -C uid!=euid -k setuid_execution
 
 # Monitor setuid/setgid bit changes on files
 -a always,exit -F arch=b64 -S chmod,fchmod,fchmodat -F a2&04000 -k setuid_bit_change
