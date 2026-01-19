@@ -15,13 +15,11 @@
   register: auditd_apt
   become: true
 
-- name: Install auditd (RedHat/Fedora)
-  ansible.builtin.dnf:
-    name: "{{ auditd_packages['RedHat'] }}"
-    state: present
-  when: ansible_os_family == "RedHat"
-  register: auditd_dnf
+- name: Install auditd packages (Fedora/RHEL) via dnf CLI
+  ansible.builtin.raw: dnf install -y audit audit-libs
   become: true
+  changed_when: false
+  when: ansible_os_family == "RedHat"
 
 - name: Display installation result
   ansible.builtin.debug:

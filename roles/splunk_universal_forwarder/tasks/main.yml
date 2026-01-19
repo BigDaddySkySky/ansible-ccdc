@@ -50,13 +50,12 @@
   when: ansible_os_family == "Debian"
   become: true
 
-- name: Install Splunk Universal Forwarder (RedHat)
-  ansible.builtin.dnf:
-    name: "/tmp/{{ splunk_forwarder_pkg }}"
-    state: present
-    disable_gpg_check: true
-  when: ansible_os_family == "RedHat"
+- name: Install Splunk Universal Forwarder (RedHat/Fedora) via dnf CLI
+  ansible.builtin.raw: "dnf install -y /tmp/{{ splunk_forwarder_pkg }}"
   become: true
+  register: splunk_rpm_install
+  changed_when: "'Nothing to do' not in (splunk_rpm_install.stdout | default(''))"
+  when: ansible_os_family == "RedHat"
 
 - name: Check if splunk user exists (created by package)
   ansible.builtin.getent:
