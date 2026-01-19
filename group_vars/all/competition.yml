@@ -23,3 +23,8 @@ team_name: "Murray State University"
 # layout changes, these may be wrong. Prefer the team packet.
 team_subnet_offset: "{{ 20 + team_number }}"
 public_ip_range: "172.25.{{ team_subnet_offset }}.0/24"
+
+# Splunk receiver (day-of)
+splunk_receiver_host: ""      # set to Splunk server IP/hostname day-of (preferred)
+splunk_receiver_port: 9997
+splunk_receiver_from_inventory: true
