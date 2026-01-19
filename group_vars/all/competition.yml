@@ -1,11 +1,25 @@
 ---
-# Competition-specific values
-# Update this file before each competition
-competition_name: MWCCDC2025
-competition_date: "2025-03-15"
-team_number: 1  # CHANGE THIS
-team_name: "Your University"
+# ============================================================
+# Competition Metadata (Day-Of Inputs)
+#
+# Purpose:
+#   Central place for competition identifiers and any derived
+#   values used for templating or rule generation.
+#
+# Rules:
+#   - Only values that are safe to change day-of belong here.
+#   - Do NOT treat derived values as authoritative network truth.
+#   - If White Team guidance conflicts with this file, follow White Team.
+# ============================================================
 
-# Calculated values (do not edit)
+# ---- Day-of inputs (edit these) ----
+competition_name: "MWCCDC"
+competition_date: "2026-02-07"   # Update day-of
+team_number: 1                  # UPDATE day-of
+team_name: "Murray State University"
+
+# ---- Derived convenience values (do not edit) ----
+# NOTE: These are optional helpers. If the competition network
+# layout changes, these may be wrong. Prefer the team packet.
 team_subnet_offset: "{{ 20 + team_number }}"
 public_ip_range: "172.25.{{ team_subnet_offset }}.0/24"
