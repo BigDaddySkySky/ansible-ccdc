@@ -1,7 +1,6 @@
 ---
 - name: restart splunk forwarder
-  ansible.builtin.shell: |
-    /opt/splunkforwarder/bin/splunk restart
+  ansible.builtin.command:
+    cmd: /opt/splunkforwarder/bin/splunk restart
   become: true
-  listen: restart splunk forwarder
   changed_when: true
