@@ -11,11 +11,20 @@
       - "Configuring Discord alerts..."
       - "Webhook: {{ auditd_discord_webhook[:50] }}..."
 
-- name: Install required packages for webhook alerts (Python)
-  ansible.builtin.package:
+- name: Install required packages for webhook alerts (Debian/Ubuntu)
+  ansible.builtin.apt:
     name: python3-requests
     state: present
+    update_cache: true
+    cache_valid_time: 3600
   become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install required packages for webhook alerts (Fedora/RHEL) via dnf CLI
+  ansible.builtin.raw: dnf install -y python3-requests
+  become: true
+  changed_when: false
+  when: ansible_os_family == "RedHat"
 
 - name: Create audit alert script directory
   ansible.builtin.file:
