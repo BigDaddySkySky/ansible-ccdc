@@ -8,7 +8,7 @@
 
 - name: 1. Pre-Flight Checks (Localhost)
   hosts: localhost
-  gather_facts: false
+  gather_facts: true
   become: false
 
   tasks:
