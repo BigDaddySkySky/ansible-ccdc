@@ -1,75 +1,95 @@
 ---
-# ============================================
-# PLAYBOOK: INSTALL OR FIX SPLUNK
-# ============================================
-# Purpose: Ensures the correct version (9.1.1) of Splunk is installed
-# ============================================
+# Install Splunk Enterprise on the Splunk server (Oracle/RHEL family)
+# Competition intent: ensure Splunk exists; configuration happens in 04-configure-splunk.yml
 
-- name: Install Splunk on splunk
+- name: Ensure Splunk Enterprise is installed
   hosts: splunk
-  gather_facts: false
+  become: true
+  gather_facts: true
 
   vars:
-    # !!! PASTE THE REAL DOWNLOAD LINK HERE !!!
-    splunk_9_1_1_rpm_url: "https://download.splunk.com/products/splunk/releases/9.1.1/linux/splunk-9.1.1-64e843ea36b1.x86_64.rpm"
+    splunk_rpm_url: "https://download.splunk.com/products/splunk/releases/9.1.1/linux/splunk-9.1.1-64e843ea36b1.x86_64.rpm"
     splunk_rpm_dest: "/tmp/splunk-9.1.1.rpm"
-    correct_version: "9.1.1"
-
-  pre_tasks:
-    - name: Load host-specific vault variables
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
-    
-    - name: Set ansible_become_password from vault
-      ansible.builtin.set_fact:
-        ansible_become_password: "{{ vault_host_password }}"
+    splunk_expected_version: "9.1.1"
+    splunk_local_rpm: ""   # optional: set day-of to a local path already on target
 
   tasks:
-    - name: Check currently installed Splunk version
+    - name: Check if Splunk binary exists
+      ansible.builtin.stat:
+        path: /opt/splunk/bin/splunk
+      register: splunk_bin
+
+    - name: Check installed Splunk version (if present)
       ansible.builtin.command:
         cmd: /opt/splunk/bin/splunk version --build
-      register: splunk_version_check
+      register: splunk_version
       changed_when: false
-      failed_when: false # Will fail if Splunk isn't installed, which is fine
-      become: true
+      failed_when: false
+      when: splunk_bin.stat.exists
 
-    - name: Set installed_version fact
+    - name: Determine installed Splunk version string
       ansible.builtin.set_fact:
-        installed_version: "{{ splunk_version_check.stdout_lines[0] | regex_search('Splunk (\\d+\\.\\d+\\.\\d+)', '\\1') | default('none') }}"
+        splunk_installed_version: >-
+          {{
+            (splunk_version.stdout | regex_search('Splunk\\s+(\\d+\\.\\d+\\.\\d+)', '\\1'))
+            | default('none')
+          }}
+      when: splunk_bin.stat.exists
 
-    - name: Display Splunk version status
-      ansible.builtin.debug:
-        msg: "Found Splunk version: {{ installed_version }}. Target version: {{ correct_version }}"
+    - name: Fail if Splunk is installed but not the expected version (operator decision)
+      ansible.builtin.fail:
+        msg: >-
+          Splunk is installed (version {{ splunk_installed_version }}), but expected {{ splunk_expected_version }}.
+          For competition stability, this play will not auto-uninstall/replace.
+          Fix manually (or point splunk_local_rpm to the correct RPM) and rerun.
+      when:
+        - splunk_bin.stat.exists
+        - splunk_installed_version != splunk_expected_version
 
-    - name: Uninstall incorrect Splunk version (if present)
-      ansible.builtin.dnf:
-        name: splunk
-        state: absent
-      become: true
-      when: installed_version != correct_version and installed_version != 'none'
+    - name: Set effective RPM path (local override supported)
+      ansible.builtin.set_fact:
+        splunk_rpm_effective_path: >-
+          {{
+            (splunk_local_rpm | trim)
+            if (splunk_local_rpm | trim) != ''
+            else splunk_rpm_dest
+          }}
 
-    - name: Download correct Splunk 9.1.1 RPM
+    - name: Download Splunk RPM (only if not installed and no local rpm provided)
       ansible.builtin.get_url:
-        url: "{{ splunk_9_1_1_rpm_url }}"
+        url: "{{ splunk_rpm_url }}"
         dest: "{{ splunk_rpm_dest }}"
-        mode: '0644'
-        validate_certs: false # Splunk downloads can be tricky, this helps
-      when: installed_version != correct_version
+        mode: "0644"
+        validate_certs: false
+        timeout: 300
+      when:
+        - not splunk_bin.stat.exists
+        - (splunk_local_rpm | trim) == ''
 
-    - name: Install correct Splunk 9.1.1 from RPM
-      ansible.builtin.dnf:
-        name: "{{ splunk_rpm_dest }}"
-        state: present
-        disable_gpg_check: true
-      become: true
-      when: installed_version != correct_version
+    - name: Verify Splunk RPM exists
+      ansible.builtin.stat:
+        path: "{{ splunk_rpm_effective_path }}"
+      register: splunk_rpm_stat
+      failed_when: not splunk_rpm_stat.stat.exists
+      when: not splunk_bin.stat.exists
 
-    - name: Clean up downloaded RPM
+    - name: Install Splunk RPM via dnf CLI (dnf5-safe pattern)
+      ansible.builtin.raw: "dnf install -y {{ splunk_rpm_effective_path }}"
+      register: splunk_install
+      changed_when: "'Nothing to do' not in (splunk_install.stdout | default(''))"
+      when: not splunk_bin.stat.exists
+
+    - name: Verify Splunk binary exists after install
+      ansible.builtin.stat:
+        path: /opt/splunk/bin/splunk
+      register: splunk_bin_after
+      failed_when: not splunk_bin_after.stat.exists
+      when: not splunk_bin.stat.exists
+
+    - name: Cleanup downloaded RPM (only if we downloaded it)
       ansible.builtin.file:
         path: "{{ splunk_rpm_dest }}"
         state: absent
-      when: installed_version != correct_version
-
-    - name: Display final status
-      ansible.builtin.debug:
-        msg: "✅ Splunk 9.1.1 is now installed. Ready for configuration."
+      when:
+        - not splunk_bin.stat.exists
+        - (splunk_local_rpm | trim) == ''
