@@ -9,7 +9,7 @@
   ansible.builtin.debug:
     msg:
       - "Configuring Discord alerts..."
-      - "Webhook: {{ auditd_discord_webhook[:50] }}..."
+      - "Webhook: configured (value hidden)"
 
 - name: Install required packages for webhook alerts (Debian/Ubuntu)
   ansible.builtin.apt:
@@ -55,7 +55,6 @@
       def send_alert(event_type, details):
           """Send alert to Discord"""
           timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-          
           payload = {
               "content": f"🚨 **Auditd Alert** - {HOSTNAME}",
               "embeds": [{
@@ -66,7 +65,6 @@
                   "footer": {"text": f"Host: {HOSTNAME}"}
               }]
           }
-          
           try:
               response = requests.post(WEBHOOK_URL, json=payload, timeout=10)
               if response.status_code in [200, 204]:
@@ -83,10 +81,8 @@
           if len(sys.argv) < 3:
               print("Usage: send-discord-alert.py <event_type> <details>")
               sys.exit(1)
-          
           event_type = sys.argv[1]
           details = sys.argv[2]
-          
           sys.exit(send_alert(event_type, details))
     mode: '0750'
     owner: root
@@ -94,13 +90,17 @@
   become: true
 
 - name: Check Discord webhook for competition alerts
-  ansible.builtin.shell: |
-    /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py \
-      "Auditd Monitoring Active" \
-      "Auditd monitoring has been configured on {{ inventory_hostname }}. File integrity monitoring, privilege escalation detection, and authentication tracking are now active."
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py
+      - Auditd Monitoring Active
+      - >-
+        Auditd monitoring has been configured on
+        {{ inventory_hostname }}.
   register: discord_test
   changed_when: false
   failed_when: false
+  no_log: true
   become: true
 
 - name: Display Discord alert check result
