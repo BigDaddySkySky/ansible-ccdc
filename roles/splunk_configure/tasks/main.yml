@@ -30,6 +30,19 @@
     delay: 5
     timeout: 180
 
+- name: Wait for Splunk management endpoint to respond (HTTPS, no auth)
+  ansible.builtin.uri:
+    url: "https://127.0.0.1:8089/services/server/info"
+    method: GET
+    validate_certs: false
+    status_code: [200, 401]
+  register: splunk_mgmt_probe
+  retries: 12
+  delay: 5
+  until: splunk_mgmt_probe.status is defined and splunk_mgmt_probe.status in [200, 401]
+  changed_when: false
+  failed_when: false
+
 # ---- Admin password handling ----
 # If the admin password is already set to vault_splunk_admin_password, do nothing.
 # If Splunk is still on the default password, change it.
