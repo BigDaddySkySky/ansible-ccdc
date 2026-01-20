@@ -3,9 +3,9 @@
 - name: Configure Splunk server
   hosts: monitoring
   become: true
-  gather_facts: true
+  gather_facts: false
 
   roles:
-    - splunk_configure
-    - splunk_content
-    - splunk_harden
+  - { role: splunk_configure, tags: ["splunk_configure"] }
+  - { role: splunk_content,   tags: ["splunk_content"] }
+  - { role: splunk_harden,    tags: ["splunk_harden"] }

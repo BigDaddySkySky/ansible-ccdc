@@ -10,7 +10,7 @@
 
 - name: Read dashboard JSON from controller (repo docs/)
   ansible.builtin.set_fact:
-    dashboard_json: "{{ lookup('file', role_path ~ '/../../docs/ccdc_dashboard.json') }}"
+    dashboard_json: "{{ lookup('file', playbook_dir ~ '/../docs/ccdc_dashboard.json') }}"
   no_log: true
   changed_when: false
 

@@ -14,6 +14,9 @@
 # - vault_splunk_admin_password is the desired final admin password
 # - vault_splunk_admin_initial_password is ONLY used to rotate away from an initial/default, if applicable
 
+- name: Gather facts (after vars loaded)
+  ansible.builtin.setup:
+
 - name: Define Splunk paths and settings
   ansible.builtin.set_fact:
     splunk_home: /opt/splunk
