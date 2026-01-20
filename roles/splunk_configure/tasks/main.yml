@@ -221,11 +221,17 @@
 # ---------------------------------------------------------------------------
 
 - name: Check if receiver port is already listening (9997)
-  ansible.builtin.command: "ss -lnt sport = :{{ splunk_receiver_port }}"
+  ansible.builtin.command:
+    cmd: "ss -lnt 'sport = :{{ splunk_receiver_port }}'"
   register: splunk_9997_check
   changed_when: false
   failed_when: false
   become: true
+
+- name: Set receiver_listening fact
+  ansible.builtin.set_fact:
+    receiver_listening: "{{ (splunk_9997_check.stdout | default('') | trim) | length > 0 }}"
+  changed_when: false
 
 - name: Enable Splunk receiving on 9997 (only if not already listening)
   ansible.builtin.command:
@@ -238,17 +244,15 @@
   changed_when: true
   failed_when: false
   no_log: true
-  when: splunk_9997_check.rc != 0
+  when: not receiver_listening
 
-# Splunk sometimes applies listen config without restart; sometimes it doesn't.
-# We do a targeted restart only when we enabled listening in this run.
 - name: Restart Splunk to apply receiver settings (only if we enabled it)
   ansible.builtin.command:
     cmd: "{{ splunk_bin }} restart"
   become: true
   become_user: splunk
   changed_when: true
-  when: splunk_9997_check.rc != 0
+  when: not receiver_listening
 
 - name: Verify receiver port is listening (9997)
   ansible.builtin.wait_for:
