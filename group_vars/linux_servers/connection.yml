@@ -1,6 +1,12 @@
 ---
 ansible_user: sysadmin
 ansible_python_interpreter: /usr/bin/python3
-ansible_become_password: "{{ vault_host_password }}"
-ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# Prefer post-rotation passphrase; fall back to initial (pre-rotation) or global default.
+ansible_become_password: >-
+  {{ vault_os_become_password
+     | default(vault_os_become_initial_password
+     | default(vault_default_password)) }}
+
+ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 ansible_timeout: 10
