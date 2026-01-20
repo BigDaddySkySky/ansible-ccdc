@@ -12,6 +12,7 @@
 
 - name: Deploy SSH keys to all Linux hosts
   hosts: all
+  become: false
   gather_facts: false
 
   vars:
@@ -50,6 +51,7 @@
 - name: Bootstrap Complete
   hosts: localhost
   gather_facts: false
+  become: false
 
   tasks:
     - name: Display next steps
