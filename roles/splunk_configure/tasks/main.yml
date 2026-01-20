@@ -179,39 +179,74 @@
     msg: >-
       Unable to authenticate to Splunk as admin using the vaulted password,
       and unable to rotate from the configured default password.
-      Fix credentials manually, then rerun.
-  when: splunk_admin_verify_after.status != 200
+      (This usually means the default password is wrong, or Splunk isn't fully initialized.)
+      Fix manually, then rerun.
+  when: (splunk_admin_verify_after.status | default(0)) != 200
 
-# ---- Enable receiving on 9997 (required for forwarders) ----
-- name: Enable Splunk receiving on 9997
+# ---------------------------------------------------------------------------
+# ENABLE BOOT-START (BEST EFFORT)
+# ---------------------------------------------------------------------------
+
+- name: Enable Splunk boot-start (best effort)
   ansible.builtin.command:
-    cmd: /opt/splunk/bin/splunk enable listen 9997 -auth "admin:{{ vault_splunk_admin_password }}"
+    cmd: "{{ splunk_bin }} enable boot-start -user splunk --accept-license --answer-yes --no-prompt"
   become: true
-  become_user: splunk
-  register: splunk_enable_listen
-  changed_when: "'enabled' in (splunk_enable_listen.stdout | lower)"
+  register: splunk_bootstart
+  changed_when: "'configured to start automatically' in (splunk_bootstart.stdout | lower | default(''))"
   failed_when: false
   no_log: true
 
-- name: Restart Splunk to apply receiver settings (if needed)
+# ---------------------------------------------------------------------------
+# ENABLE RECEIVING ON 9997 (IDEMPOTENT)
+# ---------------------------------------------------------------------------
+
+- name: Check if receiver port is already listening (9997)
+  ansible.builtin.command: "ss -lnt sport = :{{ splunk_receiver_port }}"
+  register: splunk_9997_check
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Enable Splunk receiving on 9997 (only if not already listening)
   ansible.builtin.command:
-    cmd: /opt/splunk/bin/splunk restart
+    cmd: >-
+      {{ splunk_bin }} enable listen {{ splunk_receiver_port }}
+      -auth "admin:{{ vault_splunk_admin_password }}"
   become: true
   become_user: splunk
-  when: splunk_enable_listen.rc == 0
+  register: splunk_enable_listen
   changed_when: true
+  failed_when: false
+  no_log: true
+  when: splunk_9997_check.rc != 0
+
+# Splunk sometimes applies listen config without restart; sometimes it doesn't.
+# We do a targeted restart only when we enabled listening in this run.
+- name: Restart Splunk to apply receiver settings (only if we enabled it)
+  ansible.builtin.command:
+    cmd: "{{ splunk_bin }} restart"
+  become: true
+  become_user: splunk
+  changed_when: true
+  when: splunk_9997_check.rc != 0
 
 - name: Verify receiver port is listening (9997)
   ansible.builtin.wait_for:
     host: "127.0.0.1"
-    port: 9997
+    port: "{{ splunk_receiver_port }}"
     state: started
     delay: 2
-    timeout: 60
+    timeout: 90
+
+# ---------------------------------------------------------------------------
+# FINAL HEALTH CHECKS
+# ---------------------------------------------------------------------------
 
 - name: Verify Splunk status
   ansible.builtin.command:
-    cmd: /opt/splunk/bin/splunk status
+    cmd: "{{ splunk_bin }} status"
   become: true
   become_user: splunk
+  register: splunk_status
   changed_when: false
+  failed_when: splunk_status.rc != 0
