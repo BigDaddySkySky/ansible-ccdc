@@ -3,7 +3,7 @@
 # Competition intent: ensure Splunk exists; configuration happens in 04-configure-splunk.yml
 
 - name: Ensure Splunk Enterprise is installed
-  hosts: splunk
+  hosts: monitoring
   become: true
   gather_facts: true
 

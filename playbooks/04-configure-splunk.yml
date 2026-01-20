@@ -1,7 +1,7 @@
 ---
 # Configure Splunk server (receiver + base configuration)
 - name: Configure Splunk server
-  hosts: splunk
+  hosts: monitoring
   become: true
   gather_facts: true
 
