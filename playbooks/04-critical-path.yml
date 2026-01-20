@@ -24,7 +24,7 @@
           - "  2. Firewall Configuration"
           - "  3. Auditd Monitoring"
           - ""
-          - "Targets: {{ groups['all'] | join(', ') }}"
+          - "Targets: {{ groups['linux_servers'] | join(', ') }}"
           - "Prerequisites: SSH keys deployed; become creds available"
 
     - name: Pause for confirmation
@@ -41,8 +41,9 @@
       when: (confirm | default('no') | lower) != 'yes'
 
 - name: 2. Apply Full Hardening Stack & Report Summary
-  hosts: all
-  gather_facts: true
+  hosts: linux_servers
+  gather_facts: false
+  become: true
 
   pre_tasks:
     - name: Load global vault (best effort)
@@ -82,6 +83,9 @@
       ansible.builtin.set_fact:
         ansible_become_password: "{{ effective_become_password }}"
       no_log: true
+
+    - name: Gather facts (after become password resolved)
+      ansible.builtin.setup:
 
   roles:
     - role: common_preflight
