@@ -1,38 +1,105 @@
 ---
-# Splunk server configuration (competition-safe)
+# Splunk server configuration (competition-safe, first-run safe, idempotent)
 # Goals:
-# - Ensure Splunk is running
-# - Ensure admin password is set (without printing secrets)
+# - Seed admin exactly once (user-seed.conf) if Splunk has no user DB yet
+# - Ensure Splunk is running and management port responds
+# - Ensure vaulted admin auth works (rotate from default only if needed)
 # - Enable receiving on 9997 for Universal Forwarders
+# - Enable boot-start (best effort)
+#
+# Assumptions:
+# - Splunk is installed to /opt/splunk
+# - Splunk runs as user: splunk
+# - vault_splunk_admin_password is the desired final admin password
+# - vault_default_password is ONLY used to rotate away from an initial default, if applicable
 
-- name: Ensure Splunk directory ownership is correct
+- name: Define Splunk paths
+  ansible.builtin.set_fact:
+    splunk_home: /opt/splunk
+    splunk_bin: /opt/splunk/bin/splunk
+    splunk_user_db: /opt/splunk/etc/passwd
+    splunk_user_seed: /opt/splunk/etc/system/local/user-seed.conf
+    splunk_mgmt_url: https://127.0.0.1:8089/services/server/info
+    splunk_receiver_port: 9997
+  changed_when: false
+
+- name: Ensure /opt/splunk exists (no recursive ownership)
   ansible.builtin.file:
-    path: /opt/splunk
+    path: "{{ splunk_home }}"
     state: directory
     owner: splunk
     group: splunk
-    recurse: true
+    mode: "0755"
   become: true
 
-- name: Start Splunk (accept license if first run)
+- name: Check Splunk binary exists
+  ansible.builtin.stat:
+    path: "{{ splunk_bin }}"
+  register: splunk_bin_stat
+  become: true
+
+- name: Fail if Splunk is not installed
+  ansible.builtin.fail:
+    msg: "Splunk binary not found at {{ splunk_bin }}. Install Splunk first, then re-run."
+  when: not splunk_bin_stat.stat.exists
+
+# ---------------------------------------------------------------------------
+# FIRST-RUN ADMIN SEEDING (only when user DB doesn't exist)
+# ---------------------------------------------------------------------------
+
+- name: Check if Splunk user database exists
+  ansible.builtin.stat:
+    path: "{{ splunk_user_db }}"
+  register: splunk_passwd
+  become: true
+
+- name: Stop Splunk before first-run seeding (best effort)
   ansible.builtin.command:
-    cmd: /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
+    cmd: "{{ splunk_bin }} stop"
+  become: true
+  become_user: splunk
+  changed_when: false
+  failed_when: false
+  when: not splunk_passwd.stat.exists
+
+- name: Seed initial Splunk admin via user-seed.conf (first run only)
+  ansible.builtin.copy:
+    dest: "{{ splunk_user_seed }}"
+    owner: splunk
+    group: splunk
+    mode: "0600"
+    content: |
+      [user_info]
+      USERNAME = admin
+      PASSWORD = {{ vault_splunk_admin_password }}
+  become: true
+  no_log: true
+  when: not splunk_passwd.stat.exists
+
+# ---------------------------------------------------------------------------
+# START SPLUNK + WAIT FOR MGMT PORT
+# ---------------------------------------------------------------------------
+
+- name: Start Splunk (accept license / no prompt)
+  ansible.builtin.command:
+    cmd: "{{ splunk_bin }} start --accept-license --answer-yes --no-prompt"
   become: true
   become_user: splunk
   register: splunk_start
-  changed_when: "'started' in (splunk_start.stdout | lower)"
+  changed_when: not splunk_passwd.stat.exists
+  failed_when: false
 
 - name: Wait for Splunkd management port (8089)
   ansible.builtin.wait_for:
     host: "127.0.0.1"
     port: 8089
     state: started
-    delay: 5
+    delay: 3
     timeout: 180
 
-- name: Wait for Splunk management endpoint to respond (HTTPS, no auth)
+- name: Probe Splunk management endpoint (no auth; accepts 200/401)
   ansible.builtin.uri:
-    url: "https://127.0.0.1:8089/services/server/info"
+    url: "{{ splunk_mgmt_url }}"
     method: GET
     validate_certs: false
     status_code: [200, 401]
