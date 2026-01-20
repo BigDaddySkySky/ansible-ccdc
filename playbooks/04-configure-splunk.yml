@@ -7,3 +7,5 @@
 
   roles:
     - splunk_configure
+    - splunk_content
+    - splunk_harden
