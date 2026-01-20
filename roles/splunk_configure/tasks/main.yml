@@ -11,7 +11,7 @@
 # - Splunk is installed to /opt/splunk
 # - Splunk runs as user: splunk
 # - vault_splunk_admin_password is the desired final admin password
-# - vault_default_password is ONLY used to rotate away from an initial default, if applicable
+# - vault_splunk_admin_initial_password is ONLY used to rotate away from an initial default, if applicable
 
 - name: Define Splunk paths
   ansible.builtin.set_fact:
@@ -146,13 +146,13 @@
     url: "https://127.0.0.1:8089/services/authentication/users/admin"
     method: POST
     user: admin
-    password: "{{ vault_default_password }}"
+    password: "{{ vault_splunk_admin_initial_password }}"
     force_basic_auth: true
     validate_certs: false
     body_format: form-urlencoded
     body:
       password: "{{ vault_splunk_admin_password }}"
-      oldpassword: "{{ vault_default_password }}"
+      oldpassword: "{{ vault_splunk_admin_initial_password }}"
     status_code: [200, 201]
   register: splunk_pw_change
   changed_when: true
