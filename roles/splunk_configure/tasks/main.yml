@@ -1,25 +1,27 @@
 ---
 # Splunk server configuration (competition-safe, first-run safe, idempotent)
+#
 # Goals:
 # - Seed admin exactly once (user-seed.conf) if Splunk has no user DB yet
 # - Ensure Splunk is running and management port responds
-# - Ensure vaulted admin auth works (rotate from default only if needed)
-# - Enable receiving on 9997 for Universal Forwarders
+# - Ensure vaulted admin auth works (rotate from initial/default only if needed)
+# - Enable receiving on 9997 for Universal Forwarders (idempotent)
 # - Enable boot-start (best effort)
 #
 # Assumptions:
 # - Splunk is installed to /opt/splunk
 # - Splunk runs as user: splunk
 # - vault_splunk_admin_password is the desired final admin password
-# - vault_splunk_admin_initial_password is ONLY used to rotate away from an initial default, if applicable
+# - vault_splunk_admin_initial_password is ONLY used to rotate away from an initial/default, if applicable
 
-- name: Define Splunk paths
+- name: Define Splunk paths and settings
   ansible.builtin.set_fact:
     splunk_home: /opt/splunk
     splunk_bin: /opt/splunk/bin/splunk
     splunk_user_db: /opt/splunk/etc/passwd
     splunk_user_seed: /opt/splunk/etc/system/local/user-seed.conf
     splunk_mgmt_url: https://127.0.0.1:8089/services/server/info
+    splunk_mgmt_port: 8089
     splunk_receiver_port: 9997
   changed_when: false
 
@@ -44,13 +46,19 @@
   when: not splunk_bin_stat.stat.exists
 
 # ---------------------------------------------------------------------------
-# FIRST-RUN ADMIN SEEDING (only when user DB doesn't exist)
+# FIRST-RUN ADMIN SEEDING (only when user DB doesn't exist yet)
 # ---------------------------------------------------------------------------
 
 - name: Check if Splunk user database exists
   ansible.builtin.stat:
     path: "{{ splunk_user_db }}"
   register: splunk_passwd
+  become: true
+
+- name: Check if user-seed.conf already exists
+  ansible.builtin.stat:
+    path: "{{ splunk_user_seed }}"
+  register: splunk_seed_stat
   become: true
 
 - name: Stop Splunk before first-run seeding (best effort)
@@ -60,7 +68,9 @@
   become_user: splunk
   changed_when: false
   failed_when: false
-  when: not splunk_passwd.stat.exists
+  when:
+    - not splunk_passwd.stat.exists
+    - not splunk_seed_stat.stat.exists
 
 - name: Seed initial Splunk admin via user-seed.conf (first run only)
   ansible.builtin.copy:
@@ -74,7 +84,10 @@
       PASSWORD = {{ vault_splunk_admin_password }}
   become: true
   no_log: true
-  when: not splunk_passwd.stat.exists
+  register: seed_write
+  when:
+    - not splunk_passwd.stat.exists
+    - not splunk_seed_stat.stat.exists
 
 # ---------------------------------------------------------------------------
 # START SPLUNK + WAIT FOR MGMT PORT
@@ -86,13 +99,13 @@
   become: true
   become_user: splunk
   register: splunk_start
-  changed_when: not splunk_passwd.stat.exists
+  changed_when: "'splunkd started' in (splunk_start.stdout | lower | default('')) or 'started' in (splunk_start.stdout | lower | default(''))"
   failed_when: false
 
 - name: Wait for Splunkd management port (8089)
   ansible.builtin.wait_for:
     host: "127.0.0.1"
-    port: 8089
+    port: "{{ splunk_mgmt_port }}"
     state: started
     delay: 3
     timeout: 180
@@ -121,13 +134,15 @@
     path: "{{ splunk_user_seed }}"
     state: absent
   become: true
-  when: splunk_passwd_after.stat.exists
+  when:
+    - splunk_passwd_after.stat.exists
+    - splunk_seed_stat.stat.exists or (seed_write is defined and seed_write is changed)
 
 # ---------------------------------------------------------------------------
 # ADMIN AUTH / PASSWORD ROTATION
 # ---------------------------------------------------------------------------
 
-- name: Verify vaulted Splunk admin password works
+- name: Verify vaulted Splunk admin password works (retry for startup races)
   ansible.builtin.uri:
     url: "{{ splunk_mgmt_url }}"
     method: GET
@@ -137,11 +152,14 @@
     validate_certs: false
     status_code: 200
   register: splunk_admin_verify
+  retries: 8
+  delay: 5
+  until: (splunk_admin_verify.status | default(0)) == 200
   changed_when: false
   failed_when: false
   no_log: true
 
-- name: Rotate Splunk admin password from default (only if needed)
+- name: Rotate Splunk admin password from initial/default (only if needed)
   ansible.builtin.uri:
     url: "https://127.0.0.1:8089/services/authentication/users/admin"
     method: POST
@@ -170,6 +188,9 @@
     validate_certs: false
     status_code: 200
   register: splunk_admin_verify_after
+  retries: 8
+  delay: 5
+  until: (splunk_admin_verify_after.status | default(0)) == 200
   changed_when: false
   failed_when: false
   no_log: true
@@ -178,8 +199,7 @@
   ansible.builtin.fail:
     msg: >-
       Unable to authenticate to Splunk as admin using the vaulted password,
-      and unable to rotate from the configured default password.
-      (This usually means the default password is wrong, or Splunk isn't fully initialized.)
+      and unable to rotate from vault_splunk_admin_initial_password.
       Fix manually, then rerun.
   when: (splunk_admin_verify_after.status | default(0)) != 200
 
