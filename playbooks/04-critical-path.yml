@@ -1,9 +1,9 @@
 ---
 # ============================================
-# CRITICAL PATH HARDENING PLAYBOOK (SPRINT 4.1)
+# CRITICAL PATH HARDENING PLAYBOOK
 # ============================================
-# Purpose: Master playbook for full-stack competition hardening
-# Runs: Pre-flight -> SSH -> Firewall -> Auditd -> Competition-safe checks & reporting
+# Purpose: Master playbook for competition hardening
+# Runs: Pre-flight -> SSH -> Firewall -> Auditd -> Validation + reporting
 # ============================================
 
 - name: 1. Pre-Flight Checks (Localhost)
@@ -16,7 +16,7 @@
       ansible.builtin.debug:
         msg:
           - "╔══════════════════════════════════════════╗"
-          - "║   CRITICAL PATH HARDENING (SPRINT 4)     ║"
+          - "║            CRITICAL PATH HARDENING       ║"
           - "╚══════════════════════════════════════════╝"
           - ""
           - "⚠️  This will apply the FULL hardening stack:"
@@ -25,7 +25,7 @@
           - "  3. Auditd Monitoring"
           - ""
           - "Targets: {{ groups['all'] | join(', ') }}"
-          - "Prerequisites: Passwords rotated, SSH keys deployed"
+          - "Prerequisites: SSH keys deployed; become creds available"
 
     - name: Pause for confirmation
       ansible.builtin.pause:
@@ -45,31 +45,43 @@
   gather_facts: true
 
   pre_tasks:
-    - name: Load global secrets (repo or local)
+    - name: Load global vault (best effort)
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+      failed_when: false
       no_log: true
 
-    - name: Load host secrets (repo or local)
+    - name: Load host vault (best effort)
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+      failed_when: false
+      no_log: true
+
+    - name: Resolve become password for this host
+      ansible.builtin.set_fact:
+        effective_become_password: >-
+          {{ vault_os_become_password
+             | default(vault_os_become_initial_password
+             | default(vault_default_password)) }}
       no_log: true
 
     - name: Ensure a become password is available
       ansible.builtin.assert:
         that:
-          - (vault_host_password is defined and vault_host_password | length > 0) or
-            (vault_default_password is defined and vault_default_password | length > 0)
-        fail_msg: >
-          Missing become password. Expected vault_host_password (host_vars/<host>/vault.yml)
-          or vault_default_password (group_vars/all/vault.yml).
+          - effective_become_password is defined
+          - effective_become_password | length > 0
+        fail_msg: >-
+          Missing become password for {{ inventory_hostname }}.
+          Expected one of:
+          - vault_os_become_password (preferred, post-rotation)
+          - vault_os_become_initial_password (pre-rotation)
+          - vault_default_password (global fallback)
       no_log: true
 
-    - name: Set ansible_become_password (prefer rotated)
+    - name: Set ansible_become_password for roles
       ansible.builtin.set_fact:
-        ansible_become_password: "{{ vault_host_password | default(vault_default_password) }}"
+        ansible_become_password: "{{ effective_become_password }}"
       no_log: true
-
 
   roles:
     - role: common_preflight
@@ -135,14 +147,14 @@
         - discord_webhook_effective is defined
         - discord_webhook_effective | length > 0
         - "'YOUR_WEBHOOK' not in discord_webhook_effective"
-
+      no_log: true
 
     - name: Display final summary
       ansible.builtin.debug:
         msg:
           - ""
           - "╔══════════════════════════════════════════╗"
-          - "║   CRITICAL PATH COMPLETE                 ║"
+          - "║           CRITICAL PATH COMPLETE         ║"
           - "╚══════════════════════════════════════════╝"
           - ""
           - "Total hosts: {{ total_count }}"
@@ -150,10 +162,10 @@
           - "❌ Missing: {{ missing_count }}"
           - ""
           - "Next steps:"
-          - "  1. Verify scored services for adjudication (curl, telnet, etc.)"
+          - "  1. Verify scored services (curl, telnet, etc.)"
           - "  2. Check audit logs: ansible all -m command -a 'ausearch -ts recent' -b"
-          - "  3. If available from prior preparation, capture new snapshots: 'Post-Critical-Path'"
-          - "  4. Commit changes: git commit -m 'Sprint 4: Critical path consolidated'"
+          - "  3. Capture snapshots if available: 'Post-Critical-Path'"
+          - "  4. Commit changes: git commit -m 'Critical path hardening'"
       run_once: true
       delegate_to: localhost
       become: false
