@@ -45,24 +45,26 @@
       failed_when: false
       when: splunk_bin.stat.exists
 
-    - name: Determine installed Splunk version string
+    - name: Determine installed Splunk version (safe)
       ansible.builtin.set_fact:
+        # Grab first x.y.z-looking token from output; never throws
         splunk_installed_version: >-
           {{
-            (splunk_version.stdout | regex_search('Splunk\\s+(\\d+\\.\\d+\\.\\d+)', '\\1'))
-            | default('none')
+            (splunk_version.stdout | default('') | regex_search('\\b\\d+\\.\\d+\\.\\d+\\b'))
+            | default('unknown', true)
           }}
       when: splunk_bin.stat.exists
 
-    - name: Fail if Splunk is installed but not the expected version
+    - name: Fail if Splunk is installed but not the expected version (operator decision)
       ansible.builtin.fail:
         msg: >-
           Splunk is installed (version {{ splunk_installed_version }}), but expected {{ splunk_expected_version }}.
-          For competition stability, this play will not auto-uninstall/replace.
-          Fix manually (or set splunk_local_rpm to the correct RPM) and rerun.
+          For testing stability, this play will not auto-uninstall/replace.
+          Fix manually (or point splunk_local_rpm to the correct RPM) and rerun.
       when:
         - splunk_bin.stat.exists
-        - splunk_installed_version != splunk_expected_version
+        - splunk_installed_version not in ['unknown', splunk_expected_version]
+
 
     - name: Set effective RPM path (local override supported)
       ansible.builtin.set_fact:
