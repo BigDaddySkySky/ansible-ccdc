@@ -19,16 +19,12 @@
           - host_vault_loaded is succeeded
         fail_msg: "Host vault could not be loaded for {{ inventory_hostname }} (host_vars/{{ inventory_hostname }}/vault.yml)."
       become: false
-      
+
     - name: Pin become password for this host
       ansible.builtin.set_fact:
-        ansible_become_password: >-
-          {{
-            vault_os_become_password
-              | default(vault_os_become_initial_password)
-              | default(vars.get('vault_default_password', ''), true)
-          }}
-        ansible_become_pass: "{{ ansible_become_password }}"
+        _become_pw: "{{ vault_os_sysadmin_password | default(vault_os_sysadmin_initial_password) }}"
+        ansible_become_password: "{{ _become_pw }}"
+        ansible_become_pass: "{{ _become_pw }}"
       no_log: true
       become: false
 
