@@ -3,4 +3,14 @@
   ansible.builtin.command:
     cmd: /opt/splunkforwarder/bin/splunk restart
   become: true
+  become_user: splunk
   changed_when: true
+  failed_when: false
+
+- name: wait for uf mgmt port
+  ansible.builtin.wait_for:
+    host: "127.0.0.1"
+    port: 8089
+    state: started
+    delay: 2
+    timeout: 120
