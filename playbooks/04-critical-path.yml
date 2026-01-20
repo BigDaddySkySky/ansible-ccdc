@@ -104,10 +104,13 @@
       tags: [always]
 
   post_tasks:
-    - name: Gather facts from localhost for timestamp
-      ansible.builtin.setup:
+    - name: Set timestamp
+      ansible.builtin.set_fact:
+        run_timestamp: "{{ lookup('pipe','date -Is') }}"
       delegate_to: localhost
       run_once: true
+      become: false
+
 
     - name: Calculate Results
       ansible.builtin.set_fact:
