@@ -95,12 +95,14 @@
 
     # --- Privileged tasks (explicit sudo only where needed) ---
 
-    - name: Install Splunk RPM via dnf CLI (dnf5-safe pattern)
-      ansible.builtin.raw: "dnf install -y {{ splunk_rpm_effective_path }}"
+    - name: Install Splunk RPM (dnf module)
+      ansible.builtin.dnf:
+        name: "{{ splunk_rpm_effective_path }}"
+        state: present
+        disable_gpg_check: true
       become: true
-      register: splunk_install
-      changed_when: "'Nothing to do' not in (splunk_install.stdout | default(''))"
       when: not splunk_bin.stat.exists
+
 
     - name: Verify Splunk binary exists after install
       ansible.builtin.stat:
