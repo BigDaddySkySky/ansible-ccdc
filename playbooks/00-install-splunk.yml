@@ -93,8 +93,11 @@
       failed_when: not splunk_rpm_stat.stat.exists
       when: not splunk_bin.stat.exists
 
+    # --- Privileged tasks (explicit sudo only where needed) ---
+
     - name: Install Splunk RPM via dnf CLI (dnf5-safe pattern)
       ansible.builtin.raw: "dnf install -y {{ splunk_rpm_effective_path }}"
+      become: true
       register: splunk_install
       changed_when: "'Nothing to do' not in (splunk_install.stdout | default(''))"
       when: not splunk_bin.stat.exists
@@ -110,6 +113,7 @@
       ansible.builtin.file:
         path: "{{ splunk_rpm_dest }}"
         state: absent
+      become: true
       when:
         - not splunk_bin.stat.exists
         - (splunk_local_rpm | trim) == ''
