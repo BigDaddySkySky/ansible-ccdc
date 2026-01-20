@@ -30,8 +30,9 @@
         path: "{{ bootstrap_pubkey_path }}"
       register: pubkey_stat
       delegate_to: localhost
+      become: false
       run_once: true
-
+      
     - name: Fail if public key is missing
       ansible.builtin.fail:
         msg: "Public key not found: {{ bootstrap_pubkey_path }}"
