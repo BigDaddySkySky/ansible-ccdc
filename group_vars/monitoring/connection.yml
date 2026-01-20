@@ -5,10 +5,13 @@ ansible_python_interpreter: /usr/bin/python3
 ansible_become: true
 ansible_become_method: sudo
 
+# Provide both variable names (some code paths use *_pass)
 ansible_become_password: >-
   {{ vault_os_become_password
      | default(vault_os_become_initial_password
      | default(vault_default_password)) }}
+
+ansible_become_pass: "{{ ansible_become_password }}"
 
 ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 ansible_timeout: 10
