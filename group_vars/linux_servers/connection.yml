@@ -2,7 +2,9 @@
 ansible_user: sysadmin
 ansible_python_interpreter: /usr/bin/python3
 
-# Prefer post-rotation passphrase; fall back to initial (pre-rotation) or global default.
+ansible_become: true
+ansible_become_method: sudo
+
 ansible_become_password: >-
   {{ vault_os_become_password
      | default(vault_os_become_initial_password
