@@ -1,21 +1,38 @@
 ---
-# Install Splunk Enterprise on the Splunk server (Oracle/RHEL family)
-# Competition intent: ensure Splunk exists; configuration happens in 04-configure-splunk.yml
+# ============================================
+# PLAYBOOK: INSTALL SPLUNK ENTERPRISE
+# ============================================
+# Purpose:
+#   - Ensure Splunk Enterprise is installed on the Splunk host
+#   - DO NOT configure Splunk here (handled in 04-configure-splunk.yml)
+#
+# Competition safety goals:
+#   - Avoid sudo during initial fact gathering (prevents "Missing sudo password" at setup)
+#   - Never auto-uninstall/replace an unexpected Splunk version
+#   - Support offline installs via splunk_local_rpm
+# ============================================
 
 - name: Ensure Splunk Enterprise is installed
   hosts: monitoring
-  become: true
   gather_facts: false
+  become: false
 
   vars:
     splunk_rpm_url: "https://download.splunk.com/products/splunk/releases/9.1.1/linux/splunk-9.1.1-64e843ea36b1.x86_64.rpm"
     splunk_rpm_dest: "/tmp/splunk-9.1.1.rpm"
     splunk_expected_version: "9.1.1"
-    splunk_local_rpm: ""   # optional: set day-of to a local path already on target
+
+    # Optional: point to an RPM already on the target (e.g., /srv/splunk.rpm)
+    splunk_local_rpm: ""
 
   tasks:
-    - name: Gather facts
+    # --- Non-privileged tasks first (no sudo dependency) ---
+
+    - name: Gather minimal facts (no sudo)
       ansible.builtin.setup:
+        gather_subset:
+          - "!all"
+          - "min"
 
     - name: Check if Splunk binary exists
       ansible.builtin.stat:
@@ -39,12 +56,12 @@
           }}
       when: splunk_bin.stat.exists
 
-    - name: Fail if Splunk is installed but not the expected version (operator decision)
+    - name: Fail if Splunk is installed but not the expected version
       ansible.builtin.fail:
         msg: >-
           Splunk is installed (version {{ splunk_installed_version }}), but expected {{ splunk_expected_version }}.
           For competition stability, this play will not auto-uninstall/replace.
-          Fix manually (or point splunk_local_rpm to the correct RPM) and rerun.
+          Fix manually (or set splunk_local_rpm to the correct RPM) and rerun.
       when:
         - splunk_bin.stat.exists
         - splunk_installed_version != splunk_expected_version
