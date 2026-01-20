@@ -110,14 +110,26 @@
   changed_when: false
   failed_when: false
 
-# ---- Admin password handling ----
-# If the admin password is already set to vault_splunk_admin_password, do nothing.
-# If Splunk is still on the default password, change it.
-# If neither works, fail with a clear message (no secret output).
+- name: Re-check if Splunk user database now exists
+  ansible.builtin.stat:
+    path: "{{ splunk_user_db }}"
+  register: splunk_passwd_after
+  become: true
 
-- name: Verify Splunk admin password (vault) works
+- name: Remove user-seed.conf after initialization (best practice)
+  ansible.builtin.file:
+    path: "{{ splunk_user_seed }}"
+    state: absent
+  become: true
+  when: splunk_passwd_after.stat.exists
+
+# ---------------------------------------------------------------------------
+# ADMIN AUTH / PASSWORD ROTATION
+# ---------------------------------------------------------------------------
+
+- name: Verify vaulted Splunk admin password works
   ansible.builtin.uri:
-    url: "https://127.0.0.1:8089/services/server/info"
+    url: "{{ splunk_mgmt_url }}"
     method: GET
     user: admin
     password: "{{ vault_splunk_admin_password }}"
@@ -129,28 +141,28 @@
   failed_when: false
   no_log: true
 
-- name: Change Splunk admin password from default (only if needed)
+- name: Rotate Splunk admin password from default (only if needed)
   ansible.builtin.uri:
     url: "https://127.0.0.1:8089/services/authentication/users/admin"
     method: POST
     user: admin
     password: "{{ vault_default_password }}"
+    force_basic_auth: true
+    validate_certs: false
     body_format: form-urlencoded
     body:
       password: "{{ vault_splunk_admin_password }}"
       oldpassword: "{{ vault_default_password }}"
-    force_basic_auth: true
-    validate_certs: false
-    status_code: 200
-  when: splunk_admin_verify.status != 200
+    status_code: [200, 201]
   register: splunk_pw_change
   changed_when: true
   failed_when: false
   no_log: true
+  when: (splunk_admin_verify.status | default(0)) != 200
 
-- name: Re-verify Splunk admin password works after change
+- name: Re-verify vaulted Splunk admin password works (after rotation attempt)
   ansible.builtin.uri:
-    url: "https://127.0.0.1:8089/services/server/info"
+    url: "{{ splunk_mgmt_url }}"
     method: GET
     user: admin
     password: "{{ vault_splunk_admin_password }}"
@@ -159,6 +171,7 @@
     status_code: 200
   register: splunk_admin_verify_after
   changed_when: false
+  failed_when: false
   no_log: true
 
 - name: Fail if Splunk admin credentials are not valid
