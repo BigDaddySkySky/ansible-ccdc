@@ -23,19 +23,6 @@
     splunk_expected_version: "9.1.1"
     splunk_local_rpm: ""   # optional: set day-of to a local path already on target
 
-  pre_tasks:
-    - name: Resolve become password early (make it concrete for become plugin)
-      ansible.builtin.set_fact:
-        _effective_become: >-
-          {{ vault_os_become_password
-             | default(vault_os_become_initial_password
-             | default(vault_default_password)) }}
-        ansible_become_password: "{{ _effective_become }}"
-        ansible_become_pass: "{{ _effective_become }}"
-      no_log: true
-      become: false
-
-
   tasks:
     # --- Non-privileged tasks first (no sudo dependency) ---
 
