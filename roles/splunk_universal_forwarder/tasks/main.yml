@@ -62,7 +62,6 @@
     splunk_universal_forwarder_pkg: "{{ (splunk_universal_forwarder_url_raw | string | trim | regex_replace('^\"|\"$', '')) | basename }}"
   changed_when: false
 
-
 - name: Set UF package path (local override supported)
   ansible.builtin.set_fact:
     splunk_universal_forwarder_pkg_path: >-
@@ -379,6 +378,32 @@
   register: uf_fwd
   changed_when: false
   failed_when: false
+
+  - name: Write UF canary event
+  ansible.builtin.lineinfile:
+    path: /var/log/ccdc_uf_canary.log
+    create: true
+    line: "CCDC_UF_CANARY host={{ inventory_hostname }} ts={{ ansible_date_time.iso8601 }}"
+    mode: "0644"
+  become: true
+
+- name: Monitor UF canary file
+  ansible.builtin.blockinfile:
+    path: "{{ splunk_universal_forwarder_home }}/etc/system/local/inputs.conf"
+    create: true
+    owner: "{{ splunk_universal_forwarder_user_effective }}"
+    group: "{{ splunk_universal_forwarder_group_effective }}"
+    mode: "0600"
+    marker: "# {mark} ANSIBLE CCDC CANARY INPUT"
+    block: |
+      [monitor:///var/log/ccdc_uf_canary.log]
+      disabled = 0
+      index = {{ splunk_universal_forwarder_index }}
+      sourcetype = ccdc_uf_canary
+  become: true
+  notify:
+    - restart splunk universal_forwarder
+    - wait for universal_forwarder mgmt port
 
 - name: Debug forwarding output (verbose only)
   ansible.builtin.debug:
