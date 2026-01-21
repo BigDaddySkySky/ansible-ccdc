@@ -20,6 +20,7 @@
       - "!all"
       - "min"
   become: false
+  changed_when: false
 
 - name: Define Splunk paths and settings
   ansible.builtin.set_fact:
