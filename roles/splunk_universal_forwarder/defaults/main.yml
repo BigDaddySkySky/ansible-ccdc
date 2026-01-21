@@ -1,9 +1,7 @@
 ---
 # UF download URLs (runtime download only; do not commit packages into repo)
-splunk_universal_forwarder_deb_url: |
-  "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1-linux-2.6-amd64.deb"
-splunk_universal_forwarder_rpm_url: |
-  "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1.x86_64.rpm"
+splunk_universal_forwarder_deb_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1-linux-2.6-amd64.deb"
+splunk_universal_forwarder_rpm_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1.x86_64.rpm"
 
 # Receiver config (set in group_vars day-of if possible)
 splunk_universal_forwarder_host: ""                  # preferred: explicit IP/hostname

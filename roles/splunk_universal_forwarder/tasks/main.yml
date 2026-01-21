@@ -7,17 +7,17 @@
   ansible.builtin.set_fact:
     splunk_receiver_effective_host: >-
       {{
-        (splunk_receiver_host | default('') | trim)
-        if (splunk_receiver_host | default('') | trim) != ''
+        (splunk_universal_forwarder_host | default('') | trim)
+        if (splunk_universal_forwarder_host | default('') | trim) != ''
         else (
           (hostvars['splunk']['ansible_host']
             | default(hostvars['splunk']['inventory_hostname'])
             | default(''))
-          if (splunk_receiver_from_inventory | default(true) | bool and 'splunk' in hostvars)
+          if (splunk_universal_forwarder_from_inventory | default(true) | bool and 'splunk' in hostvars)
           else ''
         )
       }}
-    splunk_receiver_effective_port: "{{ splunk_receiver_port | default(9997) }}"
+    splunk_receiver_effective_port: "{{ splunk_universal_forwarder_port | default(9997) }}"
   changed_when: false
 
 - name: Fail if Splunk receiver host is not defined
