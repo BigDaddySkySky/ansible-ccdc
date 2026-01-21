@@ -41,9 +41,29 @@
 # Package selection / source path
 # ---------------------------------------------------------------------------
 
-- name: Detect package manager (deb vs rpm)
+- name: Detect package tools (dnf/yum/apt)
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/bin/dnf
+    - /usr/bin/yum
+    - /usr/bin/apt-get
+  register: _pkg_tools
+  changed_when: false
+  become: false
+
+- name: Compute UF package type (rpm vs deb)
   ansible.builtin.set_fact:
-    _universal_forwarder_pkg_type: "{{ 'rpm' if (ansible_pkg_mgr | default('') | lower) in ['dnf','yum','zypper','rpm'] else 'deb' }}"
+    _universal_forwarder_pkg_type: >-
+      {{
+        'rpm'
+        if (
+          (ansible_pkg_mgr | default('') | lower) in ['dnf','yum','zypper','rpm']
+          or (_pkg_tools.results[0].stat.exists | default(false))
+          or (_pkg_tools.results[1].stat.exists | default(false))
+        )
+        else 'deb'
+      }}
   changed_when: false
 
 - name: Select UF download URL for platform (raw)
