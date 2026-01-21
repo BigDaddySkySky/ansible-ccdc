@@ -140,7 +140,7 @@
 # Install UF (RPM path) without Python dnf bindings
 # ---------------------------------------------------------------------------
 
-- name: Install UF (RPM via rpm -Uvh, safe idempotent)
+- name: Install UF (RPM via rpm -Uvh)
   ansible.builtin.command: >
     rpm -Uvh --replacepkgs --quiet {{ splunk_universal_forwarder_pkg_path }}
   args:
@@ -247,7 +247,7 @@
   become: true
   notify:
     - restart splunk universal_forwarder
-    - wait for universal_forwarder mgmt port
+    - wait for universal_forwarder healthy
 
 - name: Configure outputs.conf receiver target
   ansible.builtin.ini_file:
@@ -262,7 +262,7 @@
   become: true
   notify:
     - restart splunk universal_forwarder
-    - wait for universal_forwarder mgmt port
+    - wait for universal_forwarder healthy
 
 # Inputs: audit (only if file exists)
 - name: Check audit log exists
@@ -290,7 +290,7 @@
   become: true
   notify:
     - restart splunk universal_forwarder
-    - wait for universal_forwarder mgmt port
+    - wait for universal_forwarder healthy
 
 # Inputs: auth (only if file exists) - keyed on pkg type to avoid os_family dependency
 - name: Check auth log exists (deb)
@@ -327,7 +327,7 @@
   become: true
   notify:
     - restart splunk universal_forwarder
-    - wait for universal_forwarder mgmt port
+    - wait for universal_forwarder healthy
 
 - name: Configure auth input (rpm, only if present)
   ansible.builtin.blockinfile:
@@ -349,20 +349,17 @@
   become: true
   notify:
     - restart splunk universal_forwarder
-    - wait for universal_forwarder mgmt port
+    - wait for universal_forwarder healthy
 
 # ---------------------------------------------------------------------------
 # Ownership fix (prevents SPLUNK_HOME ownership warnings + CLI weirdness)
 # ---------------------------------------------------------------------------
 
 - name: Ensure UF home ownership is correct
-  ansible.builtin.file:
-    path: "{{ splunk_universal_forwarder_home }}"
-    state: directory
-    recurse: true
-    owner: "{{ splunk_universal_forwarder_user_effective }}"
-    group: "{{ splunk_universal_forwarder_group_effective }}"
+  ansible.builtin.command:
+    cmd: "chown -R {{ splunk_universal_forwarder_user_effective }}:{{ splunk_universal_forwarder_group_effective }} {{ splunk_universal_forwarder_home }}"
   become: true
+  changed_when: false
 
 # ---------------------------------------------------------------------------
 # Validation (deterministic)
@@ -396,15 +393,6 @@
   when: splunk_universal_forwarder_validate_network | bool
   become: false
 
-- name: list forward servers (non-fatal)
-  ansible.builtin.command:
-    cmd: "{{ splunk_universal_forwarder_bin }} list forward-server"
-  become: true
-  become_user: "{{ splunk_universal_forwarder_user_effective }}"
-  register: uf_fwd
-  changed_when: false
-  failed_when: false
-
 - name: Write UF canary event
   ansible.builtin.lineinfile:
     path: /var/log/ccdc_uf_canary.log
@@ -429,14 +417,7 @@
   become: true
   notify:
     - restart splunk universal_forwarder
-    - wait for universal_forwarder mgmt port
+    - wait for universal_forwarder healthy
 
-- name: Debug forwarding output (verbose only)
-  ansible.builtin.debug:
-    msg: |
-      UF status:
-      {{ uf_status.stdout | default('') }}
-
-      Forward-server:
-      {{ uf_fwd.stdout | default('') }}
-  when: splunk_universal_forwarder_verbose | bool
+- name: Flush handlers (apply UF config now)
+  ansible.builtin.meta: flush_handlers
