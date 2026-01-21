@@ -3,7 +3,6 @@
 
 - name: Set dashboard variables (safe defaults)
   ansible.builtin.set_fact:
-    _splunk_dashboard_app: "{{ splunk_dashboard_app | default('search') }}"
     _splunk_dashboard_name: "{{ splunk_dashboard_name | default('ccdc_dashboard') }}"
     splunk_views_base: "https://127.0.0.1:8089/servicesNS/nobody/{{ _splunk_dashboard_app }}/data/ui/views"
   changed_when: false
