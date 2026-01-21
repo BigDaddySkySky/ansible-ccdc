@@ -10,17 +10,17 @@ splunk_universal_forwarder_from_inventory: true      # fallback: use inventory h
 
 # Download behavior
 splunk_universal_forwarder_validate_certs: true
-splunk_universal_forwarder_local_pkg: ""            # optional: pre-staged package path on target
+splunk_universal_forwarder_local_pkg: ""             # optional: pre-staged package path on target
 
-# UF paths / service expectations
+# UF paths
 splunk_universal_forwarder_home: "/opt/splunkforwarder"
 splunk_universal_forwarder_bin: "/opt/splunkforwarder/bin/splunk"
-splunk_universal_forwarder_user: "splunk"
 
 # Inputs (only deployed if the file exists on the host)
 splunk_universal_forwarder_index: "main"
 splunk_universal_forwarder_enable_audit: true
 splunk_universal_forwarder_enable_auth: true
 
-# Optional
+# Validation behavior
+splunk_universal_forwarder_validate_network: true    # check TCP/9997 reachability
 splunk_universal_forwarder_verbose: false
