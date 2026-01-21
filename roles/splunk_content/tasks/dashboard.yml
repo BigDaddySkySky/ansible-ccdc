@@ -1,5 +1,6 @@
 ---
-# Deploy Dashboard Studio JSON via Splunk REST (data/ui/views)
+# Deploy Splunk SimpleXML dashboard via Splunk REST (data/ui/views)
+# NOTE: /data/ui/views expects XML view content (SimpleXML), NOT Dashboard Studio JSON.
 
 - name: Compute dashboard defaults
   ansible.builtin.set_fact:
@@ -12,16 +13,22 @@
     splunk_views_base: "https://127.0.0.1:8089/servicesNS/nobody/{{ _splunk_dashboard_app }}/data/ui/views"
   changed_when: false
 
-- name: Read dashboard XML from controller (repo docs/)
+- name: Read dashboard SimpleXML from controller (repo docs/)
   ansible.builtin.set_fact:
     dashboard_xml: "{{ lookup('file', playbook_dir ~ '/../docs/ccdc_dashboard.xml') }}"
   no_log: true
   changed_when: false
 
-- name: URL-encode dashboard JSON for Splunk form body
-  ansible.builtin.set_fact:
-    dashboard_json_encoded: "{{ dashboard_json | urlencode }}"
-  no_log: true
+- name: Assert dashboard XML looks like SimpleXML
+  ansible.builtin.assert:
+    that:
+      - dashboard_xml is defined
+      - dashboard_xml | length > 0
+      - "'<dashboard' in dashboard_xml"
+      - "'</dashboard>' in dashboard_xml"
+    fail_msg: >-
+      docs/ccdc_dashboard.xml is missing or not valid SimpleXML.
+      Ensure the file exists and contains a <dashboard>...</dashboard> root element.
   changed_when: false
 
 - name: Check if dashboard already exists
@@ -41,7 +48,7 @@
   ansible.builtin.fail:
     msg: >-
       Unable to access Splunk views endpoint (HTTP {{ dash_get.status }}).
-      Splunk admin auth may not be initialized. Run splunk_configure first and verify admin credentials.
+      Verify Splunk is running and vault_splunk_admin_password is correct.
   when: dash_get.status in [401, 403]
 
 - name: Extract current dashboard content (if present)
