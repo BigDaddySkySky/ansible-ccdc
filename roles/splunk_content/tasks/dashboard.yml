@@ -12,9 +12,9 @@
     splunk_views_base: "https://127.0.0.1:8089/servicesNS/nobody/{{ _splunk_dashboard_app }}/data/ui/views"
   changed_when: false
 
-- name: Read dashboard JSON from controller (repo docs/)
+- name: Read dashboard XML from controller (repo docs/)
   ansible.builtin.set_fact:
-    dashboard_json: "{{ lookup('file', playbook_dir ~ '/../docs/ccdc_dashboard.json') }}"
+    dashboard_xml: "{{ lookup('file', playbook_dir ~ '/../docs/ccdc_dashboard.xml') }}"
   no_log: true
   changed_when: false
 
@@ -46,12 +46,12 @@
 
 - name: Extract current dashboard content (if present)
   ansible.builtin.set_fact:
-    dash_current_json: "{{ (dash_get.json.entry[0].content['eai:data']) | default('') }}"
+    dash_current_xml: "{{ (dash_get.json.entry[0].content['eai:data']) | default('') }}"
   changed_when: false
   when: dash_get.status == 200
   no_log: true
 
-- name: Create dashboard (if missing) - debug mode
+- name: Create dashboard (if missing)
   ansible.builtin.uri:
     url: "{{ splunk_views_base }}"
     method: POST
@@ -62,14 +62,12 @@
     body_format: form-urlencoded
     body:
       name: "{{ _splunk_dashboard_name }}"
-      "eai:data": "{{ dashboard_json }}"
-    status_code: [200, 201, 400]
-    return_content: true
+      "eai:data": "{{ dashboard_xml }}"
+    status_code: [200, 201]
   when: dash_get.status == 404
   register: dash_create
-  changed_when: dash_create.status in [200, 201]
-  no_log: false
-
+  changed_when: true
+  no_log: true
 
 - name: Update dashboard (only if content differs)
   ansible.builtin.uri:
@@ -81,11 +79,11 @@
     validate_certs: false
     body_format: form-urlencoded
     body:
-      "eai:data": "{{ dashboard_json_encoded }}"
+      "eai:data": "{{ dashboard_xml }}"
     status_code: [200, 201]
   when:
     - dash_get.status == 200
-    - dash_current_json != dashboard_json
+    - dash_current_xml != dashboard_xml
   register: dash_update
   changed_when: true
   no_log: true
