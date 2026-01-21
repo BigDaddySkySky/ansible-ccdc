@@ -86,8 +86,8 @@
 
     - name: Load host firewall vars
       ansible.builtin.include_vars:
-        file: "{{ playboook_dir }}/../host_vars/{{ inventory_hostname }}/firewall.yml"
-      failed_when: false
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/firewall.yml"
+      failed_when: true
       tags: [firewall]
     - name: Gather facts (after become password resolved)
       ansible.builtin.setup:
