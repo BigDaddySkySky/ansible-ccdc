@@ -36,6 +36,6 @@
 
   roles:
     -roles:
-    - { role: splunk_configure, tags: ["splunk_configure"] }
-    - { role: splunk_content,   tags: ["splunk_content"] }
-    - { role: splunk_harden,    tags: ["splunk_harden"] }
+      - { role: splunk_configure, tags: ["splunk_configure"] }
+      - { role: splunk_content,   tags: ["splunk_content"] }
+      - { role: splunk_harden,    tags: ["splunk_harden"] }
