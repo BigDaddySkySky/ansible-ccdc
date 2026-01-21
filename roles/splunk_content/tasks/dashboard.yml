@@ -1,12 +1,13 @@
 ---
 # Deploy Dashboard Studio JSON via Splunk REST (data/ui/views)
 
-- name: Set dashboard variables
+- name: Set dashboard variables (safe defaults)
   ansible.builtin.set_fact:
-    splunk_dashboard_app: "{{ splunk_dashboard_app | default('search') }}"
-    splunk_dashboard_name: "{{ splunk_dashboard_name | default('ccdc_dashboard') }}"
-    splunk_views_base: "https://127.0.0.1:8089/servicesNS/nobody/{{ splunk_dashboard_app }}/data/ui/views"
+    _splunk_dashboard_app: "{{ splunk_dashboard_app | default('search') }}"
+    _splunk_dashboard_name: "{{ splunk_dashboard_name | default('ccdc_dashboard') }}"
+    splunk_views_base: "https://127.0.0.1:8089/servicesNS/nobody/{{ _splunk_dashboard_app }}/data/ui/views"
   changed_when: false
+
 
 - name: Read dashboard JSON from controller (repo docs/)
   ansible.builtin.set_fact:
@@ -16,7 +17,7 @@
 
 - name: Check if dashboard already exists
   ansible.builtin.uri:
-    url: "{{ splunk_views_base }}/{{ splunk_dashboard_name }}"
+    url: "{{ splunk_views_base }}/{{ _splunk_dashboard_name }}"
     method: GET
     user: admin
     password: "{{ vault_splunk_admin_password }}"
@@ -51,7 +52,7 @@
     validate_certs: false
     body_format: form-urlencoded
     body:
-      name: "{{ splunk_dashboard_name }}"
+      name: "{{ _splunk_dashboard_name }}"
       "eai:data": "{{ dashboard_json }}"
     status_code: [200, 201]
   when: dash_get.status == 404
@@ -61,7 +62,7 @@
 
 - name: Update dashboard (only if content differs)
   ansible.builtin.uri:
-    url: "{{ splunk_views_base }}/{{ splunk_dashboard_name }}"
+    url: "{{ splunk_views_base }}/{{ _splunk_dashboard_name }}"
     method: POST
     user: admin
     password: "{{ vault_splunk_admin_password }}"
