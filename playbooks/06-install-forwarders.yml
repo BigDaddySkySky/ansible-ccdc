@@ -1,6 +1,6 @@
 ---
 - name: Install and configure Splunk Universal Forwarders
-  hosts: linux_servers:workstations
+  hosts: forwarders
   become: true
   gather_facts: false
 
