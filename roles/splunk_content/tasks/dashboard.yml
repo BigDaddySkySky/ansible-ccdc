@@ -62,12 +62,13 @@
     body_format: form-urlencoded
     body:
       name: "{{ _splunk_dashboard_name }}"
-      "eai:data": "{{ dashboard_json_encoded }}"
+      "eai:data": "{{ dashboard_json }}"   # keep unencoded for this debug run
     status_code: [200, 201]
+    return_content: true
   when: dash_get.status == 404
   register: dash_create
   changed_when: true
-  no_log: true
+  no_log: false
 
 - name: Update dashboard (only if content differs)
   ansible.builtin.uri:
