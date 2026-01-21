@@ -51,7 +51,7 @@
   when: dash_get.status == 200
   no_log: true
 
-- name: Create dashboard (if missing)
+- name: Create dashboard (if missing) - debug mode
   ansible.builtin.uri:
     url: "{{ splunk_views_base }}"
     method: POST
@@ -62,13 +62,14 @@
     body_format: form-urlencoded
     body:
       name: "{{ _splunk_dashboard_name }}"
-      "eai:data": "{{ dashboard_json }}"   # keep unencoded for this debug run
-    status_code: [200, 201]
+      "eai:data": "{{ dashboard_json }}"
+    status_code: [200, 201, 400]
     return_content: true
   when: dash_get.status == 404
   register: dash_create
-  changed_when: true
+  changed_when: dash_create.status in [200, 201]
   no_log: false
+
 
 - name: Update dashboard (only if content differs)
   ansible.builtin.uri:
