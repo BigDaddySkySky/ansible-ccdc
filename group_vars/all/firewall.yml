@@ -1,20 +1,2 @@
----
-# Internal network CIDRs (MWCCDC)
-# Used to scope "restricted" services (e.g., Splunk ports) to internal-only.
-firewall_internal_networks:
-  linux:
-    - "172.20.242.0/24"
-  
-  windows:
-    - "172.20.240.0/24"
-
-  network_devices:
-    - "172.16.101.0/24"
-    - "172.16.101.0/24"
-
-firewall_internal_cidrs: >-
-  {{
-    firewall_internal_networks.linux
-    + firewall_internal_networks.windows
-    + firewall_internal_networks.network_devices
-  }}
+firewall_internal_cidrs:
+  - "192.168.199.0/24"
