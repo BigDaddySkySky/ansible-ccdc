@@ -1,19 +1,26 @@
 ---
-# Splunk Universal Forwarder package URLs (online install)
+# UF download URLs (runtime download only; do not commit packages into repo)
 splunk_forwarder_deb_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1-linux-2.6-amd64.deb"
 splunk_forwarder_rpm_url: "https://download.splunk.com/products/universalforwarder/releases/9.1.1/linux/splunkforwarder-9.1.1-64e843ea36b1.x86_64.rpm"
 
-# Receiver configuration (preferred)
-# Set these in inventory/group_vars day-of.
-splunk_receiver_host: ""     # e.g. 172.20.x.y or hostname
+# Receiver config (set in group_vars day-of if possible)
+splunk_receiver_host: ""                  # preferred: explicit IP/hostname
 splunk_receiver_port: 9997
-
-# If the inventory contains a host alias named "splunk", we can auto-derive receiver host.
-splunk_receiver_from_inventory: true
+splunk_receiver_from_inventory: true      # fallback: use inventory host named 'splunk'
 
 # Download behavior
 splunk_forwarder_validate_certs: true
-splunk_forwarder_local_pkg: ""   # optional: /tmp/splunkforwarder.rpm or .deb already on target
+splunk_forwarder_local_pkg: ""            # optional: pre-staged package path on target
 
-# Optional verbosity (kept off by default)
+# UF paths / service expectations
+splunk_uf_home: "/opt/splunkforwarder"
+splunk_uf_bin: "/opt/splunkforwarder/bin/splunk"
+splunk_uf_user: "splunk"
+
+# Inputs (only deployed if the file exists on the host)
+splunk_uf_index: "main"
+splunk_uf_enable_audit: true
+splunk_uf_enable_auth: true
+
+# Optional
 splunk_forwarder_verbose: false

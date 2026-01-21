@@ -1,11 +1,4 @@
 ---
-# Splunk Universal Forwarder (UF)
-# Competition goals:
-# - Install UF on Linux hosts (Debian + RedHat/Fedora)
-# - Configure outputs.conf to Splunk receiver (prefer splunk_receiver_host, else inventory host "splunk")
-# - Configure minimal inputs (audit + auth/secure + optional web logs)
-# - Keep runs predictable and quiet under pressure
-
 # ---------------------------------------------------------------------------
 # Receiver resolution
 # ---------------------------------------------------------------------------
@@ -35,6 +28,16 @@
   when: splunk_receiver_effective_host | trim == ""
 
 # ---------------------------------------------------------------------------
+# UF presence check (idempotent fast path)
+# ---------------------------------------------------------------------------
+
+- name: Check if UF is already installed
+  ansible.builtin.stat:
+    path: "{{ splunk_uf_bin }}"
+  register: uf_installed
+  become: true
+
+# ---------------------------------------------------------------------------
 # Package selection / source path
 # ---------------------------------------------------------------------------
 
@@ -42,6 +45,7 @@
   ansible.builtin.set_fact:
     splunk_forwarder_url: "{{ splunk_forwarder_rpm_url if ansible_os_family == 'RedHat' else splunk_forwarder_deb_url }}"
     splunk_forwarder_pkg: "{{ (splunk_forwarder_rpm_url if ansible_os_family == 'RedHat' else splunk_forwarder_deb_url) | basename }}"
+  when: not uf_installed.stat.exists
   changed_when: false
 
 - name: Set UF package path (local override supported)
@@ -52,6 +56,7 @@
         if (splunk_forwarder_local_pkg | default('') | trim) != ''
         else "/tmp/{{ splunk_forwarder_pkg }}"
       }}
+  when: not uf_installed.stat.exists
   changed_when: false
 
 # ---------------------------------------------------------------------------
@@ -65,19 +70,24 @@
     mode: "0644"
     validate_certs: "{{ splunk_forwarder_validate_certs | default(true) | bool }}"
     timeout: 300
-  when: (splunk_forwarder_local_pkg | default('') | trim) == ''
+  when:
+    - not uf_installed.stat.exists
+    - (splunk_forwarder_local_pkg | default('') | trim) == ''
   become: true
 
 - name: Verify UF package exists
   ansible.builtin.stat:
     path: "{{ splunk_forwarder_pkg_path }}"
   register: uf_pkg_stat
+  when: not uf_installed.stat.exists
   become: true
 
 - name: Fail if UF package is missing
   ansible.builtin.fail:
     msg: "UF package not found at {{ splunk_forwarder_pkg_path }}."
-  when: not uf_pkg_stat.stat.exists
+  when:
+    - not uf_installed.stat.exists
+    - not uf_pkg_stat.stat.exists
 
 # ---------------------------------------------------------------------------
 # Install UF
@@ -87,7 +97,9 @@
   ansible.builtin.apt:
     deb: "{{ splunk_forwarder_pkg_path }}"
     state: present
-  when: ansible_os_family == "Debian"
+  when:
+    - not uf_installed.stat.exists
+    - ansible_os_family == "Debian"
   become: true
 
 - name: Install UF (RedHat/Fedora)
@@ -95,21 +107,36 @@
     name: "{{ splunk_forwarder_pkg_path }}"
     state: present
     disable_gpg_check: true
-  when: ansible_os_family == "RedHat"
+  when:
+    - not uf_installed.stat.exists
+    - ansible_os_family == "RedHat"
   become: true
+
+# Re-check UF presence after install
+- name: Re-check UF binary exists
+  ansible.builtin.stat:
+    path: "{{ splunk_uf_bin }}"
+  register: uf_bin_after
+  become: true
+
+- name: Fail if UF binary missing after install
+  ansible.builtin.fail:
+    msg: "UF binary not found at {{ splunk_uf_bin }} after install."
+  when: not uf_bin_after.stat.exists
 
 # ---------------------------------------------------------------------------
 # First start / license (idempotent)
 # ---------------------------------------------------------------------------
 
-- name: Start UF and accept license (first run)
+- name: Start UF and accept license (first run only)
   ansible.builtin.command:
-    cmd: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
+    cmd: "{{ splunk_uf_bin }} start --accept-license --answer-yes --no-prompt"
   args:
-    creates: /opt/splunkforwarder/var/log/splunk/splunkd.log
+    creates: "{{ splunk_uf_home }}/var/log/splunk/splunkd.log"
   become: true
-  become_user: splunk
+  become_user: "{{ splunk_uf_user }}"
   changed_when: true
+  failed_when: false
 
 # ---------------------------------------------------------------------------
 # Persist across reboot (best effort)
@@ -117,7 +144,7 @@
 
 - name: Enable UF boot-start (best effort)
   ansible.builtin.command:
-    cmd: /opt/splunkforwarder/bin/splunk enable boot-start -user splunk --accept-license --answer-yes --no-prompt
+    cmd: "{{ splunk_uf_bin }} enable boot-start -user {{ splunk_uf_user }} --accept-license --answer-yes --no-prompt"
   register: uf_bootstart
   changed_when: "'configured to start automatically' in (uf_bootstart.stdout | lower | default(''))"
   failed_when: false
@@ -129,100 +156,172 @@
 
 - name: Ensure UF local config directory exists
   ansible.builtin.file:
-    path: /opt/splunkforwarder/etc/system/local
+    path: "{{ splunk_uf_home }}/etc/system/local"
     state: directory
-    owner: splunk
-    group: splunk
+    owner: "{{ splunk_uf_user }}"
+    group: "{{ splunk_uf_user }}"
     mode: "0750"
   become: true
 
 - name: Configure outputs.conf default group
   ansible.builtin.ini_file:
-    path: /opt/splunkforwarder/etc/system/local/outputs.conf
+    path: "{{ splunk_uf_home }}/etc/system/local/outputs.conf"
+    create: true
     section: tcpout
     option: defaultGroup
     value: "splunk_indexers"
-    owner: splunk
-    group: splunk
+    owner: "{{ splunk_uf_user }}"
+    group: "{{ splunk_uf_user }}"
     mode: "0600"
   become: true
-  notify: restart splunk forwarder
+  notify:
+    - restart splunk forwarder
+    - wait for uf mgmt port
 
 - name: Configure outputs.conf receiver target
   ansible.builtin.ini_file:
-    path: /opt/splunkforwarder/etc/system/local/outputs.conf
+    path: "{{ splunk_uf_home }}/etc/system/local/outputs.conf"
+    create: true
     section: tcpout:splunk_indexers
     option: server
     value: "{{ splunk_receiver_effective_host }}:{{ splunk_receiver_effective_port }}"
-    owner: splunk
-    group: splunk
+    owner: "{{ splunk_uf_user }}"
+    group: "{{ splunk_uf_user }}"
     mode: "0600"
   become: true
-  notify: restart splunk forwarder
+  notify:
+    - restart splunk forwarder
+    - wait for uf mgmt port
 
-# --- Inputs: keep aligned with your dashboard (index=main) ---
+# -------------------------
+# Inputs: audit (only if file exists)
+# -------------------------
 
-- name: Configure audit log input
+- name: Check audit log exists
+  ansible.builtin.stat:
+    path: /var/log/audit/audit.log
+  register: audit_log
+  become: true
+
+- name: Configure audit log input (only if present)
   ansible.builtin.blockinfile:
-    path: /opt/splunkforwarder/etc/system/local/inputs.conf
+    path: "{{ splunk_uf_home }}/etc/system/local/inputs.conf"
     create: true
-    owner: splunk
-    group: splunk
+    owner: "{{ splunk_uf_user }}"
+    group: "{{ splunk_uf_user }}"
     mode: "0600"
     marker: "# {mark} ANSIBLE CCDC AUDIT INPUT"
     block: |
       [monitor:///var/log/audit/audit.log]
       disabled = 0
-      index = main
+      index = {{ splunk_uf_index }}
       sourcetype = linux_audit
+  when:
+    - splunk_uf_enable_audit | bool
+    - audit_log.stat.exists
   become: true
-  notify: restart splunk forwarder
+  notify:
+    - restart splunk forwarder
+    - wait for uf mgmt port
 
-- name: Configure auth input (Debian)
+# -------------------------
+# Inputs: auth/secure (only if file exists)
+# -------------------------
+
+- name: Check Debian auth log exists
+  ansible.builtin.stat:
+    path: /var/log/auth.log
+  register: deb_auth_log
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Check RedHat secure log exists
+  ansible.builtin.stat:
+    path: /var/log/secure
+  register: rh_secure_log
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Configure auth input (Debian, only if present)
   ansible.builtin.blockinfile:
-    path: /opt/splunkforwarder/etc/system/local/inputs.conf
+    path: "{{ splunk_uf_home }}/etc/system/local/inputs.conf"
     create: true
-    owner: splunk
-    group: splunk
+    owner: "{{ splunk_uf_user }}"
+    group: "{{ splunk_uf_user }}"
     mode: "0600"
     marker: "# {mark} ANSIBLE CCDC AUTH INPUT"
     block: |
       [monitor:///var/log/auth.log]
       disabled = 0
-      index = main
+      index = {{ splunk_uf_index }}
       sourcetype = linux_secure
-  when: ansible_os_family == "Debian"
+  when:
+    - splunk_uf_enable_auth | bool
+    - ansible_os_family == "Debian"
+    - deb_auth_log.stat.exists
   become: true
-  notify: restart splunk forwarder
+  notify:
+    - restart splunk forwarder
+    - wait for uf mgmt port
 
-- name: Configure auth input (RedHat)
+- name: Configure auth input (RedHat, only if present)
   ansible.builtin.blockinfile:
-    path: /opt/splunkforwarder/etc/system/local/inputs.conf
+    path: "{{ splunk_uf_home }}/etc/system/local/inputs.conf"
     create: true
-    owner: splunk
-    group: splunk
+    owner: "{{ splunk_uf_user }}"
+    group: "{{ splunk_uf_user }}"
     mode: "0600"
     marker: "# {mark} ANSIBLE CCDC AUTH INPUT"
     block: |
       [monitor:///var/log/secure]
       disabled = 0
-      index = main
+      index = {{ splunk_uf_index }}
       sourcetype = linux_secure
-  when: ansible_os_family == "RedHat"
+  when:
+    - splunk_uf_enable_auth | bool
+    - ansible_os_family == "RedHat"
+    - rh_secure_log.stat.exists
   become: true
-  notify: restart splunk forwarder
+  notify:
+    - restart splunk forwarder
+    - wait for uf mgmt port
 
 # ---------------------------------------------------------------------------
-# Minimal validation (no secrets)
+# Validation (proves forwarding is configured, not just installed)
 # ---------------------------------------------------------------------------
 
-- name: Verify UF binary exists
-  ansible.builtin.stat:
-    path: /opt/splunkforwarder/bin/splunk
-  register: uf_bin
+- name: UF status (non-fatal, informational)
+  ansible.builtin.command:
+    cmd: "{{ splunk_uf_bin }} status"
   become: true
+  become_user: "{{ splunk_uf_user }}"
+  register: uf_status
+  changed_when: false
+  failed_when: false
 
-- name: Fail if UF binary missing
+- name: List forward servers
+  ansible.builtin.command:
+    cmd: "{{ splunk_uf_bin }} list forward-server"
+  become: true
+  become_user: "{{ splunk_uf_user }}"
+  register: uf_fwd
+  changed_when: false
+  failed_when: false
+
+- name: Fail if receiver not present in forwarding list
   ansible.builtin.fail:
-    msg: "UF binary not found at /opt/splunkforwarder/bin/splunk after install."
-  when: not uf_bin.stat.exists
+    msg: |
+      UF installed but forwarding not confirmed.
+      Expected receiver: {{ splunk_receiver_effective_host }}:{{ splunk_receiver_effective_port }}
+
+      UF status:
+      {{ uf_status.stdout | default('') }}
+
+      Forward-server output:
+      {{ uf_fwd.stdout | default('') }}
+
+      Common causes:
+      - Receiver IP/host wrong
+      - Network path blocked
+      - UF not restarted after config change
+  when: (splunk_receiver_effective_host ~ ":" ~ splunk_receiver_effective_port|string) not in (uf_fwd.stdout | default(''))

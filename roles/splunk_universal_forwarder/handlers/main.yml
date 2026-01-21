@@ -1,9 +1,10 @@
 ---
 - name: restart splunk forwarder
   ansible.builtin.command:
-    cmd: /opt/splunkforwarder/bin/splunk restart
+    cmd: "{{ splunk_uf_bin }} restart"
   become: true
-  become_user: splunk
+  become_user: "{{ splunk_uf_user }}"
+  register: uf_restart
   changed_when: true
   failed_when: false
 
