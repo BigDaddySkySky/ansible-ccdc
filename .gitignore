@@ -56,3 +56,5 @@ ssh_*.sh
 .vault_pass
 .venv/
 .ansible/
+
+scripts/gen-firewall-profiles.sh

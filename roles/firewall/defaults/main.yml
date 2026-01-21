@@ -2,8 +2,6 @@
 # ============================================
 # FIREWALL HARDENING ROLE - DEFAULT VARIABLES
 # ============================================
-# Override these in group_vars or host_vars as needed
-# ============================================
 
 # ============================================
 # Firewall Backend Selection
@@ -15,149 +13,179 @@ firewall_backend: "{{ 'ufw' if ansible_os_family == 'Debian' else 'firewalld' }}
 # Force enable/disable firewall
 firewall_enabled: true
 
+# Start/enable firewalld if it is not already running
+# Critical-path safe default: false (do not surprise-enable a firewall)
+firewall_manage_firewalld_service: false
+
+# Default zone for firewalld (we DO NOT change it automatically)
+firewalld_default_zone: public
+
 # ============================================
-# Scored Services (from MWCCDC PDF)
+# Scored Services Catalog
+# NOTE: This is a catalog of commonly scored services.
+# Actual per-host allowed ports are selected via firewall_profile below.
 # ============================================
 
-# Services that must remain accessible for scoring
 firewall_scored_services:
   - name: ssh
     port: 22
     proto: tcp
-    comment: "SSH - Required for management"
+    comment: "SSH - Management"
 
   - name: http
     port: 80
     proto: tcp
-    comment: "HTTP - Web server (scored)"
+    comment: "HTTP - Web"
 
   - name: https
     port: 443
     proto: tcp
-    comment: "HTTPS - Secure web (scored)"
+    comment: "HTTPS - Web TLS"
 
   - name: smtp
     port: 25
     proto: tcp
-    comment: "SMTP - Mail submission (scored)"
+    comment: "SMTP"
 
   - name: pop3
     port: 110
     proto: tcp
-    comment: "POP3 - Mail retrieval (scored)"
+    comment: "POP3"
 
   - name: ftp
     port: 21
     proto: tcp
-    comment: "FTP - File transfer (scored)"
+    comment: "FTP"
 
-  - name: dns
+  - name: dns_udp
     port: 53
     proto: udp
-    comment: "DNS - Name resolution (scored)"
+    comment: "DNS (UDP)"
 
-# Additional services (host-specific, not scored by default)
+  # Common “mail stack” ports that are frequently required (not always scored)
+  - name: submission
+    port: 587
+    proto: tcp
+    comment: "SMTP Submission"
+
+  - name: smtps
+    port: 465
+    proto: tcp
+    comment: "SMTPS"
+
+  - name: imap
+    port: 143
+    proto: tcp
+    comment: "IMAP"
+
+  - name: imaps
+    port: 993
+    proto: tcp
+    comment: "IMAPS"
+
+  - name: pop3s
+    port: 995
+    proto: tcp
+    comment: "POP3S"
+
+  # Splunk common ports (usually NOT public)
+  - name: splunk_web
+    port: 8000
+    proto: tcp
+    comment: "Splunk Web UI"
+
+  - name: splunk_mgmt
+    port: 8089
+    proto: tcp
+    comment: "Splunk Management"
+
+  - name: splunk_recv
+    port: 9997
+    proto: tcp
+    comment: "Splunk Receiver"
+
+# Additional services (host-specific ad-hoc ports), appended to profile rules
+# Format: [{name: foo, port: 1234, proto: tcp, comment: "..."}]
 firewall_additional_services: []
 
 # ============================================
-# Scoring Engine / White Team Access
+# Profiles (THIS is how we differ rules per host)
 # ============================================
 
-# If true, allow ALL ports from scoring IP ranges (generally NOT needed).
-# Keep false unless White Team explicitly requires it.
+# Set per-host in host_vars:
+# firewall_profile: splunk | webmail | baseline
+firewall_profile: baseline
+
+# CIDRs considered "internal". Override this to match MWCCDC internal ranges.
+# If you only know "all internal", RFC1918 is a sane default.
+firewall_internal_cidrs:
+  - "10.0.0.0/8"
+  - "172.16.0.0/12"
+  - "192.168.0.0/16"
+
+# Profile definitions:
+# - allow_services: service names from firewall_scored_services catalog
+# - allow_ports: additional explicit ports (list of {port, proto})
+# - restrict_ports: ports only allowed from firewall_internal_cidrs (list of {port, proto})
+firewall_profiles:
+  baseline:
+    allow_services: [ssh]
+    allow_ports: []
+    restrict_ports: []
+
+  webmail:
+    # Keep webmail services reachable. Adjust once you confirm what’s actually scored.
+    allow_services: [ssh, http, https, smtp, submission, smtps, pop3, pop3s, imap, imaps]
+    allow_ports: []
+    restrict_ports: []
+
+  splunk:
+    # Splunk should NOT be publicly exposed. Restrict Splunk ports to internal CIDRs only.
+    allow_services: [ssh]
+    allow_ports: []
+    restrict_ports:
+      - { port: 8000, proto: tcp }
+      - { port: 8089, proto: tcp }
+      - { port: 9997, proto: tcp }
+
+# ============================================
+# Scoring Engine / White Team Access (Optional)
+# ============================================
+
 firewall_allow_all_from_scoring_ips: false
-
-# Only populate if you are told exact scoring/judge subnets.
 firewall_scoring_ips: []
-
-# Allow traffic from White Team (if specified)
 firewall_whiteteam_ips: []
 
 # ============================================
-# Rate Limiting (DDoS Protection)
+# Rate Limiting (Optional)
 # ============================================
 
-# Enable rate limiting for web services
 firewall_enable_rate_limiting: false
-
-# HTTP/HTTPS rate limit (connections per minute)
 firewall_http_rate_limit: "30/minute"
-
-# SSH rate limit (new connections per minute)
 firewall_ssh_rate_limit: "10/minute"
 
 # ============================================
-# Logging Configuration
+# Logging Configuration (Optional)
 # ============================================
 
-# Enable firewall logging
 firewall_enable_logging: false
-
-# Log level (low/medium/high for ufw, notice/info/debug for firewalld)
 firewall_log_level: "{{ 'low' if ansible_os_family == 'Debian' else 'notice' }}"
-
-# Log denied packets
 firewall_log_denied: true
-
-# Log accepted packets (verbose, useful for debugging)
 firewall_log_accepted: false
 
 # ============================================
 # Security Settings
 # ============================================
 
-# Default policy for incoming traffic
 firewall_default_incoming: deny
-
-# Default policy for outgoing traffic (allow for package updates, etc.)
 firewall_default_outgoing: allow
-
-# Default policy for forwarding (disable unless this is a router)
 firewall_default_forward: deny
-
-# Block ICMP ping requests (may impact scoring - use cautiously)
 firewall_block_icmp: false
-
-# Enable SYN flood protection (Linux kernel setting)
 firewall_enable_syn_protection: false
 
 # ============================================
-# UFW-Specific Settings
+# Auto Detect (not used in this profile system yet)
 # ============================================
 
-# UFW application profiles to enable
-ufw_applications: []
-
-# UFW before rules (advanced)
-ufw_before_rules: []
-
-# ============================================
-# Firewalld-Specific Settings
-# ============================================
-
-# Start/enable firewalld if it is not already running
-# Critical-path safe default: false (do not surprise-enable a firewall)
-firewall_manage_firewalld_service: false
-
-# Default zone for firewalld
-firewalld_default_zone: public
-
-# Firewalld zones to configure
-firewalld_zones:
-  - name: public
-    description: "Public zone - scored services only"
-
-# Rich rules for advanced firewalld configuration
-firewalld_rich_rules: []
-
-# ============================================
-# Host-Specific Service Filtering
-# ============================================
-
-# Only enable services that are actually running on this host
-# Set to true to auto-detect running services
 firewall_auto_detect_services: false
-
-# Manually specify which services to enable (overrides auto-detect)
-# Example: ['ssh', 'http', 'https']
 firewall_enabled_services: []
