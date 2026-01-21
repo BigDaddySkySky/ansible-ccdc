@@ -41,11 +41,15 @@
 # Package selection / source path
 # ---------------------------------------------------------------------------
 
+- name: Detect package manager (deb vs rpm)
+  ansible.builtin.set_fact:
+    _uf_pkg_type: "{{ 'rpm' if (ansible_pkg_mgr | default('') | lower) in ['dnf','yum','zypper','rpm'] else 'deb' }}"
+  changed_when: false
+
 - name: Select UF download URL for platform
   ansible.builtin.set_fact:
-    splunk_forwarder_url: "{{ splunk_forwarder_rpm_url if ansible_os_family == 'RedHat' else splunk_forwarder_deb_url }}"
-    splunk_forwarder_pkg: "{{ (splunk_forwarder_rpm_url if ansible_os_family == 'RedHat' else splunk_forwarder_deb_url) | basename }}"
-  when: not uf_installed.stat.exists
+    splunk_forwarder_url: "{{ splunk_forwarder_rpm_url if _uf_pkg_type == 'rpm' else splunk_forwarder_deb_url }}"
+    splunk_forwarder_pkg: "{{ (splunk_forwarder_rpm_url if _uf_pkg_type == 'rpm' else splunk_forwarder_deb_url) | basename }}"
   changed_when: false
 
 - name: Set UF package path (local override supported)
@@ -99,7 +103,7 @@
     state: present
   when:
     - not uf_installed.stat.exists
-    - ansible_os_family == "Debian"
+    - _uf_pkg_type == 'deb'
   become: true
 
 - name: Install UF (RedHat/Fedora)
@@ -109,7 +113,7 @@
     disable_gpg_check: true
   when:
     - not uf_installed.stat.exists
-    - ansible_os_family == "RedHat"
+    - _uf_pkg_type == 'rpm'
   become: true
 
 # Re-check UF presence after install
