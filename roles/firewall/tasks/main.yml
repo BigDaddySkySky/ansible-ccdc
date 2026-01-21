@@ -20,7 +20,7 @@
 
 - name: Include kernel hardening tasks
   ansible.builtin.include_tasks: kernel_hardening.yml
-  when: firewall_enable_syn_protection | bool
+  when: firewall_enable_kernel_hardening | default(false) | bool
 
 # ============================================
 # UFW Configuration (Debian/Ubuntu)

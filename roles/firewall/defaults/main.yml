@@ -88,6 +88,17 @@ firewall_scored_services:
     proto: tcp
     comment: "POP3S"
 
+  # LDAP(s) ports for directory services
+  - name: ldap
+    port: 389
+    proto: tcp
+    comment: "LDAP"
+
+  - name: ldaps
+    port: 636
+    proto: tcp
+    comment: "LDAPS"
+
   # Splunk common ports (usually NOT public)
   - name: splunk_web
     port: 8000
@@ -107,10 +118,6 @@ firewall_scored_services:
 # Additional services (host-specific ad-hoc ports), appended to profile rules
 # Format: [{name: foo, port: 1234, proto: tcp, comment: "..."}]
 firewall_additional_services: []
-
-# ============================================
-# Profiles (THIS is how we differ rules per host)
-# ============================================
 
 # Set per-host in host_vars:
 # firewall_profile: splunk | webmail | baseline
@@ -133,15 +140,21 @@ firewall_profiles:
     allow_ports: []
     restrict_ports: []
 
+  ecom:
+    # E-Commerce host: scored web + manageable
+    allow_services: [ssh, http, https]
+    allow_ports: []
+    restrict_ports: []
+
   webmail:
     # Keep webmail services reachable. Adjust once you confirm what’s actually scored.
-    allow_services: [ssh, http, https, smtp, submission, smtps, pop3, pop3s, imap, imaps]
+    allow_services: [ssh, http, https, smtp, submission, smtps, pop3, pop3s, imap, imaps, ldap, ldaps]
     allow_ports: []
     restrict_ports: []
 
   splunk:
     # Splunk should NOT be publicly exposed. Restrict Splunk ports to internal CIDRs only.
-    allow_services: [ssh]
+    allow_services: [ssh, http, https]
     allow_ports: []
     restrict_ports:
       - { port: 8000, proto: tcp }
@@ -174,6 +187,21 @@ firewall_log_denied: true
 firewall_log_accepted: false
 
 # ============================================
+# Kernel Hardening (sysctl)
+# ============================================
+
+# Master toggle for kernel network hardening sysctls
+firewall_enable_kernel_hardening: false
+
+# rp_filter settings (0=off, 1=strict, 2=loose)
+firewall_enable_rp_filter: true
+firewall_rp_filter_value: "2"
+
+# Forwarding controls (leave false unless you're hardening a non-router)
+firewall_disable_ip_forwarding: false
+firewall_disable_ipv6_forwarding: false
+
+# ============================================
 # Security Settings
 # ============================================
 
@@ -181,7 +209,6 @@ firewall_default_incoming: deny
 firewall_default_outgoing: allow
 firewall_default_forward: deny
 firewall_block_icmp: false
-firewall_enable_syn_protection: false
 
 # ============================================
 # Auto Detect (not used in this profile system yet)

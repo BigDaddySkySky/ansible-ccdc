@@ -2,8 +2,6 @@
 # ============================================
 # KERNEL HARDENING FOR NETWORK SECURITY
 # ============================================
-# Configure Linux kernel parameters for DDoS protection
-# ============================================
 
 - name: Enable SYN cookies (SYN flood protection)
   ansible.posix.sysctl:
@@ -34,14 +32,17 @@
   become: true
   when: firewall_disable_ipv6_forwarding | default(false) | bool
 
-- name: Enable source address verification (anti-spoofing)
+# rp_filter values:
+# 0=off, 1=strict, 2=loose (recommended default in routed/NAT environments)
+- name: Enable source address verification (anti-spoofing) (optional)
   ansible.posix.sysctl:
     name: net.ipv4.conf.all.rp_filter
-    value: '2'
+    value: "{{ firewall_rp_filter_value | default('2') }}"
     state: present
     sysctl_set: true
     reload: true
   become: true
+  when: firewall_enable_rp_filter | default(true) | bool
 
 - name: Disable ICMP redirect acceptance
   ansible.posix.sysctl:
@@ -93,7 +94,8 @@
     msg:
       - "Kernel hardening applied:"
       - "  • SYN flood protection: ENABLED"
-      - "  • IP forwarding: DISABLED"
-      - "  • Source verification: ENABLED"
+      - "  • IP forwarding forced off: {{ 'YES' if (firewall_disable_ip_forwarding | default(false) | bool) else 'NO (unchanged)' }}"
+      - "  • IPv6 forwarding forced off: {{ 'YES' if (firewall_disable_ipv6_forwarding | default(false) | bool) else 'NO (unchanged)' }}"
+      - "  • rp_filter: {{ (firewall_rp_filter_value | default('2')) if (firewall_enable_rp_filter | default(true) | bool) else 'DISABLED' }}"
       - "  • ICMP redirects: DISABLED"
       - "  • Martian logging: ENABLED"
