@@ -45,7 +45,5 @@
       become: false
       tags: [always]
 
-
-
   roles:
     - splunk_universal_forwarder

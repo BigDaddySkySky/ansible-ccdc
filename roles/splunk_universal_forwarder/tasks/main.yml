@@ -379,7 +379,7 @@
   changed_when: false
   failed_when: false
 
-  - name: Write UF canary event
+- name: Write UF canary event
   ansible.builtin.lineinfile:
     path: /var/log/ccdc_uf_canary.log
     create: true
