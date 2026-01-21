@@ -2,7 +2,9 @@
 # ============================================
 # UFW CONFIGURATION (Debian/Ubuntu)
 # ============================================
-# Configure Uncomplicated Firewall for scored services
+# Profile-driven allowlist:
+# - baseline/webmail/splunk profiles (from firewall_profiles)
+# - restricted ports only allowed from firewall_internal_cidrs
 # ============================================
 
 - name: Install UFW
@@ -13,11 +15,6 @@
     cache_valid_time: 3600
   become: true
 
-- name: Display UFW installation result
-  ansible.builtin.debug:
-    msg: "✅ UFW installed"
-
-
 - name: Check if UFW is active
   ansible.builtin.command: ufw status
   register: ufw_status_raw
@@ -25,31 +22,23 @@
   failed_when: false
   become: true
 
-- name: set ufw_active fact
+- name: Set ufw_active fact
   ansible.builtin.set_fact:
     ufw_active: "{{ 'Status: active' in (ufw_status_raw.stdout | default('')) }}"
+  changed_when: false
 
 # ============================================
-# Reset UFW (clean slate)
+# Optional reset (clean slate BEFORE enabling)
 # ============================================
 
-- name: Reset UFW to default (if already configured)
+- name: Reset UFW to default (optional)
   community.general.ufw:
     state: reset
   become: true
-  when:
-    - firewall_ufw_reset | default(false) | bool
-    - not ufw_active
-
-- name: Display UFW reset message
-  ansible.builtin.debug:
-    msg: "✅ UFW reset to defaults"
-  when:
-    - firewall_ufw_reset | default(false) | bool
-    - not ufw_active
+  when: firewall_ufw_reset | default(false) | bool
 
 # ============================================
-# Configure Default Policies
+# Default policies (set before enable; safe if already active too)
 # ============================================
 
 - name: Set default incoming policy
@@ -57,32 +46,57 @@
     direction: incoming
     policy: "{{ firewall_default_incoming }}"
   become: true
-  when: not ufw_active
 
 - name: Set default outgoing policy
   community.general.ufw:
     direction: outgoing
     policy: "{{ firewall_default_outgoing }}"
   become: true
-  when: not ufw_active
 
 - name: Set default forwarding policy
   community.general.ufw:
     direction: routed
     policy: "{{ firewall_default_forward }}"
   become: true
-  when: not ufw_active
-
-- name: Display default policies
-  ansible.builtin.debug:
-    msg:
-      - "Default policies:"
-      - "  • Incoming: {{ firewall_default_incoming | upper }}"
-      - "  • Outgoing: {{ firewall_default_outgoing | upper }}"
-      - "  • Forward: {{ firewall_default_forward | upper }}"
 
 # ============================================
-# ALWAYS allow SSH first
+# Compute profile rules
+# ============================================
+
+- name: Select firewall profile (fallback to baseline)
+  ansible.builtin.set_fact:
+    firewall_profile_effective: "{{ firewall_profile if firewall_profile in firewall_profiles else 'baseline' }}"
+  changed_when: false
+
+- name: Compute allowed service names for profile
+  ansible.builtin.set_fact:
+    firewall_allowed_service_names: "{{ firewall_profiles[firewall_profile_effective].allow_services | default([]) }}"
+    firewall_profile_allow_ports: "{{ firewall_profiles[firewall_profile_effective].allow_ports | default([]) }}"
+    firewall_profile_restrict_ports: "{{ firewall_profiles[firewall_profile_effective].restrict_ports | default([]) }}"
+  changed_when: false
+
+- name: Build allowed ports list from catalog + additional services
+  ansible.builtin.set_fact:
+    firewall_allowed_ports: >-
+      {{
+        (
+          (firewall_scored_services | selectattr('name','in', firewall_allowed_service_names) | list)
+          + (firewall_additional_services | default([]))
+        )
+      }}
+  changed_when: false
+
+- name: Display firewall profile summary (ufw)
+  ansible.builtin.debug:
+    msg:
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      - "🔥 UFW Profile: {{ firewall_profile_effective }}"
+      - "✅ Allowed services: {{ firewall_allowed_service_names | join(', ') if firewall_allowed_service_names | length > 0 else '(none)' }}"
+      - "🔒 Restricted ports: {{ firewall_profile_restrict_ports | map(attribute='port') | list | join(', ') if firewall_profile_restrict_ports | length > 0 else '(none)' }}"
+      - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================
+# ALWAYS allow SSH first (prevents lockout)
 # ============================================
 
 - name: Allow SSH first
@@ -94,43 +108,42 @@
   become: true
 
 # ============================================
-# Allow Scored Services
+# Allow profile ports (public allowlist)
 # ============================================
 
-- name: Allow scored services
+- name: Allow profile ports
   community.general.ufw:
     rule: allow
     port: "{{ item.port }}"
     proto: "{{ item.proto }}"
-    comment: "{{ item.comment }}"
-  loop: "{{ firewall_scored_services }}"
+    comment: "{{ item.comment | default(item.name | default('allowed')) }}"
+  loop: "{{ firewall_allowed_ports }}"
   become: true
-
-- name: Display allowed services
-  ansible.builtin.debug:
-    msg:
-      - "Allowed services:"
-      - "{{ firewall_scored_services | map(attribute='name') | map('regex_replace', '^(.*)$', '  • \\1') | list }}"
+  when: firewall_allowed_ports | length > 0
 
 # ============================================
-# Allow Additional Services (host-specific)
+# Restrict sensitive ports to internal CIDRs only (Splunk profile)
+# UFW supports 'from_ip' per rule.
 # ============================================
 
-- name: Allow additional services
+- name: Allow restricted ports from internal CIDRs only
   community.general.ufw:
     rule: allow
-    port: "{{ item.port }}"
-    proto: "{{ item.proto }}"
-    comment: "{{ item.comment | default('Additional service') }}"
-  loop: "{{ firewall_additional_services }}"
-  when: firewall_additional_services | length > 0
+    from_ip: "{{ item.0 }}"
+    port: "{{ item.1.port }}"
+    proto: "{{ item.1.proto }}"
+    comment: "Restricted {{ item.1.port }}/{{ item.1.proto }} from {{ item.0 }}"
+  loop: "{{ firewall_internal_cidrs | product(firewall_profile_restrict_ports) | list }}"
   become: true
+  when:
+    - firewall_profile_restrict_ports | length > 0
+    - firewall_internal_cidrs | length > 0
 
 # ============================================
 # Rate Limiting
 # ============================================
 
-- name: Enable rate limiting for SSH
+- name: Enable rate limiting for SSH (optional)
   community.general.ufw:
     rule: limit
     port: 22
@@ -139,15 +152,11 @@
   when: firewall_enable_rate_limiting | bool
   become: true
 
-- name: Display rate limiting status
-  ansible.builtin.debug:
-    msg: "{{ '✅ Rate limiting enabled for SSH' if firewall_enable_rate_limiting else 'ℹ️  Rate limiting disabled' }}"
-
 # ============================================
-# Allow from Scoring Engine IPs
+# Allow from Scoring Engine IPs (optional)
 # ============================================
 
-- name: Allow traffic from scoring engine IPs (optional)
+- name: Allow traffic from scoring engine IPs (optional - all ports)
   community.general.ufw:
     rule: allow
     from_ip: "{{ item }}"
@@ -158,13 +167,6 @@
     - firewall_scoring_ips | length > 0
   become: true
 
-- name: Display scoring IP allowances
-  ansible.builtin.debug:
-    msg:
-      - "Allowed scoring IPs:"
-      - "{{ firewall_scoring_ips | map('regex_replace', '^(.*)$', '  • \\1') | list }}"
-  when: firewall_scoring_ips | length > 0
-
 # ============================================
 # Logging Configuration
 # ============================================
@@ -174,22 +176,17 @@
     logging: "{{ firewall_log_level if firewall_enable_logging else 'off' }}"
   become: true
 
-- name: Display logging status
-  ansible.builtin.debug:
-    msg: "{{ '✅ Logging enabled (' ~ firewall_log_level ~ ')' if firewall_enable_logging else 'ℹ️  Logging disabled' }}"
-
 # ============================================
-# Enable UFW
+# Enable UFW (idempotent)
 # ============================================
 
 - name: Enable UFW
   community.general.ufw:
     state: enabled
   become: true
-  when: not ufw_active
 
 - name: Verify UFW is active
-  ansible.builtin.command: "ufw status verbose"
+  ansible.builtin.command: ufw status verbose
   register: ufw_status
   changed_when: false
   become: true
@@ -197,14 +194,3 @@
 - name: Display UFW status
   ansible.builtin.debug:
     msg: "{{ ufw_status.stdout_lines }}"
-
-- name: Display UFW configuration summary
-  ansible.builtin.debug:
-    msg:
-      - ""
-      - "UFW configuration complete:"
-      - "  • Status: ACTIVE"
-      - "  • Default policy: {{ firewall_default_incoming | upper }}"
-      - "  • Services allowed: {{ firewall_scored_services | length }}"
-      - "{{ '  • Rate limiting: SSH' if firewall_enable_rate_limiting else '' }}"
-      - "{{ '  • Logging: ' ~ firewall_log_level | upper if firewall_enable_logging else '  • Logging: OFF' }}"
