@@ -79,11 +79,38 @@
 # Compute profile rules
 # ============================================
 
-- name: Select firewall profile (fallback to baseline)
-  ansible.builtin.set_fact:
-    firewall_profile_effective: "{{ firewall_profile if firewall_profile in firewall_profiles else 'baseline' }}"
+- name: Assert firewall_profiles is valid
+  ansible.builtin.assert:
+    that:
+      - firewall_profiles is mapping
+      - "'baseline' in firewall_profiles"
+    fail_msg: "firewall_profiles is missing or invalid (expected a dict with at least 'baseline')."
   changed_when: false
   when: firewalld_running
+
+- name: Resolve firewall profile (strict)
+  ansible.builtin.set_fact:
+    firewall_profile_effective: "{{ firewall_profile | default('baseline') | trim }}"
+  changed_when: false
+  when: firewalld_running
+
+- name: Debug firewall profile inputs
+  ansible.builtin.debug:
+    msg:
+      - "firewall_profile={{ firewall_profile | default('UNDEF') }}"
+      - "firewall_profile_effective={{ firewall_profile_effective | default('UNDEF') }}"
+      - "firewall_profiles keys={{ firewall_profiles.keys() | list if firewall_profiles is mapping else 'NOT_A_MAPPING' }}"
+      - "firewall_internal_cidrs={{ firewall_internal_cidrs | default([]) }}"
+  when: firewalld_running
+
+- name: Fail if firewall_profile is not defined in firewall_profiles
+  ansible.builtin.fail:
+    msg: >-
+      firewall_profile='{{ firewall_profile_effective }}' is not present in firewall_profiles keys:
+      {{ firewall_profiles.keys() | list }}
+  when:
+    - firewalld_running
+    - firewall_profile_effective not in firewall_profiles
 
 - name: Compute allowed service names for profile
   ansible.builtin.set_fact:
