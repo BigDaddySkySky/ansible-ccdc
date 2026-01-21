@@ -84,6 +84,11 @@
         ansible_become_password: "{{ effective_become_password }}"
       no_log: true
 
+    - name: Load host firewall vars
+      ansible.builtin.include_vars:
+        file: "{{ playboook_dir }}/../host_vars/{{ inventory_hostname }}/firewall.yml"
+      failed_when: false
+      tags: [firewall]
     - name: Gather facts (after become password resolved)
       ansible.builtin.setup:
 
