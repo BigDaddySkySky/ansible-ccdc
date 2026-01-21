@@ -37,6 +37,15 @@
       become: false
       tags: [always]
 
+    - name: Gather minimal facts (needed for ansible_os_family)
+      ansible.builtin.setup:
+        gather_subset:
+          - "!all"
+          - "min"
+      become: false
+      tags: [always]
+
+
 
   roles:
     - splunk_universal_forwarder
