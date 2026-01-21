@@ -46,12 +46,22 @@
     _universal_forwarder_pkg_type: "{{ 'rpm' if (ansible_pkg_mgr | default('') | lower) in ['dnf','yum','zypper','rpm'] else 'deb' }}"
   changed_when: false
 
-- name: Select UF download URL for platform
+- name: Select UF download URL for platform (raw)
   ansible.builtin.set_fact:
-    splunk_universal_forwarder_url_raw: "{{ splunk_universal_forwarder_rpm_url if _universal_forwarder_pkg_type == 'rpm' else splunk_universal_forwarder_deb_url }}"
-    splunk_universal_forwarder_url: "{{ splunk_universal_forwarder_url_raw | trim | regex_replace('^\"|\"$', '') }}"
-    splunk_universal_forwarder_pkg: "{{ (splunk_universal_forwarder_url_raw | trim | regex_replace('^\"|\"$', '')) | basename }}"
+    splunk_universal_forwarder_url_raw: >-
+      {{
+        splunk_universal_forwarder_rpm_url
+        if _universal_forwarder_pkg_type == 'rpm'
+        else splunk_universal_forwarder_deb_url
+      }}
   changed_when: false
+
+- name: Normalize UF download URL + package name
+  ansible.builtin.set_fact:
+    splunk_universal_forwarder_url: "{{ splunk_universal_forwarder_url_raw | string | trim | regex_replace('^\"|\"$', '') }}"
+    splunk_universal_forwarder_pkg: "{{ (splunk_universal_forwarder_url_raw | string | trim | regex_replace('^\"|\"$', '')) | basename }}"
+  changed_when: false
+
 
 - name: Set UF package path (local override supported)
   ansible.builtin.set_fact:
