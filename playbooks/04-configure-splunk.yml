@@ -12,6 +12,7 @@
       register: host_vault_loaded
       no_log: true
       become: false
+      tags: [always]
 
     - name: Assert host vault loaded
       ansible.builtin.assert:
@@ -19,6 +20,7 @@
           - host_vault_loaded is succeeded
         fail_msg: "Host vault could not be loaded for {{ inventory_hostname }} (host_vars/{{ inventory_hostname }}/vault.yml)."
       become: false
+      tags: [always]
 
     # Compute then pin (two tasks avoids same-task self-reference pitfalls)
     - name: Compute become password for this host
@@ -26,6 +28,7 @@
         _become_pw: "{{ vault_os_become_password | default(vault_os_become_initial_password) }}"
       no_log: true
       become: false
+      tags: [always]
 
     - name: Pin become password for this host
       ansible.builtin.set_fact:
@@ -33,6 +36,7 @@
         ansible_become_pass: "{{ _become_pw }}"
       no_log: true
       become: false
+      tags: [always]
 
   roles:
     - role: splunk_configure
