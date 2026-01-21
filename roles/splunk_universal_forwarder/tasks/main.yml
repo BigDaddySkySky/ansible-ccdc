@@ -116,6 +116,31 @@
     - _universal_forwarder_pkg_type == 'rpm'
   become: true
 
+- name: Detect UF service account (splunkfwd vs splunk)
+  ansible.builtin.getent:
+    database: passwd
+  register: _passwd
+  become: true
+
+- name: Set UF run user/group
+  ansible.builtin.set_fact:
+    splunk_universal_forwarder_user_effective: >-
+      {{
+        'splunkfwd' if 'splunkfwd' in _passwd.ansible_facts.getent_passwd
+        else ('splunk' if 'splunk' in _passwd.ansible_facts.getent_passwd else '')
+      }}
+    splunk_universal_forwarder_group_effective: >-
+      {{
+        'splunkfwd' if 'splunkfwd' in _passwd.ansible_facts.getent_passwd
+        else ('splunk' if 'splunk' in _passwd.ansible_facts.getent_passwd else '')
+      }}
+  changed_when: false
+
+- name: Fail if no UF service user found
+  ansible.builtin.fail:
+    msg: "UF installed but no service user found (expected 'splunkfwd' or 'splunk')."
+  when: splunk_universal_forwarder_user_effective | trim == ""
+
 # Re-check UF presence after install
 - name: Re-check UF binary exists
   ansible.builtin.stat:
@@ -138,7 +163,7 @@
   args:
     creates: "{{ splunk_universal_forwarder_home }}/var/log/splunk/splunkd.log"
   become: true
-  become_user: "{{ splunk_universal_forwarder_user }}"
+  become_user: "{{ splunk_universal_forwarder_user_effective }}"
   changed_when: true
   failed_when: false
 
@@ -148,7 +173,7 @@
 
 - name: Enable UF boot-start (best effort)
   ansible.builtin.command:
-    cmd: "{{ splunk_universal_forwarder_bin }} enable boot-start -user {{ splunk_universal_forwarder_user }} --accept-license --answer-yes --no-prompt"
+    cmd: "{{ splunk_universal_forwarder_bin }} enable boot-start -user {{ splunk_universal_forwarder_user_effective }} --accept-license --answer-yes --no-prompt"
   register: universal_forwarder_bootstart
   changed_when: "'configured to start automatically' in (universal_forwarder_bootstart.stdout | lower | default(''))"
   failed_when: false
@@ -162,8 +187,8 @@
   ansible.builtin.file:
     path: "{{ splunk_universal_forwarder_home }}/etc/system/local"
     state: directory
-    owner: "{{ splunk_universal_forwarder_user }}"
-    group: "{{ splunk_universal_forwarder_user }}"
+    owner: "{{ splunk_universal_forwarder_user_effective }}"
+    group: "{{ splunk_universal_forwarder_group_effective }}"
     mode: "0750"
   become: true
 
@@ -174,8 +199,8 @@
     section: tcpout
     option: defaultGroup
     value: "splunk_indexers"
-    owner: "{{ splunk_universal_forwarder_user }}"
-    group: "{{ splunk_universal_forwarder_user }}"
+    owner: "{{ splunk_universal_forwarder_user_effective }}"
+    group: "{{ splunk_universal_forwarder_group_effective }}"
     mode: "0600"
   become: true
   notify:
@@ -189,8 +214,8 @@
     section: tcpout:splunk_indexers
     option: server
     value: "{{ splunk_receiver_effective_host }}:{{ splunk_receiver_effective_port }}"
-    owner: "{{ splunk_universal_forwarder_user }}"
-    group: "{{ splunk_universal_forwarder_user }}"
+    owner: "{{ splunk_universal_forwarder_user_effective }}"
+    group: "{{ splunk_universal_forwarder_group_effective }}"
     mode: "0600"
   become: true
   notify:
@@ -211,8 +236,8 @@
   ansible.builtin.blockinfile:
     path: "{{ splunk_universal_forwarder_home }}/etc/system/local/inputs.conf"
     create: true
-    owner: "{{ splunk_universal_forwarder_user }}"
-    group: "{{ splunk_universal_forwarder_user }}"
+    owner: "{{ splunk_universal_forwarder_user_effective }}"
+    group: "{{ splunk_universal_forwarder_group_effective }}"
     mode: "0600"
     marker: "# {mark} ANSIBLE CCDC AUDIT INPUT"
     block: |
@@ -250,8 +275,8 @@
   ansible.builtin.blockinfile:
     path: "{{ splunk_universal_forwarder_home }}/etc/system/local/inputs.conf"
     create: true
-    owner: "{{ splunk_universal_forwarder_user }}"
-    group: "{{ splunk_universal_forwarder_user }}"
+    owner: "{{ splunk_universal_forwarder_user_effective }}"
+    group: "{{ splunk_universal_forwarder_group_effective }}"
     mode: "0600"
     marker: "# {mark} ANSIBLE CCDC AUTH INPUT"
     block: |
@@ -272,8 +297,8 @@
   ansible.builtin.blockinfile:
     path: "{{ splunk_universal_forwarder_home }}/etc/system/local/inputs.conf"
     create: true
-    owner: "{{ splunk_universal_forwarder_user }}"
-    group: "{{ splunk_universal_forwarder_user }}"
+    owner: "{{ splunk_universal_forwarder_user_effective }}"
+    group: "{{ splunk_universal_forwarder_group_effective }}"
     mode: "0600"
     marker: "# {mark} ANSIBLE CCDC AUTH INPUT"
     block: |
@@ -298,7 +323,7 @@
   ansible.builtin.command:
     cmd: "{{ splunk_universal_forwarder_bin }} status"
   become: true
-  become_user: "{{ splunk_universal_forwarder_user }}"
+  become_user: "{{ splunk_universal_forwarder_user_effective }}"
   register: universal_forwarder_status
   changed_when: false
   failed_when: false
@@ -307,7 +332,7 @@
   ansible.builtin.command:
     cmd: "{{ splunk_universal_forwarder_bin }} list forward-server"
   become: true
-  become_user: "{{ splunk_universal_forwarder_user }}"
+  become_user: "{{ splunk_universal_forwarder_user_effective }}"
   register: universal_forwarder_fwd
   changed_when: false
   failed_when: false

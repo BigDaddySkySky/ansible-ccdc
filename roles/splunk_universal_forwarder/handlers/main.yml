@@ -1,9 +1,9 @@
 ---
 - name: restart splunk forwarder
   ansible.builtin.command:
-    cmd: "{{ splunk_uf_bin }} restart"
+    cmd: "{{ splunk_universal_forwarder_bin }} restart"
   become: true
-  become_user: "{{ splunk_uf_user }}"
+  become_user: "{{ splunk_universal_forwarder_user_effective }}"
   register: uf_restart
   changed_when: true
   failed_when: false
