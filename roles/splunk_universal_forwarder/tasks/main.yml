@@ -361,7 +361,7 @@
   when: splunk_universal_forwarder_validate_network | bool
   become: false
 
-- name: Optional: list forward servers (non-fatal)
+- name: list forward servers (non-fatal)
   ansible.builtin.command:
     cmd: "{{ splunk_universal_forwarder_bin }} list forward-server"
   become: true
