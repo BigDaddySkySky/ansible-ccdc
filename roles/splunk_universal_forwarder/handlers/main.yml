@@ -1,14 +1,14 @@
 ---
-- name: restart splunk forwarder
+- name: restart splunk universal_forwarder
   ansible.builtin.command:
     cmd: "{{ splunk_universal_forwarder_bin }} restart"
   become: true
-  become_user: "{{ splunk_universal_forwarder_user_effective }}"
+  become_user: "{{ splunk_universal_forwarder_user_effective | default(splunk_universal_forwarder_user) }}"
   register: uf_restart
   changed_when: true
   failed_when: false
 
-- name: wait for uf mgmt port
+- name: wait for universal_forwarder mgmt port
   ansible.builtin.wait_for:
     host: "127.0.0.1"
     port: 8089
