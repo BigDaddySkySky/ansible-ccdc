@@ -136,15 +136,21 @@
     - _universal_forwarder_pkg_type == 'deb'
   become: true
 
-- name: Install UF (RedHat/Fedora)
-  ansible.builtin.dnf:
-    name: "{{ splunk_universal_forwarder_pkg_path }}"
-    state: present
-    disable_gpg_check: true
+# ---------------------------------------------------------------------------
+# Install UF (RPM path) without Python dnf bindings
+# ---------------------------------------------------------------------------
+
+- name: Install UF (RPM via rpm -Uvh, safe idempotent)
+  ansible.builtin.command: >
+    rpm -Uvh --replacepkgs --quiet {{ splunk_universal_forwarder_pkg_path }}
+  args:
+    creates: "{{ splunk_universal_forwarder_bin }}"
   when:
     - not universal_forwarder_installed.stat.exists
     - _universal_forwarder_pkg_type == 'rpm'
   become: true
+  register: uf_rpm_install
+  changed_when: uf_rpm_install.rc == 0
 
 # Re-check UF presence after install
 - name: Re-check UF binary exists
