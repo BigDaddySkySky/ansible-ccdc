@@ -58,4 +58,5 @@ ssh_*.sh
 .ansible/
 
 scripts/gen-firewall-profiles.sh
+# Testing / contingency playbooks
 playbooks/00-install-splunk.yml
