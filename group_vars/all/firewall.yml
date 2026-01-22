@@ -1,2 +1,13 @@
+---
+# Override internal CIDRs here (per environment).
+#
+# Testing lab example:
 firewall_internal_cidrs:
   - "192.168.199.0/24"
+
+# Competition day example (uncomment and adjust):
+# firewall_internal_cidrs:
+#   - "172.20.242.0/24"   # linux
+#   - "172.20.240.0/24"   # windows
+#   - "172.16.101.0/24"   # network devices
+#   - "172.16.102.0/24"

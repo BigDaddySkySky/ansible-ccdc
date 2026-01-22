@@ -1,10 +1,19 @@
 ---
 # ============================================
-# FIREWALL HARDENING ROLE - MAIN TASKS (SPRINT 4)
+# FIREWALL HARDENING ROLE - MAIN TASKS
 # ============================================
-# NOTE: Pre-flight and competition checks are handled
-# by common_preflight and common_validation
+# Notes:
+# - This role is profile-driven (firewall_profile)
+# - We optionally load host firewall vars from host_vars/<host>/firewall.yml
+#   because Ansible does NOT auto-load arbitrary host_vars files.
 # ============================================
+
+- name: Load host firewall vars (best effort)
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/firewall.yml"
+  failed_when: false
+  tags: [firewall]
+  become: false
 
 - name: Display firewall hardening header
   ansible.builtin.debug:
@@ -12,15 +21,16 @@
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       - "🔥 Firewall Hardening: {{ inventory_hostname }}"
       - "Backend: {{ firewall_backend }}"
+      - "Profile: {{ firewall_profile | default('baseline') }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ============================================
-# Kernel Security Settings
+# Kernel Security Settings (optional)
 # ============================================
 
 - name: Include kernel hardening tasks
   ansible.builtin.include_tasks: kernel_hardening.yml
-  when: firewall_enable_kernel_hardening | default(false) | bool
+  when: firewall_enable_kernel_hardening | bool
 
 # ============================================
 # UFW Configuration (Debian/Ubuntu)
@@ -41,10 +51,6 @@
   when:
     - firewall_backend == "firewalld"
     - firewall_enabled | bool
-
-# ============================================
-# Summary
-# ============================================
 
 - name: Display completion message
   ansible.builtin.debug:

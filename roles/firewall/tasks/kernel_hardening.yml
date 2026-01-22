@@ -11,6 +11,7 @@
     sysctl_set: true
     reload: true
   become: true
+  when: firewall_enable_syn_protection | default(false) | bool
 
 - name: Disable IP forwarding (not a router)
   ansible.posix.sysctl:
@@ -93,7 +94,7 @@
   ansible.builtin.debug:
     msg:
       - "Kernel hardening applied:"
-      - "  • SYN flood protection: ENABLED"
+      - "  • SYN cookies: {{ 'ENABLED' if (firewall_enable_syn_protection | default(false) | bool) else 'OFF' }}"
       - "  • IP forwarding forced off: {{ 'YES' if (firewall_disable_ip_forwarding | default(false) | bool) else 'NO (unchanged)' }}"
       - "  • IPv6 forwarding forced off: {{ 'YES' if (firewall_disable_ipv6_forwarding | default(false) | bool) else 'NO (unchanged)' }}"
       - "  • rp_filter: {{ (firewall_rp_filter_value | default('2')) if (firewall_enable_rp_filter | default(true) | bool) else 'DISABLED' }}"

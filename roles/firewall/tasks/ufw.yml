@@ -3,7 +3,7 @@
 # UFW CONFIGURATION (Debian/Ubuntu)
 # ============================================
 # Profile-driven allowlist:
-# - baseline/webmail/splunk profiles (from firewall_profiles)
+# - baseline/webmail/ecom/splunk profiles (from firewall_profiles)
 # - restricted ports only allowed from firewall_internal_cidrs
 # ============================================
 
@@ -27,20 +27,14 @@
     ufw_active: "{{ 'Status: active' in (ufw_status_raw.stdout | default('')) }}"
   changed_when: false
 
-# ============================================
-# Optional reset (clean slate BEFORE enabling)
-# ============================================
-
+# Optional reset (use only if you WANT to wipe existing rules)
 - name: Reset UFW to default (optional)
   community.general.ufw:
     state: reset
   become: true
   when: firewall_ufw_reset | default(false) | bool
 
-# ============================================
-# Default policies (set before enable; safe if already active too)
-# ============================================
-
+# Default policies (set before enable; safe even if already active)
 - name: Set default incoming policy
   community.general.ufw:
     direction: incoming
@@ -69,37 +63,22 @@
       - firewall_profiles is mapping
       - "'baseline' in firewall_profiles"
     fail_msg: "firewall_profiles is missing or invalid (expected a dict with at least 'baseline')."
-  changed_when: false
-  when: firewalld_running
 
 - name: Resolve firewall profile (strict)
   ansible.builtin.set_fact:
     firewall_profile_effective: "{{ firewall_profile | default('baseline') | trim }}"
   changed_when: false
-  when: firewalld_running
-
-- name: Debug firewall profile inputs
-  ansible.builtin.debug:
-    msg:
-      - "firewall_profile={{ firewall_profile | default('UNDEF') }}"
-      - "firewall_profile_effective={{ firewall_profile_effective | default('UNDEF') }}"
-      - "firewall_profiles keys={{ firewall_profiles.keys() | list if firewall_profiles is mapping else 'NOT_A_MAPPING' }}"
-      - "firewall_internal_cidrs={{ firewall_internal_cidrs | default([]) }}"
-  when: firewalld_running
 
 - name: Fail if firewall_profile is not defined in firewall_profiles
   ansible.builtin.fail:
-    msg: >-
+    msg: |
       firewall_profile='{{ firewall_profile_effective }}' is not present in firewall_profiles keys:
       {{ firewall_profiles.keys() | list }}
-  when:
-    - firewalld_running
-    - firewall_profile_effective not in firewall_profiles
+  when: firewall_profile_effective not in firewall_profiles
 
-- name: Compute allowed service names for profile
+- name: Compute allowed service names and restricted ports for profile
   ansible.builtin.set_fact:
     firewall_allowed_service_names: "{{ firewall_profiles[firewall_profile_effective].allow_services | default([]) }}"
-    firewall_profile_allow_ports: "{{ firewall_profiles[firewall_profile_effective].allow_ports | default([]) }}"
     firewall_profile_restrict_ports: "{{ firewall_profiles[firewall_profile_effective].restrict_ports | default([]) }}"
   changed_when: false
 
@@ -108,7 +87,7 @@
     firewall_allowed_ports: >-
       {{
         (
-          (firewall_scored_services | selectattr('name','in', firewall_allowed_service_names) | list)
+          (firewall_service_catalog | selectattr('name','in', firewall_allowed_service_names) | list)
           + (firewall_additional_services | default([]))
         )
       }}
@@ -121,24 +100,19 @@
       - "🔥 UFW Profile: {{ firewall_profile_effective }}"
       - "✅ Allowed services: {{ firewall_allowed_service_names | join(', ') if firewall_allowed_service_names | length > 0 else '(none)' }}"
       - "🔒 Restricted ports: {{ firewall_profile_restrict_ports | map(attribute='port') | list | join(', ') if firewall_profile_restrict_ports | length > 0 else '(none)' }}"
+      - "🏠 Internal CIDRs: {{ firewall_internal_cidrs | join(', ') if firewall_internal_cidrs | length > 0 else '(none)' }}"
       - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ============================================
-# ALWAYS allow SSH first (prevents lockout)
-# ============================================
-
+# ALWAYS allow SSH first to prevent lockout
 - name: Allow SSH first
   community.general.ufw:
     rule: allow
     port: 22
     proto: tcp
-    comment: "SSH - protect management access"
+    comment: "SSH - management access"
   become: true
 
-# ============================================
 # Allow profile ports (public allowlist)
-# ============================================
-
 - name: Allow profile ports
   community.general.ufw:
     rule: allow
@@ -149,11 +123,7 @@
   become: true
   when: firewall_allowed_ports | length > 0
 
-# ============================================
-# Restrict sensitive ports to internal CIDRs only (Splunk profile)
-# UFW supports 'from_ip' per rule.
-# ============================================
-
+# Restrict sensitive ports to internal CIDRs only (Splunk profile, etc.)
 - name: Allow restricted ports from internal CIDRs only
   community.general.ufw:
     rule: allow
@@ -167,10 +137,7 @@
     - firewall_profile_restrict_ports | length > 0
     - firewall_internal_cidrs | length > 0
 
-# ============================================
-# Rate Limiting
-# ============================================
-
+# Optional SSH rate limiting
 - name: Enable rate limiting for SSH (optional)
   community.general.ufw:
     rule: limit
@@ -180,10 +147,7 @@
   when: firewall_enable_rate_limiting | bool
   become: true
 
-# ============================================
-# Allow from Scoring Engine IPs (optional)
-# ============================================
-
+# Optional scoring IP bypass (all ports)
 - name: Allow traffic from scoring engine IPs (optional - all ports)
   community.general.ufw:
     rule: allow
@@ -195,19 +159,13 @@
     - firewall_scoring_ips | length > 0
   become: true
 
-# ============================================
-# Logging Configuration
-# ============================================
-
+# Logging configuration
 - name: Configure UFW logging
   community.general.ufw:
     logging: "{{ firewall_log_level if firewall_enable_logging else 'off' }}"
   become: true
 
-# ============================================
 # Enable UFW (idempotent)
-# ============================================
-
 - name: Enable UFW
   community.general.ufw:
     state: enabled
