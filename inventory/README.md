@@ -1,61 +1,32 @@
-# Inventory (Competition Day)
+# Inventory
 
-This directory defines **Ansible inventory only**.
-
-**Important:** Inventory names here are *Ansible aliases*. They do **not** change system hostnames or IPs on the target systems.
+Inventories used to define `ansible_host` values.
 
 ---
 
 ## Files
 
-- `staging.ini`  
-  Practice / validation inventory (VMware or lab). Not used on competition day unless you intentionally choose to.
+* `staging.ini`  
+  Lab / validation inventory.
 
-- `production.ini`  
-  Competition inventory. Fill this file **day-of** using the team packet and White Team guidance.
-
----
-
-## Competition Day Workflow
-
-1. Open `inventory/production.ini`
-2. Fill in `ansible_host=` values for each system you plan to manage
-3. Validate reachability before making changes
-
-Example:
-```bash
-ansible -i inventory/production.ini all --list-hosts
-ansible -i inventory/production.ini all -m ping
-```
-
-Then proceed with the runbook:
-
-```bash
-ansible-playbook -i inventory/production.ini playbooks/02-validate-environment.yml
-ansible-playbook -i inventory/production.ini playbooks/04-critical-path.yml
-```
+* `production.ini`  
+  Competition inventory.  
+  May be prepared ahead of time and may contain real competition IP addresses.  
+  Contains **no credentials** (secrets live in Ansible Vault).
 
 ---
 
-## Naming Standard (Required)
+## Standards
 
-Use short, competition-real aliases:
-
-* `ecom`
-* `webmail`
-* `splunk`
-* `wkst`
-
-If you add additional hosts, name them by **service role**, not by OS or “vm” naming.
+* Use service-based aliases (`ecom`, `webmail`, `splunk`, `wkst`)
+* Aliases are identifiers only; they do not rename systems
+* Credentials and privilege escalation are not handled in inventory  
+  Refer to `group_vars/VAULT_CONTENTS.md` and `host_vars/VAULT_CONTENTS.md`
+* Connection defaults are defined in `ansible.cfg`
 
 ---
 
-## Safety Rules
+## Competition Notes
 
-Do not:
-
-* Commit real competition IPs to GitHub
-* Change inventory aliases mid-competition unless coordinated
-* Assume any derived “team subnet math” is authoritative (prefer the team packet)
-
-If White Team guidance conflicts with this repo, follow White Team.
+* Assigned IPs and hostnames must not be changed unless directed by an inject
+* If White Team guidance conflicts with this repo, follow White Team
