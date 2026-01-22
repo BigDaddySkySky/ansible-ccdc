@@ -1,8 +1,23 @@
-# Scripts (Operator Tools)
+# Scripts
 
-Only two scripts are intended for competition use:
+Operator helper scripts used during competition.
 
-- `bootstrap.sh` — prepares the control node (venv + Ansible + collections + vault file check)
-- `preflight.sh` — read-only checks (syntax, inventory parsing, vault file presence)
+Only the scripts listed below are intended for use.
 
-No other scripts in this directory should modify repo files or print secrets.
+---
+
+## Scripts
+
+- `bootstrap.sh`  
+  Prepares the control node (virtual environment, Ansible, required collections).
+
+- `preflight.sh`  
+  Read-only checks (syntax validation, inventory parsing, vault file presence).
+
+---
+
+## Notes
+
+- Scripts must not modify repository contents
+- Scripts must not print secrets or decrypted vault values
+- All system changes are performed via Ansible playbooks
