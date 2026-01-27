@@ -42,8 +42,7 @@ REQUIRED_FILES=(
   "inventory/staging.ini"
   "inventory/production.ini"
   "scripts/bootstrap.sh"
-  "playbooks/02-validate-environment.yml"
-  "playbooks/04-critical-path.yml"
+  "playbooks/02-critical-path.yml"
 )
 for file in "${REQUIRED_FILES[@]}"; do
   [[ -f "$file" ]] && pass "$file" || fail "$file missing"
@@ -103,7 +102,7 @@ if [[ $FAIL -eq 0 ]]; then
   echo -e "${GREEN}✅ Preflight passed ($PASS checks)${NC}"
   echo ""
   echo "Next step:"
-  echo "  ansible-playbook -i inventory/staging.ini playbooks/02-validate-environment.yml"
+  echo "  ansible-playbook -i inventory/staging.ini playbooks/02-critical-path.yml"
   exit 0
 else
   echo -e "${RED}❌ Preflight failed ($FAIL failures, $PASS passes)${NC}"

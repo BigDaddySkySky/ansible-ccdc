@@ -80,6 +80,48 @@
     msg: "✅ Effective zone: {{ firewalld_effective_zone }}"
   when: firewalld_running
 
+- name: Allow ICMP echo-request (ping) inbound (firewalld rich rule)
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_effective_zone }}"
+    rich_rule: 'rule family="ipv4" icmp-type name="echo-request" accept'
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+  when: firewalld_running
+
+- name: Allow ICMP echo-reply inbound (firewalld rich rule)
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_effective_zone }}"
+    rich_rule: 'rule family="ipv4" icmp-type name="echo-reply" accept'
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+  when: firewalld_running
+
+- name: Allow ICMPv6 echo-request inbound (firewalld rich rule, best effort)
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_effective_zone }}"
+    rich_rule: 'rule family="ipv6" icmp-type name="echo-request" accept'
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+  when: firewalld_running
+  failed_when: false
+
+- name: Allow ICMPv6 echo-reply inbound (firewalld rich rule, best effort)
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_effective_zone }}"
+    rich_rule: 'rule family="ipv6" icmp-type name="echo-reply" accept'
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+  when: firewalld_running
+  failed_when: false
+
 # ============================================
 # Compute profile rules
 # ============================================
