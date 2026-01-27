@@ -43,12 +43,11 @@
   when: ansible_os_family == "Debian"
   become: true
 
-- name: FIM | Install AIDE (Fedora/RHEL/Oracle)
-  ansible.builtin.dnf:
-    name: aide
-    state: present
+- name: FIM | Install AIDE (Fedora/RHEL/Oracle) via dnf CLI
+  ansible.builtin.raw: dnf install -y aide
   when: ansible_os_family == "RedHat"
   become: true
+  changed_when: false
 
 # Optional but helpful: auditd sender uses python3-requests; ensure it's present
 - name: FIM | Ensure python3-requests installed (Debian/Ubuntu)
@@ -64,6 +63,16 @@
   ansible.builtin.raw: dnf install -y python3-requests
   changed_when: false
   when: ansible_os_family == "RedHat"
+  become: true
+
+- name: FIM | Ensure AIDE config parent directory exists (if using /etc/aide/aide.conf)
+  ansible.builtin.file:
+    path: "{{ fim_aide_conf_path | dirname }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: (fim_aide_conf_path | dirname) != "/etc"
   become: true
 
 - name: FIM | Ensure AIDE config file exists (do not overwrite if missing)
