@@ -170,16 +170,12 @@
         else
           TITLE="AIDE Check Error (rc=${RC})"
         fi
-
         if [ -x "$SENDER" ]; then
           # Reuse existing Discord sender (already knows webhook)
-          "$SENDER" "${TITLE}" "Host: ${HOST}
-
-${DETAILS}" >/dev/null 2>&1 || true
+          "$SENDER" "${TITLE}" "Host: ${HOST}\n\n${DETAILS}" >/dev/null 2>&1 || true
         else
           # No sender script available: log locally (still useful for IR)
-          logger -t ccdc-fim "${TITLE} on ${HOST}. Tail:
-${DETAILS}"
+          logger -t ccdc-fim "${TITLE} on ${HOST}. Tail:\n${DETAILS}"
         fi
       fi
 
