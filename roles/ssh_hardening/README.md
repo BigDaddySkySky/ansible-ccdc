@@ -195,7 +195,8 @@ ssh root@192.168.1.250  # Should be rejected
 ansible all -m command -a "fail2ban-client status sshd" -b
 
 # Run validation playbook
-ansible-playbook playbooks/01-validate-environment.yml
+./scripts/preflight.sh
+ansible-playbook -i inventory/staging.ini playbooks/02-critical-path.yml
 ```
 
 ## Troubleshooting
@@ -263,7 +264,8 @@ ansible-playbook playbooks/00-hello-world.yml
 # VMware → Snapshot → Revert to "Pre-Hardening"
 
 # Fix the issue (check logs)
-ansible-playbook playbooks/01-validate-environment.yml
+./scripts/preflight.sh
+ansible-playbook -i inventory/staging.ini playbooks/02-critical-path.yml
 
 # Re-run hardening with verbose output
 ansible-playbook playbooks/04-ssh-hardening.yml -vv

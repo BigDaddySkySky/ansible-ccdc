@@ -64,4 +64,4 @@
           - "Next steps:"
           - "  1) Remove ansible_password from inventory"
           - "  2) Run connectivity check"
-          - "  3) Run 04-critical-path.yml"
+          - "  3) Run 02-critical-path.yml"

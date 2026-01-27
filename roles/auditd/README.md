@@ -257,7 +257,8 @@ auditd_compress_evidence: true
 
 ```bash
 # Verify SSH/firewall working
-ansible-playbook playbooks/01-validate-environment.yml
+./scripts/preflight.sh
+ansible-playbook -i inventory/staging.ini playbooks/02-critical-path.yml
 
 # Check disk space
 ansible all -m shell -a "df -h /var/log" -b
