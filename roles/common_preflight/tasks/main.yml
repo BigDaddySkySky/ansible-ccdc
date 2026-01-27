@@ -29,6 +29,7 @@
       - '!all'
       - 'min'
   when: ansible_os_family is not defined or ansible_distribution is not defined
+  become: false
 
 - name: Detect operating system family
   ansible.builtin.debug:
