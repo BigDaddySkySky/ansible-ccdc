@@ -57,13 +57,29 @@
   ansible.builtin.blockinfile:
     path: /etc/ufw/before.rules
     marker: "# {mark} ANSIBLE MANAGED - ICMP"
-    insertafter: "^\\*filter"
+    # NOTE: UFW's before.rules is consumed by iptables-restore.
+    # Inserting directly after "*filter" can break the ruleset because
+    # chain definitions come next. Insert before COMMIT to keep ordering safe.
+    insertbefore: "^COMMIT"
     block: |
       # Allow inbound ping (echo-request) so ICMP works (MWCCDC expectation)
       -A ufw-before-input -p icmp --icmp-type echo-request -j ACCEPT
       -A ufw-before-input -p icmp --icmp-type echo-reply -j ACCEPT
   become: true
-  notify: Reload ufw
+  register: ufw_icmp_rules
+
+- name: Allow ICMP echo-request (ping) inbound (UFW IPv6, best effort)
+  ansible.builtin.blockinfile:
+    path: /etc/ufw/before6.rules
+    marker: "# {mark} ANSIBLE MANAGED - ICMP"
+    insertbefore: "^COMMIT"
+    block: |
+      # Allow inbound ping (echo-request) so ICMP works (MWCCDC expectation)
+      -A ufw6-before-input -p icmpv6 --icmpv6-type echo-request -j ACCEPT
+      -A ufw6-before-input -p icmpv6 --icmpv6-type echo-reply -j ACCEPT
+  become: true
+  register: ufw6_icmp_rules
+  failed_when: false
 
 # ============================================
 # Compute profile rules
@@ -178,9 +194,19 @@
   become: true
 
 # Enable UFW (idempotent)
-- name: Enable UFW
+- name: Enable UFW if inactive
   community.general.ufw:
     state: enabled
+  when: not ufw_active
+  become: true
+
+- name: Reload UFW if already active and ICMP rules changed
+  ansible.builtin.command: ufw reload
+  when:
+    - ufw_active
+    - ufw_icmp_rules.changed or (ufw6_icmp_rules is defined and ufw6_icmp_rules.changed)
+  changed_when: true
+  failed_when: false
   become: true
 
 - name: Verify UFW is active
