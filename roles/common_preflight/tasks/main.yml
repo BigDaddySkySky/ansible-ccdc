@@ -22,6 +22,14 @@
   delegate_to: localhost
   run_once: true
 
+
+- name: Gather minimal facts if missing (required for OS detection)
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - 'min'
+  when: ansible_os_family is not defined or ansible_distribution is not defined
+
 - name: Detect operating system family
   ansible.builtin.debug:
     msg: "OS Family: {{ ansible_os_family }}, Distribution: {{ ansible_distribution }}"
