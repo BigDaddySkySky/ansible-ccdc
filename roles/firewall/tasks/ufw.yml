@@ -53,6 +53,18 @@
     policy: "{{ firewall_default_forward }}"
   become: true
 
+- name: Allow ICMP echo-request (ping) inbound (UFW)
+  ansible.builtin.blockinfile:
+    path: /etc/ufw/before.rules
+    marker: "# {mark} ANSIBLE MANAGED - ICMP"
+    insertafter: "^\\*filter"
+    block: |
+      # Allow inbound ping (echo-request) so ICMP works (MWCCDC expectation)
+      -A ufw-before-input -p icmp --icmp-type echo-request -j ACCEPT
+      -A ufw-before-input -p icmp --icmp-type echo-reply -j ACCEPT
+  become: true
+  notify: Reload ufw
+
 # ============================================
 # Compute profile rules
 # ============================================
