@@ -1,0 +1,29 @@
+---
+# ============================================
+# FIM (AIDE) ROLE - DEFAULT VARIABLES
+# ============================================
+# Goal: Periodically check file integrity (hash baseline vs current)
+# and alert to Discord when changes are detected.
+# ============================================
+
+# Paths to include in AIDE checks.
+# Keep scope tight for competition to avoid noise.
+fim_aide_paths:
+  - /etc
+
+# How often to run checks (cron)
+fim_aide_cron_minute: "*/15"
+fim_aide_cron_hour: "*"
+
+# Where we deploy our helper script
+fim_aide_script_dir: /usr/local/bin/ccdc-fim
+fim_aide_script_path: /usr/local/bin/ccdc-fim/aide-check.sh
+
+# Reuse auditd's Discord sender if present
+fim_discord_sender_path: /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py
+
+# Limit output sent to Discord (avoid spam)
+fim_discord_tail_lines: 80
+
+# If you want to disable the role quickly without removing it
+fim_aide_enabled: true

@@ -1,0 +1,5 @@
+---
+# Splunk server has additional sensitive config under /opt/splunk/etc
+fim_aide_paths:
+  - /etc
+  - /opt/splunk/etc

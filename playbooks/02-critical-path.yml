@@ -107,6 +107,9 @@
 
     - role: common_validation
       tags: [always]
+    
+    - role: fim_aide
+      tags: [fim]
 
   post_tasks:
     - name: Set timestamp

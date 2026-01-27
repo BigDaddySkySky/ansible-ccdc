@@ -1,0 +1,208 @@
+---
+# ============================================
+# FIM (AIDE) ROLE - TASKS
+# ============================================
+# Installs AIDE, injects monitored paths into config,
+# initializes database on first run, and schedules periodic checks.
+# ============================================
+
+- name: FIM | End host early when disabled
+  ansible.builtin.meta: end_host
+  when: not (fim_aide_enabled | bool)
+
+- name: FIM | Determine AIDE config path candidates
+  ansible.builtin.set_fact:
+    fim_aide_conf_candidates:
+      - /etc/aide/aide.conf
+      - /etc/aide.conf
+
+- name: FIM | Find existing AIDE config path
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ fim_aide_conf_candidates }}"
+  register: fim_aide_conf_stats
+
+- name: FIM | Select AIDE config path
+  ansible.builtin.set_fact:
+    fim_aide_conf_path: >-
+      {{
+        (fim_aide_conf_stats.results
+          | selectattr('stat.exists', 'equalto', true)
+          | map(attribute='item')
+          | list
+          | first)
+          | default('/etc/aide/aide.conf')
+      }}
+
+- name: FIM | Install AIDE (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: aide
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: FIM | Install AIDE (Fedora/RHEL/Oracle)
+  ansible.builtin.dnf:
+    name: aide
+    state: present
+  when: ansible_os_family == "RedHat"
+  become: true
+
+# Optional but helpful: auditd sender uses python3-requests; ensure it's present
+- name: FIM | Ensure python3-requests installed (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: python3-requests
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: FIM | Ensure python3-requests installed (Fedora/RHEL/Oracle) via dnf CLI
+  ansible.builtin.raw: dnf install -y python3-requests
+  changed_when: false
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: FIM | Ensure AIDE config file exists (do not overwrite if missing)
+  ansible.builtin.file:
+    path: "{{ fim_aide_conf_path }}"
+    state: touch
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+
+- name: FIM | Inject CCDC monitored paths into AIDE config
+  ansible.builtin.blockinfile:
+    path: "{{ fim_aide_conf_path }}"
+    marker: "# {mark} CCDC FIM (AIDE) PATHS"
+    block: |
+      # Keep scope tight to reduce competition noise.
+      {% for p in fim_aide_paths %}
+      {{ p }}  NORMAL
+      {% endfor %}
+  become: true
+
+# Initialize AIDE DB only if not present
+- name: FIM | Check if AIDE database exists (gz)
+  ansible.builtin.stat:
+    path: /var/lib/aide/aide.db.gz
+  register: fim_aide_db_gz
+  become: true
+
+- name: FIM | Check if AIDE database exists (plain)
+  ansible.builtin.stat:
+    path: /var/lib/aide/aide.db
+  register: fim_aide_db_plain
+  become: true
+
+- name: FIM | Check if aideinit exists
+  ansible.builtin.command: bash -lc "command -v aideinit"
+  register: fim_aide_aideinit
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: FIM | Initialize AIDE database (first run)
+  ansible.builtin.command: "{{ 'aideinit' if fim_aide_aideinit.rc == 0 else 'aide --init' }}"
+  when:
+    - not fim_aide_db_gz.stat.exists
+    - not fim_aide_db_plain.stat.exists
+  changed_when: true
+  failed_when: false
+  become: true
+
+- name: FIM | Move newly created AIDE DB into place (if needed)
+  ansible.builtin.shell: |
+    set -e
+    if [ -f /var/lib/aide/aide.db.new.gz ]; then
+      mv -f /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+    elif [ -f /var/lib/aide/aide.db.new ]; then
+      mv -f /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+    fi
+  args:
+    executable: /bin/bash
+  when:
+    - not fim_aide_db_gz.stat.exists
+    - not fim_aide_db_plain.stat.exists
+  changed_when: true
+  failed_when: false
+  become: true
+
+- name: FIM | Create FIM script directory
+  ansible.builtin.file:
+    path: "{{ fim_aide_script_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+
+- name: FIM | Deploy periodic AIDE check script (Discord on diff)
+  ansible.builtin.copy:
+    dest: "{{ fim_aide_script_path }}"
+    mode: "0750"
+    owner: root
+    group: root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      SENDER="{{ fim_discord_sender_path }}"
+      TAIL_LINES="{{ fim_discord_tail_lines }}"
+      HOST="$(hostname -f 2>/dev/null || hostname)"
+
+      OUT="$(mktemp)"
+      RC=0
+
+      # AIDE returns non-zero when differences are found.
+      aide --check >"$OUT" 2>&1 || RC=$?
+
+      if [ "$RC" -ne 0 ]; then
+        DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
+
+        # Distinguish "differences detected" from "check error" to reduce confusion/noise.
+        if grep -qiE "found differences|differences found|AIDE.*differences" "$OUT"; then
+          TITLE="AIDE Integrity Changes"
+        else
+          TITLE="AIDE Check Error (rc=${RC})"
+        fi
+
+        if [ -x "$SENDER" ]; then
+          # Reuse existing Discord sender (already knows webhook)
+          "$SENDER" "${TITLE}" "Host: ${HOST}
+
+${DETAILS}" >/dev/null 2>&1 || true
+        else
+          # No sender script available: log locally (still useful for IR)
+          logger -t ccdc-fim "${TITLE} on ${HOST}. Tail:
+${DETAILS}"
+        fi
+      fi
+
+      rm -f "$OUT"
+      exit 0
+  become: true
+
+- name: FIM | Create cron job for periodic AIDE checks
+  ansible.builtin.cron:
+    name: "CCDC AIDE Integrity Check"
+    minute: "{{ fim_aide_cron_minute }}"
+    hour: "{{ fim_aide_cron_hour }}"
+    user: root
+    job: "{{ fim_aide_script_path }}"
+    state: present
+  become: true
+
+- name: FIM | Display summary
+  ansible.builtin.debug:
+    msg:
+      - "FIM (AIDE) configured:"
+      - "  • Config: {{ fim_aide_conf_path }}"
+      - "  • Paths: {{ fim_aide_paths | join(', ') }}"
+      - "  • Script: {{ fim_aide_script_path }}"
+      - "  • Cron: {{ fim_aide_cron_minute }} {{ fim_aide_cron_hour }}"
+      - "  • Discord sender: {{ fim_discord_sender_path }} (used if present)"
