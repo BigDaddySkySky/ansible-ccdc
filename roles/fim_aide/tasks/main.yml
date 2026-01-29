@@ -49,6 +49,8 @@
   when: ansible_os_family == "Debian"
   become: true
 
+# On some Fedora/RHEL images, Ansible's dnf module fails due to missing python libs.
+# Use dnf CLI directly for resilience.
 - name: FIM | Install AIDE (Fedora/RHEL/Oracle) via dnf CLI
   ansible.builtin.raw: dnf install -y aide
   when: ansible_os_family == "RedHat"
@@ -67,10 +69,13 @@
 
 - name: FIM | Ensure python3-requests installed (Fedora/RHEL/Oracle) via dnf CLI
   ansible.builtin.raw: dnf install -y python3-requests
-  changed_when: false
   when: ansible_os_family == "RedHat"
   become: true
+  changed_when: false
 
+# ----------------------------
+# Ensure config exists and inject rules/paths
+# ----------------------------
 - name: FIM | Ensure AIDE config parent directory exists (if using /etc/aide/aide.conf)
   ansible.builtin.file:
     path: "{{ fim_aide_conf_path | dirname }}"
