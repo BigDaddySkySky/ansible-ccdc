@@ -10,6 +10,9 @@
   ansible.builtin.meta: end_host
   when: not (fim_aide_enabled | bool)
 
+# ----------------------------
+# Determine AIDE config path
+# ----------------------------
 - name: FIM | Determine AIDE config path candidates
   ansible.builtin.set_fact:
     fim_aide_conf_candidates:
@@ -34,6 +37,9 @@
           | default('/etc/aide/aide.conf')
       }}
 
+# ----------------------------
+# Install dependencies
+# ----------------------------
 - name: FIM | Install AIDE (Debian/Ubuntu)
   ansible.builtin.apt:
     name: aide
@@ -141,6 +147,9 @@
   failed_when: false
   become: true
 
+# ----------------------------
+# Deploy check script + cron
+# ----------------------------
 - name: FIM | Create FIM script directory
   ansible.builtin.file:
     path: "{{ fim_aide_script_dir }}"
