@@ -2,7 +2,7 @@
 # ============================================
 # FIM (AIDE) ROLE - TASKS
 # ============================================
-# Installs AIDE, injects monitored paths into config,
+# Installs AIDE, injects a portable rule + monitored paths into config,
 # initializes database on first run, and schedules periodic checks.
 # ============================================
 
@@ -74,7 +74,7 @@
   changed_when: false
 
 # ----------------------------
-# Ensure config exists and inject rules/paths
+# Ensure config exists
 # ----------------------------
 - name: FIM | Ensure AIDE config parent directory exists (if using /etc/aide/aide.conf)
   ansible.builtin.file:
@@ -95,10 +95,32 @@
     group: root
   become: true
 
-- name: FIM | Inject CCDC rule + monitored paths into AIDE config
+# ----------------------------
+# Clean up legacy blocks (marker drift)
+# ----------------------------
+# You previously had a marker "... PATHS" and later changed it.
+# If you don't remove both, the old "/etc NORMAL" lines will remain and break AIDE.
+- name: FIM | Remove legacy CCDC FIM block (old marker without PATHS)
   ansible.builtin.blockinfile:
     path: "{{ fim_aide_conf_path }}"
     marker: "# {mark} CCDC FIM (AIDE)"
+    state: absent
+  become: true
+
+- name: FIM | Remove legacy CCDC FIM block (old PATHS marker)
+  ansible.builtin.blockinfile:
+    path: "{{ fim_aide_conf_path }}"
+    marker: "# {mark} CCDC FIM (AIDE) PATHS"
+    state: absent
+  become: true
+
+# ----------------------------
+# Inject portable rule + paths
+# ----------------------------
+- name: FIM | Inject CCDC rule + monitored paths into AIDE config
+  ansible.builtin.blockinfile:
+    path: "{{ fim_aide_conf_path }}"
+    marker: "# {mark} CCDC FIM (AIDE) PATHS"
     block: |
       # Portable rule set for CCDC FIM.
       # Do not rely on distro-defined groups like "NORMAL" (not consistent across images).
@@ -108,6 +130,15 @@
       {% for p in fim_aide_paths %}
       {{ p }}  {{ fim_aide_rule }}
       {% endfor %}
+
+      # Reduce noise from volatile paths if included indirectly by distro defaults.
+      # These are safe competition exclusions; do NOT monitor logs/runtime state.
+      !/var/log
+      !/var/run
+      !/run
+      !/tmp
+      !/var/tmp
+      !/var/spool
   become: true
 
 # ----------------------------
