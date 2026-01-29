@@ -163,8 +163,11 @@
   failed_when: false
   become: true
 
-- name: FIM | Initialize AIDE database (first run)
-  ansible.builtin.command: "{{ 'aideinit' if fim_aide_aideinit.rc == 0 else 'aide --init' }}"
+# Some distros require explicit config for init as well.
+- name: FIM | Initialize AIDE database (first run) using explicit config
+  ansible.builtin.command: >-
+    {{ 'aideinit -c ' ~ fim_aide_conf_path if fim_aide_aideinit.rc == 0
+       else 'aide --config ' ~ fim_aide_conf_path ~ ' --init' }}
   when:
     - not fim_aide_db_gz.stat.exists
     - not fim_aide_db_plain.stat.exists
