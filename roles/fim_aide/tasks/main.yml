@@ -197,7 +197,7 @@
 
       rm -f "$OUT"
       exit 0
-    become: true
+  become: true
 
 - name: FIM | Create cron job for periodic AIDE checks
   ansible.builtin.cron:
