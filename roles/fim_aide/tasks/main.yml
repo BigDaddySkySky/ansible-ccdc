@@ -160,37 +160,44 @@
       #!/usr/bin/env bash
       set -euo pipefail
 
+      # Cron-safe PATH (aide is often in /usr/sbin)
+      export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+
       SENDER="{{ fim_discord_sender_path }}"
       TAIL_LINES="{{ fim_discord_tail_lines }}"
       HOST="$(hostname -f 2>/dev/null || hostname)"
+      CONF="{{ fim_aide_conf_path }}"
+
+      # Prevent overlapping runs (cron + manual)
+      LOCK="/var/lock/ccdc-fim-aide.lock"
+      exec 9>"$LOCK"
+      flock -n 9 || exit 0
 
       OUT="$(mktemp)"
       RC=0
 
-      # AIDE returns non-zero when differences are found.
-      aide --check >"$OUT" 2>&1 || RC=$?
+      # Always call AIDE with explicit config
+      aide --config "$CONF" --check >"$OUT" 2>&1 || RC=$?
 
       if [ "$RC" -ne 0 ]; then
         DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
 
-        # Distinguish "differences detected" from "check error" to reduce confusion/noise.
         if grep -qiE "found differences|differences found|AIDE.*differences" "$OUT"; then
           TITLE="AIDE Integrity Changes"
         else
           TITLE="AIDE Check Error (rc=${RC})"
         fi
+
         if [ -x "$SENDER" ]; then
-          # Reuse existing Discord sender (already knows webhook)
           "$SENDER" "${TITLE}" "Host: ${HOST}\n\n${DETAILS}" >/dev/null 2>&1 || true
         else
-          # No sender script available: log locally (still useful for IR)
           logger -t ccdc-fim "${TITLE} on ${HOST}. Tail:\n${DETAILS}"
         fi
       fi
 
       rm -f "$OUT"
       exit 0
-  become: true
+    become: true
 
 - name: FIM | Create cron job for periodic AIDE checks
   ansible.builtin.cron:
