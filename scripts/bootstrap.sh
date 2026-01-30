@@ -4,16 +4,12 @@
 #
 # Purpose:
 #   Prepare a known-good Ansible control environment for
-#   competition execution. This script is intentionally strict.
+#   competition execution. Strict and operator-friendly.
 #
-# Design principles:
-#   - No silent secret creation
-#   - No lab/practice assumptions
-#   - Fail fast on unsafe conditions
-#   - Reduce operator memory dependency
-#
-# Usage:
-#   ./scripts/bootstrap.sh [-v|--verbose]
+# Vault behavior:
+#   - ~/.vault_pass is REQUIRED
+#   - If missing, this script PROMPTS (hidden input) and creates it
+#   - No hardcoded secrets
 # ============================================================
 
 set -euo pipefail
@@ -25,57 +21,53 @@ NC='\033[0m'
 
 VERBOSE=0
 for arg in "$@"; do
-    case "$arg" in
-        -v|--verbose) VERBOSE=1 ;;
-    esac
+  case "$arg" in
+    -v|--verbose) VERBOSE=1 ;;
+  esac
 done
 
-log() {
-    [[ $VERBOSE -eq 1 ]] && echo -e "$1"
+log() { [[ $VERBOSE -eq 1 ]] && echo -e "$1"; }
+
+die() {
+  echo -e "${RED}✗${NC} $1" >&2
+  exit 1
 }
 
-echo -e "${YELLOW}=== MWCCDC Ansible Bootstrap ===${NC}"
-echo ""
+echo -e "${YELLOW}=== MWCCDC Ansible Bootstrap ===${NC}\n"
 
 # ------------------------------------------------------------
 # Environment detection
 # ------------------------------------------------------------
-if [[ -n "${CODESPACES:-}" ]]; then
-    ENV="codespaces"
-    echo -e "${GREEN}✓${NC} Environment: GitHub Codespaces"
-    echo -e "${YELLOW}⚠ Codespaces is EDITING ONLY. Do not run playbooks here.${NC}"
-elif [[ -f /etc/arch-release ]]; then
-    ENV="arch"
-    echo -e "${GREEN}✓${NC} Environment: Arch Linux"
+if [[ -f /etc/arch-release ]]; then
+  ENV="arch"
+  echo -e "${GREEN}✓${NC} Environment: Arch Linux"
 elif command -v apt-get &>/dev/null; then
-    ENV="debian"
-    echo -e "${GREEN}✓${NC} Environment: Debian/Ubuntu"
+  ENV="debian"
+  echo -e "${GREEN}✓${NC} Environment: Debian/Ubuntu"
 elif command -v dnf &>/dev/null; then
-    ENV="fedora"
-    echo -e "${GREEN}✓${NC} Environment: Fedora/RHEL"
+  ENV="fedora"
+  echo -e "${GREEN}✓${NC} Environment: Fedora/RHEL"
 else
-    echo -e "${RED}✗ Unsupported distribution${NC}"
-    exit 1
+  die "Unsupported distribution"
 fi
 
 # ------------------------------------------------------------
 # System dependencies
 # ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Installing system dependencies...${NC}"
+echo -e "\n${YELLOW}Installing system dependencies...${NC}"
 
 case "$ENV" in
-    arch)
-        sudo pacman -Sy --noconfirm ${VERBOSE:+} >/dev/null 2>&1 || true
-        sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git ${VERBOSE:+} >/dev/null 2>&1
-        ;;
-    debian|codespaces)
-        sudo apt-get update -qq >/dev/null 2>&1
-        sudo apt-get install -y -qq python3 python3-pip python3-venv sshpass git >/dev/null 2>&1
-        ;;
-    fedora)
-        sudo dnf install -y python3 python3-pip sshpass git ${VERBOSE:+} >/dev/null 2>&1
-        ;;
+  arch)
+    sudo pacman -Sy --noconfirm >/dev/null 2>&1 || true
+    sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git >/dev/null 2>&1
+    ;;
+  debian)
+    sudo apt-get update -qq >/dev/null 2>&1
+    sudo apt-get install -y -qq python3 python3-pip python3-venv sshpass git >/dev/null 2>&1
+    ;;
+  fedora)
+    sudo dnf install -y python3 python3-pip sshpass git >/dev/null 2>&1
+    ;;
 esac
 
 echo -e "${GREEN}✓${NC} System packages ready"
@@ -83,41 +75,35 @@ echo -e "${GREEN}✓${NC} System packages ready"
 # ------------------------------------------------------------
 # Python virtual environment (mandatory)
 # ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Preparing Python virtual environment...${NC}"
+echo -e "\n${YELLOW}Preparing Python virtual environment...${NC}"
 
 if [[ ! -d .venv ]]; then
-    python3 -m venv .venv
+  python3 -m venv .venv
 fi
 
 # shellcheck disable=SC1091
 source .venv/bin/activate
-
 echo -e "${GREEN}✓${NC} Virtual environment active"
 
 # ------------------------------------------------------------
 # Python dependencies
 # ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Installing Ansible...${NC}"
-
+echo -e "\n${YELLOW}Installing Ansible...${NC}"
 pip install --upgrade pip setuptools wheel >/dev/null
 pip install ansible-core==2.16.0 >/dev/null
-
 echo -e "${GREEN}✓${NC} $(ansible --version | head -1)"
 
 # ------------------------------------------------------------
 # Ansible collections
 # ------------------------------------------------------------
 if [[ -f requirements.yml ]]; then
-    echo ""
-    echo -e "${YELLOW}Installing Ansible collections...${NC}"
-    ansible-galaxy collection install -r requirements.yml --force
-    echo -e "${GREEN}✓${NC} Collections installed"
+  echo -e "\n${YELLOW}Installing Ansible collections...${NC}"
+  ansible-galaxy collection install -r requirements.yml --force
+  echo -e "${GREEN}✓${NC} Collections installed"
 fi
 
 # ------------------------------------------------------------
-# Vault safety check (NO silent creation)
+# Vault setup (prompted, never hardcoded)
 # ------------------------------------------------------------
 echo ""
 echo -e "${YELLOW}Validating vault configuration...${NC}"
