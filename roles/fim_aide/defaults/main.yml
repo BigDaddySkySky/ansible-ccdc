@@ -2,78 +2,42 @@
 # ============================================
 # FIM (AIDE) ROLE - DEFAULT VARIABLES
 # ============================================
-# Purpose:
-#   Baseline file integrity using AIDE and periodically check for
-#   unauthorized changes. Alerts are sent to Discord when differences
-#   or errors are detected.
-#
-# Design:
-#   - Baseline-based (AIDE), not event-based
-#   - Cron-driven, fire-and-forget
-#   - Tight scope to reduce competition noise
-# ============================================
 
-# --------------------------------------------
-# Role enable/disable switch
-# --------------------------------------------
 fim_aide_enabled: true
 
 # --------------------------------------------
 # AIDE rule definition
 # --------------------------------------------
-# Portable rule set defined by this role.
-# We DO NOT rely on distro-provided rules like "NORMAL",
-# because they are inconsistent across images.
-#
-# Attributes:
-#   p  = permissions
-#   i  = inode
-#   n  = number of links
-#   u  = user
-#   g  = group
-#   s  = size
-#   m  = mtime
-#   c  = ctime
-#   md5 = content hash
-#
 fim_aide_rule: "CCDC_FIM"
+fim_aide_rule_attrs: "p+i+n+u+g+s+m+c+sha256"
 
 # --------------------------------------------
-# Paths to monitor
+# AIDE config + DB locations (pinned)
 # --------------------------------------------
-# Keep this tight to avoid alert spam.
-# Per-host overrides are expected via host_vars/*/fim.yml
-#
+fim_aide_conf_path: "/etc/aide/aide.conf"
+fim_aide_db_dir: "/var/lib/aide"
+fim_aide_db_plain: "/var/lib/aide/aide.db"
+fim_aide_db_gz: "/var/lib/aide/aide.db.gz"
+fim_aide_db_new_plain: "/var/lib/aide/aide.db.new"
+fim_aide_db_new_gz: "/var/lib/aide/aide.db.new.gz"
+
+# --------------------------------------------
+# Paths to monitor (MUST be tight)
+# --------------------------------------------
 fim_aide_paths:
-  - /etc
+  - "^/etc"
 
 # --------------------------------------------
-# Excludes
+# Excludes (regex)
 # --------------------------------------------
-# Host-aware excludes are strongly recommended via host_vars/*/fim.yml.
-# These defaults are “safe-noise” exclusions for most servers.
-fim_aide_excludes:
-  - /var/log
-  - /var/run
-  - /run
-  - /tmp
-  - /var/tmp
-  - /var/cache
-  - /var/lib/aide
+# Default safe-noise excludes + known offenders you saw in alerts.
+fim_aide_excludes: []
 
-# --------------------------------------------
-# Baseline initialization
-# --------------------------------------------
-# Creating the initial AIDE database can take several minutes on some hosts
-# (especially Ubuntu). For competition “critical path” runs, you usually want
-# to SKIP baseline creation and run it separately ahead of time.
 fim_aide_initialize_db: true
 
 # --------------------------------------------
 # Cron schedule
 # --------------------------------------------
-# Default: every 15 minutes
-#
 fim_aide_cron_minute: "*/15"
 fim_aide_cron_hour: "*"
 
@@ -86,10 +50,5 @@ fim_aide_script_path: /usr/local/bin/ccdc-fim/aide-check.sh
 # --------------------------------------------
 # Discord alert integration
 # --------------------------------------------
-# Reuse the auditd Discord sender if it exists.
-# This script already embeds the webhook securely.
-#
 fim_discord_sender_path: /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py
-
-# Limit how much AIDE output is sent to Discord
 fim_discord_tail_lines: 80
