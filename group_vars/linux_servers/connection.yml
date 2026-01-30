@@ -4,6 +4,7 @@ ansible_user: sysadmin
 ansible_python_interpreter: /usr/bin/python3
 
 ansible_become: true
+ansible_become_password: "{{ vault_os_become_password | default(vault_default_password) }}"
 ansible_become_method: sudo
 
 ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
