@@ -111,29 +111,49 @@ echo -e "${YELLOW}Validating vault configuration...${NC}"
 VAULT_FILE="$HOME/.vault_pass"
 
 if [[ ! -f "$VAULT_FILE" ]]; then
-    echo -e "${RED}✗ Vault password file not found:${NC} $VAULT_FILE"
-    echo ""
-    echo "Create it manually before proceeding:"
-    echo "  umask 077"
-    echo "  nano ~/.vault_pass"
-    echo ""
-    echo "Bootstrap intentionally refuses to create secrets for you."
-    exit 1
+  echo -e "${YELLOW}Vault password file not found:${NC} $VAULT_FILE"
+  echo "We will create it now (permissions: 0600). Your input will be hidden."
+  echo ""
+
+  read -r -s -p "Enter vault password: " VP1
+  echo ""
+  read -r -s -p "Confirm vault password: " VP2
+  echo ""
+  echo ""
+
+  [[ -n "${VP1}" ]] || die "Vault password cannot be empty"
+  [[ "${VP1}" == "${VP2}" ]] || die "Vault passwords did not match"
+
+  umask 077
+  tmpfile="$(mktemp "${VAULT_FILE}.XXXXXX")"
+  printf '%s\n' "$VP1" > "$tmpfile"
+  chmod 600 "$tmpfile"
+  mv -f "$tmpfile" "$VAULT_FILE"
+  unset VP1 VP2
+
+  echo -e "${GREEN}✓${NC} Vault password file created: $VAULT_FILE"
+else
+  chmod 600 "$VAULT_FILE" || true
+  echo -e "${GREEN}✓${NC} Vault password file present"
 fi
 
-chmod 600 "$VAULT_FILE"
-echo -e "${GREEN}✓${NC} Vault password file present"
+# Optional sanity check
+if [[ -f group_vars/all/vault.yml ]]; then
+  if ! ansible-vault view group_vars/all/vault.yml --vault-password-file "$VAULT_FILE" >/dev/null 2>&1; then
+    die "Vault decrypt sanity check failed. ~/.vault_pass does not match this repo."
+  fi
+  echo -e "${GREEN}✓${NC} Vault decrypt sanity check passed"
+fi
 
 # ------------------------------------------------------------
-# ansible.cfg (safe defaults, no forced inventory)
+# ansible.cfg (safe defaults)
 # ------------------------------------------------------------
 if [[ ! -f ansible.cfg ]]; then
-    echo ""
-    echo -e "${YELLOW}Creating ansible.cfg...${NC}"
+  echo -e "\n${YELLOW}Creating ansible.cfg...${NC}"
 
-    cat > ansible.cfg << 'EOF'
+  cat > ansible.cfg << EOF
 [defaults]
-vault_password_file = ~/.vault_pass
+vault_password_file = ${VAULT_FILE}
 host_key_checking = False
 timeout = 10
 forks = 10
