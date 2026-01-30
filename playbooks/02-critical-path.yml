@@ -117,6 +117,10 @@
     
     - role: fim_aide
       tags: [fim]
+      vars:
+        # Baseline creation can take several minutes on Ubuntu.
+        # Critical Path should be fast: configure + cron only.
+        fim_aide_initialize_db: false
 
   post_tasks:
     - name: Set timestamp
