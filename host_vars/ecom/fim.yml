@@ -1,9 +1,11 @@
 ---
-# Splunk server has additional sensitive config under /opt/splunk/etc
+# Host-aware FIM scope for the Ubuntu ecom web server
+
 fim_aide_paths:
   - /etc
-  - /opt/splunk/etc
+  - /var/www
 
+# Exclude volatile locations (noise)
 fim_aide_excludes:
   - /var/log
   - /var/run
@@ -12,4 +14,4 @@ fim_aide_excludes:
   - /var/tmp
   - /var/cache
   - /var/lib/aide
-  - /opt/splunk/var
+  - /var/spool

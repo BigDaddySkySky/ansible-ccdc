@@ -48,6 +48,28 @@ fim_aide_paths:
   - /etc
 
 # --------------------------------------------
+# Excludes
+# --------------------------------------------
+# Host-aware excludes are strongly recommended via host_vars/*/fim.yml.
+# These defaults are “safe-noise” exclusions for most servers.
+fim_aide_excludes:
+  - /var/log
+  - /var/run
+  - /run
+  - /tmp
+  - /var/tmp
+  - /var/cache
+  - /var/lib/aide
+
+# --------------------------------------------
+# Baseline initialization
+# --------------------------------------------
+# Creating the initial AIDE database can take several minutes on some hosts
+# (especially Ubuntu). For competition “critical path” runs, you usually want
+# to SKIP baseline creation and run it separately ahead of time.
+fim_aide_initialize_db: true
+
+# --------------------------------------------
 # Cron schedule
 # --------------------------------------------
 # Default: every 15 minutes

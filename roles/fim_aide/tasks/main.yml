@@ -124,21 +124,19 @@
     block: |
       # Portable rule set for CCDC FIM.
       # Do not rely on distro-defined groups like "NORMAL" (not consistent across images).
-      {{ fim_aide_rule }} = p+i+n+u+g+s+m+c+md5
+      # Note: use space-separated attributes (no '+') to avoid deprecation warnings.
+      {{ fim_aide_rule }} = p i n u g s m c md5
 
       # Keep scope tight to reduce competition noise.
       {% for p in fim_aide_paths %}
       {{ p }}  {{ fim_aide_rule }}
       {% endfor %}
 
-      # Reduce noise from volatile paths if included indirectly by distro defaults.
+      # Exclusions (host-aware).
       # These are safe competition exclusions; do NOT monitor logs/runtime state.
-      !/var/log
-      !/var/run
-      !/run
-      !/tmp
-      !/var/tmp
-      !/var/spool
+      {% for e in fim_aide_excludes %}
+      !{{ e }}
+      {% endfor %}
   become: true
 
 # ----------------------------
