@@ -1,18 +1,8 @@
 ---
 # ============================================
-# FIM BASELINE (AIDE) PLAYBOOK
-# ============================================
 # Purpose:
 #   Create the initial AIDE database (baseline) for each host.
 #   This can take several minutes, especially on Ubuntu.
-#
-# Usage examples:
-#   ansible-playbook playbooks/05-fim-baseline.yml
-#   ansible-playbook playbooks/05-fim-baseline.yml --limit ecom
-#
-# Notes:
-#   - Safe to re-run (only initializes if DB is missing).
-#   - Critical Path playbook intentionally skips baseline creation.
 # ============================================
 
 
