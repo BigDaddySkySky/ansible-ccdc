@@ -1,18 +1,18 @@
 ---
-# Host-aware FIM scope for the Fedora webmail server
-
 fim_aide_paths:
-  - /etc
-  - /etc/postfix
-  - /etc/dovecot
+  - "^/etc"
+  - "^/usr/local/bin"
+  - "^/usr/local/sbin"
 
-# Exclude volatile locations (mail queues and runtime state are noisy)
 fim_aide_excludes:
-  - /var/log
-  - /var/run
-  - /run
-  - /tmp
-  - /var/tmp
-  - /var/cache
-  - /var/lib/aide
-  - /var/spool
+  - "^/var/spool"
+  - "^/var/mail"
+  - "^/var/vmail"
+  - "^/var/lib/dovecot"
+  - "^/var/log"
+  - "^/run"
+  - "^/var/run"
+  - "^/tmp"
+  - "^/var/tmp"
+  - "^/var/cache"
+  - "^/var/lib/systemd/timers"

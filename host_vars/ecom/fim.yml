@@ -1,17 +1,16 @@
 ---
-# Host-aware FIM scope for the Ubuntu ecom web server
-
 fim_aide_paths:
-  - /etc
-  - /var/www
+  - "^/etc"
+  - "^/usr/local/bin"
+  - "^/usr/local/sbin"
+  - "^/var/www"
 
-# Exclude volatile locations (noise)
+# Extra excludes for common churn
 fim_aide_excludes:
-  - /var/log
-  - /var/run
-  - /run
-  - /tmp
-  - /var/tmp
-  - /var/cache
-  - /var/lib/aide
-  - /var/spool
+  - "^/var/log"
+  - "^/run"
+  - "^/var/run"
+  - "^/tmp"
+  - "^/var/tmp"
+  - "^/var/cache"
+  - "^/var/lib/systemd/timers"

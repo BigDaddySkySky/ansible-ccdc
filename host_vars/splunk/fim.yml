@@ -1,15 +1,20 @@
 ---
-# Splunk server has additional sensitive config under /opt/splunk/etc
 fim_aide_paths:
-  - /etc
-  - /opt/splunk/etc
+  - "^/etc"
+  - "^/usr/local/bin"
+  - "^/usr/local/sbin"
+  - "^/opt/splunk/etc"      # high-signal (Splunk configs)
+  - "^/opt/splunk/bin"     
 
 fim_aide_excludes:
-  - /var/log
-  - /var/run
-  - /run
-  - /tmp
-  - /var/tmp
-  - /var/cache
-  - /var/lib/aide
-  - /opt/splunk/var
+  - "^/var/log"
+  - "^/run"
+  - "^/var/run"
+  - "^/tmp"
+  - "^/var/tmp"
+  - "^/var/cache"
+  - "^/var/lib/systemd/timers"
+
+  # Splunk churn (avoid constant diffs)
+  - "^/opt/splunk/var"
+  - "^/opt/splunkforwarder/var"
