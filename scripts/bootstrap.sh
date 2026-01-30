@@ -173,46 +173,44 @@ become_method = sudo
 become_ask_pass = False
 EOF
 
-    echo -e "${GREEN}✓${NC} ansible.cfg created"
+  echo -e "${GREEN}✓${NC} ansible.cfg created"
 fi
 
 # ------------------------------------------------------------
 # SSH keypair (idempotent)
 # ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Ensuring SSH keypair exists...${NC}"
+echo -e "\n${YELLOW}Ensuring SSH keypair exists...${NC}"
 
 KEY_PATH="$HOME/.ssh/ccdc_rsa"
 mkdir -p "$HOME/.ssh"
 chmod 700 "$HOME/.ssh"
 
 if [[ ! -f "$KEY_PATH" ]]; then
-    ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc@$(hostname)" >/dev/null
-    chmod 600 "$KEY_PATH"
-    chmod 644 "$KEY_PATH.pub"
-    echo -e "${GREEN}✓${NC} SSH key generated"
+  ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc@$(hostname)" >/dev/null
+  chmod 600 "$KEY_PATH"
+  chmod 644 "$KEY_PATH.pub"
+  echo -e "${GREEN}✓${NC} SSH key generated"
 else
-    echo -e "${GREEN}✓${NC} SSH key already present"
+  echo -e "${GREEN}✓${NC} SSH key already present"
 fi
 
 # ------------------------------------------------------------
-# Optional: bootstrap SSH keys (memory guardrail)
+# Optional: bootstrap SSH keys
 # ------------------------------------------------------------
 echo ""
 read -r -p "Run SSH key bootstrap now? (recommended) [y/N]: " REPLY
 if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Running 00-bootstrap-keys.yml (will prompt for sudo password)...${NC}"
-    ansible-playbook playbooks/00-bootstrap-keys.yml -k
+  echo -e "${YELLOW}Running 00-bootstrap-keys.yml (will prompt for SSH password)...${NC}"
+  ansible-playbook playbooks/00-bootstrap-keys.yml -k
 fi
 
 # ------------------------------------------------------------
 # Final state
 # ------------------------------------------------------------
-echo ""
-echo -e "${GREEN}=== Bootstrap Complete ===${NC}"
-echo ""
+echo -e "\n${GREEN}=== Bootstrap Complete ===${NC}\n"
 echo "Environment: $ENV"
 echo "Ansible: $(ansible --version | head -1)"
+echo "Vault file: $VAULT_FILE (0600)"
 echo ""
 echo "Next step (competition):"
 echo "  ./scripts/preflight.sh"
