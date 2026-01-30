@@ -15,10 +15,65 @@
 #   - Critical Path playbook intentionally skips baseline creation.
 # ============================================
 
+
 - name: Create AIDE baselines (may take a while)
   hosts: linux_servers
   gather_facts: true
   become: true
+
+  pre_tasks:
+    - name: Load global vault (best effort)
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
+      failed_when: false
+      no_log: true
+      tags: [always]
+
+    - name: Load host vault (best effort)
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
+      failed_when: false
+      no_log: true
+      tags: [always]
+
+    - name: Resolve become password for this host
+      ansible.builtin.set_fact:
+        effective_become_password: >-
+          {{ vault_os_become_password
+             | default(vault_os_become_initial_password
+             | default(vault_default_password)) }}
+      no_log: true
+      tags: [always]
+
+    - name: Ensure a become password is available
+      ansible.builtin.assert:
+        that:
+          - effective_become_password is defined
+          - effective_become_password | length > 0
+        fail_msg: >-
+          Missing become password for {{ inventory_hostname }}.
+          Expected one of:
+          - vault_os_become_password (preferred, post-rotation)
+          - vault_os_become_initial_password (pre-rotation)
+          - vault_default_password (global fallback)
+      no_log: true
+      tags: [always]
+
+    - name: Set ansible_become_password for roles
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ effective_become_password }}"
+      no_log: true
+      tags: [always]
+
+    - name: Load host firewall vars
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/firewall.yml"
+      failed_when: false
+      tags: [firewall]
+
+    - name: Gather facts (after become password resolved)
+      ansible.builtin.setup:
+      tags: [always]
 
   roles:
     - role: fim_aide
