@@ -55,11 +55,11 @@
       no_log: true
       tags: [always]
 
-    - name: Load host firewall vars
+    - name: Create AIDE baselines (may take a while)
       ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/firewall.yml"
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/fim.yml"
       failed_when: false
-      tags: [firewall]
+      tags: [fim]
 
     - name: Gather facts (after become password resolved)
       ansible.builtin.setup:
