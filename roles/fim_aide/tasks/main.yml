@@ -199,17 +199,16 @@
     group: root
     content: |
       #!/usr/bin/env bash
+      {% raw %}
       set -euo pipefail
 
       export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 
-      SENDER="{{ fim_discord_sender_path }}"
-      TAIL_LINES="{{ fim_discord_tail_lines }}"
       HOST="$(hostname -f 2>/dev/null || hostname)"
-      CONF="{{ fim_aide_conf_path }}"
+      CONF="__CONF__"
 
-      DB_GZ="{{ fim_aide_db_gz }}"
-      DB_PLAIN="{{ fim_aide_db_plain }}"
+      DB_GZ="__DB_GZ__"
+      DB_PLAIN="__DB_PLAIN__"
       STAMP="/var/lib/ccdc-fim-baseline-missing.stamp"
 
       REPORT_DIR="/var/log/aide/ccdc"
@@ -219,6 +218,9 @@
 
       mkdir -p "$REPORT_DIR" 2>/dev/null || true
       chmod 0750 "$REPORT_DIR" 2>/dev/null || true
+
+      SENDER="__SENDER__"
+      TAIL_LINES="__TAIL_LINES__"
 
       send_msg() {
         local title="$1"
@@ -321,7 +323,16 @@
 
       rm -f "$OUT"
       exit 0
+      {% endraw %}
   become: true
+  vars:
+    # Inject Ansible vars safely without letting Jinja parse the bash internals.
+    __SENDER__: "{{ fim_discord_sender_path }}"
+    __TAIL_LINES__: "{{ fim_discord_tail_lines }}"
+    __CONF__: "{{ fim_aide_conf_path }}"
+    __DB_GZ__: "{{ fim_aide_db_gz }}"
+    __DB_PLAIN__: "{{ fim_aide_db_plain }}"
+
 
 - name: FIM | Create cron job for periodic AIDE checks
   ansible.builtin.cron:
