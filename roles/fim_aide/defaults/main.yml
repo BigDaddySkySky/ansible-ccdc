@@ -8,7 +8,7 @@ fim_aide_enabled: true
 # --------------------------------------------
 # AIDE rule definition
 # --------------------------------------------
-fim_aide_rule: "CCDC_FIM"
+fim_aide_rule: "CCDCFIM"
 fim_aide_rule_attrs: "p+i+n+u+g+s+m+c+sha256"
 
 # --------------------------------------------
