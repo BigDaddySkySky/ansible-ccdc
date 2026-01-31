@@ -19,11 +19,12 @@ LATEST_FILE="${REPORT_DIR}/latest-${HOST}.txt"
 
 mkdir -p "$REPORT_DIR" 2>/dev/null || true
 chmod 0750 "$REPORT_DIR" 2>/dev/null || true
+chown root:root "$REPORT_DIR" 2>/dev/null || true
 
 send_msg() {
   local title="$1"
   local msg="$2"
-  if [ -x "$SENDER" ] || [ -f "$SENDER" ]; then
+  if [ -r "$SENDER" ]; then
     python3 "$SENDER" "$title" "$msg" >/dev/null 2>&1 || true
   else
     logger -t ccdc-fim "$title - $msg"
