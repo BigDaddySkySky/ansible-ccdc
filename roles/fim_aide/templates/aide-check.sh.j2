@@ -94,6 +94,18 @@ if [ "$RC" -ne 0 ]; then
     echo "Categories: ${CATS}"
     echo "Severity: ${SEV}"
     echo "----------------------------------------"
+    echo "Summary (extracted):"
+    if grep -qi "^Changed Entries" "$OUT"; then
+      awk '
+        BEGIN{P=0}
+        /^Changed entries/{p=1}
+        p==1{print}
+        /^$/{if(p==1){exit}}
+      ' "$OUT" | sed 's/\r$//'
+    elif grep -qi "^Added entries" "$OUT" || grep -qi "^Removed entries" "$OUT"; then
+      grep -E '^Added entries|Removed entries| Changed entries| Total number of entries)' "$OUT" | sed 's/\r$//'
+    fi
+    echo "----------------------------------------"
     cat "$OUT"
     echo
   } > "$REPORT_FILE" 2>/dev/null || true
