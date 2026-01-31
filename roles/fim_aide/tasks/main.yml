@@ -307,8 +307,8 @@
         fi
 
         # Keep last 50 reports per host
-        ls -1t "${REPORT_DIR}/aide-${HOST}-"*.txt 2>/dev/null | tail -n +51 | xargs -r rm -f 2>/dev/null || true
-        ls -1t "${REPORT_DIR}/aide-${HOST}-"*.txt.sha256 2>/dev/null | tail -n +51 | xargs -r rm -f 2>/dev/null || true
+        find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
+        find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt.sha256" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
       fi
 
       if [ "$RC" -ge 1 ] && [ "$RC" -le 7 ]; then
