@@ -1,20 +1,20 @@
 ---
 fim_aide_paths:
-  - "^/etc"
-  - "^/usr/local/bin"
-  - "^/usr/local/sbin"
-  - "^/opt/splunk/etc"      # high-signal (Splunk configs)
-  - "^/opt/splunk/bin"     
+  - "/etc"
+  - "/usr/local/bin"
+  - "/usr/local/sbin"
+  - "/opt/splunk/etc"      # high-signal (Splunk configs)
+  - "/opt/splunk/bin"     
 
 fim_aide_excludes:
-  - "^/var/log"
-  - "^/run"
-  - "^/var/run"
-  - "^/tmp"
-  - "^/var/tmp"
-  - "^/var/cache"
-  - "^/var/lib/systemd/timers"
+  - "/var/log"
+  - "/run"
+  - "/var/run"
+  - "/tmp"
+  - "/var/tmp"
+  - "/var/cache"
+  - "/var/lib/systemd/timers"
 
   # Splunk churn (avoid constant diffs)
-  - "^/opt/splunk/var"
-  - "^/opt/splunkforwarder/var"
+  - "/opt/splunk/var"
+  - "/opt/splunkforwarder/var"
