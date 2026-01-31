@@ -4,6 +4,7 @@
 # ============================================
 # Installs AIDE, writes a minimal authoritative config (no distro defaults),
 # initializes DB idempotently, and schedules periodic checks + Discord alerts.
+# Also writes forensic artifacts to /var/log/aide/ccdc for white team.
 # ============================================
 
 - name: FIM | End host early when disabled
@@ -74,6 +75,15 @@
 - name: FIM | Ensure report directory exists
   ansible.builtin.file:
     path: /var/log/aide
+    state: directory
+    mode: "0750"
+    owner: root
+    group: root
+  become: true
+
+- name: FIM | Ensure FIM artifact directory exists
+  ansible.builtin.file:
+    path: /var/log/aide/ccdc
     state: directory
     mode: "0750"
     owner: root
@@ -181,7 +191,7 @@
     group: root
   become: true
 
-- name: FIM | Deploy periodic AIDE check script (Discord on diff/error)
+- name: FIM | Deploy periodic AIDE check script (Discord + artifact on diff/error)
   ansible.builtin.copy:
     dest: "{{ fim_aide_script_path }}"
     mode: "0750"
@@ -202,14 +212,43 @@
       DB_PLAIN="{{ fim_aide_db_plain }}"
       STAMP="/var/lib/ccdc-fim-baseline-missing.stamp"
 
+      REPORT_DIR="/var/log/aide/ccdc"
+      TS="$(date -u +%Y%m%dT%H%M%SZ)"
+      REPORT_FILE="${REPORT_DIR}/aide-${HOST}-${TS}.txt"
+      LATEST_FILE="${REPORT_DIR}/latest-${HOST}.txt"
+
+      mkdir -p "$REPORT_DIR" 2>/dev/null || true
+      chmod 0750 "$REPORT_DIR" 2>/dev/null || true
+
       send_msg() {
         local title="$1"
         local msg="$2"
         if [ -x "$SENDER" ] || [ -f "$SENDER" ]; then
-          # sender might not have +x depending on how it's deployed
           python3 "$SENDER" "$title" "$msg" >/dev/null 2>&1 || true
         else
           logger -t ccdc-fim "$title - $msg"
+        fi
+      }
+
+      summarize_rc() {
+        local rc="$1"
+        local parts=()
+        if (( rc & 1 )); then parts+=("NEW"); fi
+        if (( rc & 2 )); then parts+=("REMOVED"); fi
+        if (( rc & 4 )); then parts+=("CHANGED"); fi
+        if [ "${#parts[@]}" -eq 0 ]; then
+          echo "NONE"
+        else
+          (IFS=','; echo "${parts[*]}")
+        fi
+      }
+
+      severity_for() {
+        local rc="$1"
+        if (( rc & 2 )) || (( rc & 4 )); then
+          echo "HIGH"
+        else
+          echo "MEDIUM"
         fi
       }
 
@@ -221,28 +260,63 @@
           LAST_EPOCH="$(cat "$STAMP" 2>/dev/null || echo 0)"
         fi
         if [ $((NOW_EPOCH - LAST_EPOCH)) -ge 86400 ]; then
-          send_msg "AIDE Baseline Missing" "Host: ${HOST}\n\nAIDE DB not found. Run the FIM baseline play to create it.\nConfig: ${CONF}"
+          send_msg "AIDE Baseline Missing" "Host: ${HOST}\n\nAIDE DB not found. Run the FIM baseline play to create it.\nConfig: ${CONF}\nArtifact dir: ${REPORT_DIR}"
           echo "$NOW_EPOCH" > "$STAMP" 2>/dev/null || true
         fi
         exit 0
       fi
 
-      # Prevent overlap
-      LOCK="/var/lock/ccdc-fim-aide.lock"
-      exec 9>"$LOCK"
-      flock -n 9 || exit 0
+      # Prevent overlap (skip locking if flock not present)
+      if command -v flock >/dev/null 2>&1; then
+        LOCK="/var/lock/ccdc-fim-aide.lock"
+        exec 9>"$LOCK"
+        flock -n 9 || exit 0
+      fi
 
       OUT="$(mktemp)"
       RC=0
 
+      # AIDE --check exit status is a bitmask:
+      # 1=new files, 2=removed files, 4=changed files (can be combined up to 7).
       aide --config "$CONF" --check >"$OUT" 2>&1 || RC=$?
 
-      if [ "$RC" -eq 1 ]; then
+      # Write forensic artifact for any non-zero outcome (diff or error)
+      if [ "$RC" -ne 0 ]; then
+        CATS="$(summarize_rc "$RC")"
+        SEV="$(severity_for "$RC")"
+
+        {
+          echo "CCDC FIM (AIDE) Report"
+          echo "Timestamp (UTC): ${TS}"
+          echo "Host: ${HOST}"
+          echo "Config: ${CONF}"
+          echo "Exit code: ${RC}"
+          echo "Categories: ${CATS}"
+          echo "Severity: ${SEV}"
+          echo "----------------------------------------"
+          cat "$OUT"
+          echo
+        } > "$REPORT_FILE" 2>/dev/null || true
+
+        cp -f "$REPORT_FILE" "$LATEST_FILE" 2>/dev/null || true
+
+        if command -v sha256sum >/dev/null 2>&1; then
+          sha256sum "$REPORT_FILE" > "${REPORT_FILE}.sha256" 2>/dev/null || true
+        fi
+
+        # Keep last 50 reports per host
+        ls -1t "${REPORT_DIR}/aide-${HOST}-"*.txt 2>/dev/null | tail -n +51 | xargs -r rm -f 2>/dev/null || true
+        ls -1t "${REPORT_DIR}/aide-${HOST}-"*.txt.sha256 2>/dev/null | tail -n +51 | xargs -r rm -f 2>/dev/null || true
+      fi
+
+      if [ "$RC" -ge 1 ] && [ "$RC" -le 7 ]; then
         DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
-        send_msg "AIDE Integrity Changes" "Host: ${HOST}\n\n${DETAILS}"
+        CATS="$(summarize_rc "$RC")"
+        SEV="$(severity_for "$RC")"
+        send_msg "AIDE Integrity Changes [${SEV}] (rc=${RC}: ${CATS})" "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
       elif [ "$RC" -ne 0 ]; then
         DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
-        send_msg "AIDE Check Error (rc=${RC})" "Host: ${HOST}\n\n${DETAILS}"
+        send_msg "AIDE Check Error (rc=${RC})" "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
       fi
 
       rm -f "$OUT"
