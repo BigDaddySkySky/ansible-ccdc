@@ -36,7 +36,7 @@ summarize_rc() {
   if (( rc & 1 )); then parts+=("NEW"); fi
   if (( rc & 2 )); then parts+=("REMOVED"); fi
   if (( rc & 4 )); then parts+=("CHANGED"); fi
-  if [ "${#parts[@]}" -eq 0 ]; then
+  if [ -z "${parts[*]-}" ]; then
     echo "NONE"
   else
     (IFS=','; echo "${parts[*]}")
