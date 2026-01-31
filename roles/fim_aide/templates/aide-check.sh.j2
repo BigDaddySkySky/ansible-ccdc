@@ -76,6 +76,9 @@ fi
 OUT="$(mktemp)"
 RC=0
 
+cleanup() { rm -f "$OUT" 2>/dev/null || true; }
+trap cleanup EXIT
+
 # AIDE --check exit status is a bitmask:
 # 1=new files, 2=removed files, 4=changed files (can be combined up to 7).
 aide --config "$CONF" --check >"$OUT" 2>&1 || RC=$?
@@ -85,6 +88,34 @@ if [ "$RC" -ne 0 ]; then
   CATS="$(summarize_rc "$RC")"
   SEV="$(severity_for "$RC")"
 
+  SUM="$(mktemp)"
+
+  # Try to extract the most actionable blocks from AIDE output
+  # (case-insensitive, tolerant of formatting differences)
+  if grep -qi "^changed entries" "$OUT"; then
+    # Capture from "Changed entries" until a divider line or EOF
+    awk '
+      BEGIN{p=0}
+      tolower($0) ~ /^changed entries/ {p=1; print; next}
+      p==1 {
+        # Stop if we hit a long dashed divider line (common in AIDE output)
+        if ($0 ~ /^-[- -]*$/) { print; exit }
+        print
+      }
+    ' "$OUT" > "$SUM" || true
+  elif grep -qiE "^(added entries|removed entries|changed entries|total number of entries)" "$OUT"; then
+    # Capture common summary lines
+    grep -iE "^(total number of entries|added entries|removed entries|changed entries)" "$OUT" > "$SUM" || true
+  fi
+
+  # If extraction got nothing (or only whitespace), fall back to tail
+  if ! [ -s "$SUM" ] || ! grep -q '[[:alnum:]]' "$SUM"; then
+    {
+      echo "(No structured summary section found; showing tail of AIDE output)"
+      tail -n "${TAIL_LINES}" "$OUT" 2>/dev/null || true
+    } > "$SUM"
+  fi
+
   {
     echo "CCDC FIM (AIDE) Report"
     echo "Timestamp (UTC): ${TS}"
@@ -93,43 +124,57 @@ if [ "$RC" -ne 0 ]; then
     echo "Exit code: ${RC}"
     echo "Categories: ${CATS}"
     echo "Severity: ${SEV}"
+    echo "Report file: ${REPORT_FILE}"
     echo "----------------------------------------"
-    echo "Summary (extracted):"
-    if grep -qi "^Changed Entries" "$OUT"; then
-      awk '
-        BEGIN{P=0}
-        /^Changed entries/{p=1}
-        p==1{print}
-        /^$/{if(p==1){exit}}
-      ' "$OUT" | sed 's/\r$//'
-    elif grep -qi "^Added entries" "$OUT" || grep -qi "^Removed entries" "$OUT"; then
-      grep -E '^Added entries|Removed entries| Changed entries| Total number of entries)' "$OUT" | sed 's/\r$//'
-    fi
+    echo "Summary:"
+    cat "$SUM"
     echo "----------------------------------------"
+    echo "Raw AIDE output:"
     cat "$OUT"
     echo
   } > "$REPORT_FILE" 2>/dev/null || true
+
+  rm -f "$SUM" 2>/dev/null || true
 
   cp -f "$REPORT_FILE" "$LATEST_FILE" 2>/dev/null || true
 
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$REPORT_FILE" > "${REPORT_FILE}.sha256" 2>/dev/null || true
+    sha256sum "$LATEST_FILE" > "${LATEST_FILE}.sha256" 2>/dev/null || true
   fi
 
-  # Keep last 50 reports per host
-  find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
-  find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt.sha256" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
+  # Keep last 50 reports per host (and their hashes)
+  find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt" \
+    -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
+
+  find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt.sha256" \
+    -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
+
+  # Keep only a small number of latest pointers/hashes (optional cleanup)
+  # rm -f "${LATEST_FILE}.sha256" 2>/dev/null || true
 fi
+
+# Prefer the canonical artifact; fall back to raw OUT if artifact missing
+get_details() {
+  if [ -n "${REPORT_FILE:-}" ] && [ -f "$REPORT_FILE" ]; then
+    tail -n "${TAIL_LINES}" "$REPORT_FILE" 2>/dev/null || true
+  else
+    tail -n "${TAIL_LINES}" "$OUT" 2>/dev/null || true
+  fi
+}
 
 if [ "$RC" -ge 1 ] && [ "$RC" -le 7 ]; then
-  DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
+  DETAILS="$(get_details)"
   CATS="$(summarize_rc "$RC")"
   SEV="$(severity_for "$RC")"
-  send_msg "AIDE Integrity Changes [${SEV}] (rc=${RC}: ${CATS})" "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
+  send_msg "AIDE Integrity Changes [${SEV}] (rc=${RC}: ${CATS})" \
+    "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
 elif [ "$RC" -ne 0 ]; then
-  DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
-  send_msg "AIDE Check Error (rc=${RC})" "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
+  DETAILS="$(get_details)"
+  CATS="$(summarize_rc "$RC")"
+  SEV="$(severity_for "$RC")"
+  send_msg "AIDE Check Error [${SEV}] (rc=${RC})" \
+    "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
 fi
 
-rm -f "$OUT"
 exit 0
