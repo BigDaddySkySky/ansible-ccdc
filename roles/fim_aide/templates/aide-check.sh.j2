@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+
+SENDER="{{ fim_discord_sender_path }}"
+TAIL_LINES="{{ fim_discord_tail_lines }}"
+HOST="$(hostname -f 2>/dev/null || hostname)"
+CONF="{{ fim_aide_conf_path }}"
+
+DB_GZ="{{ fim_aide_db_gz }}"
+DB_PLAIN="{{ fim_aide_db_plain }}"
+STAMP="/var/lib/ccdc-fim-baseline-missing.stamp"
+
+REPORT_DIR="/var/log/aide/ccdc"
+TS="$(date -u +%Y%m%dT%H%M%SZ)"
+REPORT_FILE="${REPORT_DIR}/aide-${HOST}-${TS}.txt"
+LATEST_FILE="${REPORT_DIR}/latest-${HOST}.txt"
+
+mkdir -p "$REPORT_DIR" 2>/dev/null || true
+chmod 0750 "$REPORT_DIR" 2>/dev/null || true
+
+send_msg() {
+  local title="$1"
+  local msg="$2"
+  if [ -x "$SENDER" ] || [ -f "$SENDER" ]; then
+    python3 "$SENDER" "$title" "$msg" >/dev/null 2>&1 || true
+  else
+    logger -t ccdc-fim "$title - $msg"
+  fi
+}
+
+summarize_rc() {
+  local rc="$1"
+  local parts=()
+  if (( rc & 1 )); then parts+=("NEW"); fi
+  if (( rc & 2 )); then parts+=("REMOVED"); fi
+  if (( rc & 4 )); then parts+=("CHANGED"); fi
+  if [ "${#parts[@]}" -eq 0 ]; then
+    echo "NONE"
+  else
+    (IFS=','; echo "${parts[*]}")
+  fi
+}
+
+severity_for() {
+  local rc="$1"
+  if (( rc & 2 )) || (( rc & 4 )); then
+    echo "HIGH"
+  else
+    echo "MEDIUM"
+  fi
+}
+
+# Baseline missing reminder (max 1/day)
+if [ ! -f "$DB_GZ" ] && [ ! -f "$DB_PLAIN" ]; then
+  NOW_EPOCH="$(date +%s)"
+  LAST_EPOCH=0
+  if [ -f "$STAMP" ]; then
+    LAST_EPOCH="$(cat "$STAMP" 2>/dev/null || echo 0)"
+  fi
+  if [ $((NOW_EPOCH - LAST_EPOCH)) -ge 86400 ]; then
+    send_msg "AIDE Baseline Missing" "Host: ${HOST}\n\nAIDE DB not found. Run the FIM baseline play to create it.\nConfig: ${CONF}\nArtifact dir: ${REPORT_DIR}"
+    echo "$NOW_EPOCH" > "$STAMP" 2>/dev/null || true
+  fi
+  exit 0
+fi
+
+# Prevent overlap
+if command -v flock >/dev/null 2>&1; then
+  LOCK="/var/lock/ccdc-fim-aide.lock"
+  exec 9>"$LOCK"
+  flock -n 9 || exit 0
+fi
+
+OUT="$(mktemp)"
+RC=0
+
+# AIDE --check exit status is a bitmask:
+# 1=new files, 2=removed files, 4=changed files (can be combined up to 7).
+aide --config "$CONF" --check >"$OUT" 2>&1 || RC=$?
+
+# Write forensic artifact for any non-zero outcome (diff or error)
+if [ "$RC" -ne 0 ]; then
+  CATS="$(summarize_rc "$RC")"
+  SEV="$(severity_for "$RC")"
+
+  {
+    echo "CCDC FIM (AIDE) Report"
+    echo "Timestamp (UTC): ${TS}"
+    echo "Host: ${HOST}"
+    echo "Config: ${CONF}"
+    echo "Exit code: ${RC}"
+    echo "Categories: ${CATS}"
+    echo "Severity: ${SEV}"
+    echo "----------------------------------------"
+    cat "$OUT"
+    echo
+  } > "$REPORT_FILE" 2>/dev/null || true
+
+  cp -f "$REPORT_FILE" "$LATEST_FILE" 2>/dev/null || true
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$REPORT_FILE" > "${REPORT_FILE}.sha256" 2>/dev/null || true
+  fi
+
+  # Keep last 50 reports per host
+  find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
+  find "$REPORT_DIR" -maxdepth 1 -type f -name "aide-${HOST}-*.txt.sha256" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR>50{print $2}' | xargs -r rm -f 2>/dev/null || true
+fi
+
+if [ "$RC" -ge 1 ] && [ "$RC" -le 7 ]; then
+  DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
+  CATS="$(summarize_rc "$RC")"
+  SEV="$(severity_for "$RC")"
+  send_msg "AIDE Integrity Changes [${SEV}] (rc=${RC}: ${CATS})" "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
+elif [ "$RC" -ne 0 ]; then
+  DETAILS="$(tail -n "${TAIL_LINES}" "$OUT")"
+  send_msg "AIDE Check Error (rc=${RC})" "Host: ${HOST}\nReport: ${REPORT_FILE}\nConfig: ${CONF}\n\n${DETAILS}"
+fi
+
+rm -f "$OUT"
+exit 0
