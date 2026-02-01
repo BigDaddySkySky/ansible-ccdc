@@ -11,7 +11,7 @@
 # ============================================
 
 - name: Deploy SSH keys to all Linux hosts
-  hosts: all
+  hosts: linux_servers
   become: false
   gather_facts: false
 
@@ -62,6 +62,6 @@
           - "╚══════════════════════════════════════════╝"
           - ""
           - "Next steps:"
-          - "  1) Remove ansible_password from inventory"
+          - "  1) Confirm password authentication is no longer required"
           - "  2) Run connectivity check"
           - "  3) Run 02-critical-path.yml"
