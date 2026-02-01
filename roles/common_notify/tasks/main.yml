@@ -2,8 +2,6 @@
 # ============================================
 # COMMON DISCORD NOTIFIER
 # ============================================
-# Purpose: Send a standardized message to Discord
-# ============================================
 
 - name: Send Discord notification
   ansible.builtin.uri:

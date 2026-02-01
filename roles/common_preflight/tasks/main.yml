@@ -2,8 +2,6 @@
 # ============================================
 # COMMON PRE-FLIGHT CHECKS
 # ============================================
-# Purpose: Check host state before running any hardening
-# ============================================
 
 - name: Display pre-flight header
   ansible.builtin.debug:
