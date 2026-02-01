@@ -1,19 +1,11 @@
 ---
-# ============================================
-# FIM (AIDE) ROLE - DEFAULT VARIABLES
-# ============================================
+# fim/aide default variables
 
 fim_aide_enabled: true
 
-# --------------------------------------------
-# AIDE rule definition
-# --------------------------------------------
 fim_aide_rule: "CCDCFIM"
 fim_aide_rule_attrs: "p+i+n+u+g+s+m+c+sha256"
 
-# --------------------------------------------
-# AIDE config + DB locations (pinned)
-# --------------------------------------------
 fim_aide_conf_path: "/etc/aide/aide.conf"
 fim_aide_db_dir: "/var/lib/aide"
 fim_aide_db_plain: "/var/lib/aide/aide.db"
@@ -21,34 +13,18 @@ fim_aide_db_gz: "/var/lib/aide/aide.db.gz"
 fim_aide_db_new_plain: "/var/lib/aide/aide.db.new"
 fim_aide_db_new_gz: "/var/lib/aide/aide.db.new.gz"
 
-# --------------------------------------------
-# Paths to monitor (MUST be tight)
-# --------------------------------------------
 fim_aide_paths:
   - "^/etc"
 
-# --------------------------------------------
-# Excludes (regex)
-# --------------------------------------------
-# Default safe-noise excludes + known offenders you saw in alerts.
 fim_aide_excludes: []
 
 fim_aide_initialize_db: true
 
-# --------------------------------------------
-# Cron schedule
-# --------------------------------------------
 fim_aide_cron_minute: "*/15"
 fim_aide_cron_hour: "*"
 
-# --------------------------------------------
-# Script deployment paths
-# --------------------------------------------
 fim_aide_script_dir: /usr/local/bin/ccdc-fim
 fim_aide_script_path: /usr/local/bin/ccdc-fim/aide-check.sh
 
-# --------------------------------------------
-# Discord alert integration
-# --------------------------------------------
 fim_discord_sender_path: /usr/local/bin/ccdc-audit-alerts/send-discord-alert.py
 fim_discord_tail_lines: 80

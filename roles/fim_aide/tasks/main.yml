@@ -1,11 +1,5 @@
 ---
-# ============================================
-# FIM (AIDE) ROLE - TASKS
-# ============================================
-# Installs AIDE, writes a minimal authoritative config (no distro defaults),
-# initializes DB idempotently, and schedules periodic checks + Discord alerts.
-# Also writes forensic artifacts to /var/log/aide/ccdc for white team.
-# ============================================
+# fim/aide role tasks
 
 - name: FIM | End host early when disabled
   ansible.builtin.meta: end_host
@@ -18,9 +12,6 @@
       - fim_aide_paths | length > 0
     fail_msg: "fim_aide_paths must be set per-host (tight scope). Do not monitor broad roots like '/' in competition."
 
-# ----------------------------
-# Install dependencies
-# ----------------------------
 - name: FIM | Install AIDE (Debian/Ubuntu)
   ansible.builtin.apt:
     name: aide
