@@ -20,7 +20,7 @@ die()  { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 
 on_err() {
   local ec=$?
-  echo -e "${RED}✗${NC} Bootstrap failed (exit=${ec})"
+  echo -e "${RED}✗${NC} Bootstrap failed (exit=${ec})" >&2
   echo -e "${RED}✗${NC} Line: ${BASH_LINENO[0]}  Cmd: ${BASH_COMMAND}" >&2
   exit "$ec"
 }
@@ -79,6 +79,7 @@ else
   ok "Venv exists: ${VENV_DIR}"
 fi
 
+# shellcheck disable=SC1091
 source "${VENV_DIR}/bin/activate"
 ok "Virtual environment active"
 
@@ -101,6 +102,10 @@ if [[ ! -f "$VAULT_FILE" ]]; then
   echo "Creating it now (permissions: 0600). Input will be hidden."
   echo ""
 
+  if [[ $NONINTERACTIVE -eq 1 ]]; then
+    die "Non-interactive mode but ~/.vault_pass is missing. Create it first."
+  fi
+
   read -r -s -p "Enter vault password: " VP1; echo ""
   read -r -s -p "Confirm vault password: " VP2; echo ""
   echo ""
@@ -121,8 +126,11 @@ else
   ok "Vault password file present: $VAULT_FILE"
 fi
 
+# ### CHANGED: make sanity check explicit (so a failure gives a clear error)
 if [[ -f "${REPO_ROOT}/group_vars/all/vault.yml" ]]; then
-  ansible-vault view "${REPO_ROOT}/group_vars/all/vault.yml" --vault-password-file "$VAULT_FILE" >/dev/null
+  if ! ansible-vault view "${REPO_ROOT}/group_vars/all/vault.yml" --vault-password-file "$VAULT_FILE" >/dev/null; then
+    die "Vault decrypt sanity check failed. ~/.vault_pass does not match this repo."
+  fi
   ok "Vault decrypt sanity check passed"
 else
   warn "group_vars/all/vault.yml not found; skipping decrypt sanity check"
@@ -165,17 +173,24 @@ else
   ok "ansible.cfg present"
 fi
 
-grep -qE "^\s*inventory\s*=\s*${EXPECTED_INVENTORY}\s*$" "$CFG" \
-  && ok "ansible.cfg inventory = ${EXPECTED_INVENTORY}" \
-  || warn "ansible.cfg inventory is not '${EXPECTED_INVENTORY}'"
+# ### CHANGED: use if/else (avoids ERR trap firing on grep “no match”)
+if grep -qE "^\s*inventory\s*=\s*${EXPECTED_INVENTORY}\s*$" "$CFG"; then
+  ok "ansible.cfg inventory = ${EXPECTED_INVENTORY}"
+else
+  warn "ansible.cfg inventory is not '${EXPECTED_INVENTORY}'"
+fi
 
-grep -qE "^\s*private_key_file\s*=" "$CFG" \
-  && ok "ansible.cfg private_key_file is set" \
-  || warn "ansible.cfg private_key_file is not set"
+if grep -qE "^\s*private_key_file\s*=" "$CFG"; then
+  ok "ansible.cfg private_key_file is set"
+else
+  warn "ansible.cfg private_key_file is not set"
+fi
 
-grep -qE "^\s*vault_password_file\s*=\s*${HOME}/\.vault_pass\s*$" "$CFG" \
-  && ok "ansible.cfg vault_password_file = ~/.vault_pass" \
-  || warn "ansible.cfg vault_password_file is not '~/.vault_pass'"
+if grep -qE "^\s*vault_password_file\s*=\s*${HOME}/\.vault_pass\s*$" "$CFG"; then
+  ok "ansible.cfg vault_password_file = ~/.vault_pass"
+else
+  warn "ansible.cfg vault_password_file is not '~/.vault_pass'"
+fi
 
 echo -e "\n${YELLOW}Ensuring SSH keypair exists...${NC}"
 mkdir -p "${HOME}/.ssh"
