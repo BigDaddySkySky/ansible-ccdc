@@ -1,12 +1,6 @@
 ---
-# ============================================
-# FIREWALL HARDENING ROLE - MAIN TASKS
-# ============================================
-# Notes:
-# - This role is profile-driven (firewall_profile)
-# - We optionally load host firewall vars from host_vars/<host>/firewall.yml
-#   because Ansible does NOT auto-load arbitrary host_vars files.
-# ============================================
+# Firewall hardening entrypoint (profile-driven).
+# This repo keeps host_vars at repo root (not inventory-relative), so we include them explicitly.
 
 - name: Load host firewall vars (best effort)
   ansible.builtin.include_vars:
