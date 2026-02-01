@@ -1,11 +1,5 @@
 ---
-# ============================================
-# ROOT ACCOUNT HARDENING
-# ============================================
-# Disable root login and change shell
-# ============================================
-
-# NOTE: PermitRootLogin is handled in sshd_config.yml
+# root hardening. Sets root to nologin.
 
 - name: Get current root shell
   ansible.builtin.shell: "getent passwd root | cut -d: -f7"
