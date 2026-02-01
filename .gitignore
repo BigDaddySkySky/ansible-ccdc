@@ -1,62 +1,57 @@
-# Backup files
+# =========================
+# Ansible / Python
+# =========================
 .ansible/
+*.retry
+*.pyc
+__pycache__/
 .venv/
-*.backup
-*.backup.*
-*.bak
-*~
+venv/
+*.egg-info/
+/tmp/ansible_facts
 
-# Vault password files
+# =========================
+# Vault / Secrets
+# =========================
 .vault_pass
 vault_pass.txt
 *.vault_pass
 
-# Temporary scripts
-fix_all.sh
+# =========================
+# Backups / temp
+# =========================
+*.bak
+*.backup
+*.backup.*
+*~
+*.log
 fix_*.sh
 
-# Ansible temporary
-*.retry
-*.pyc
-__pycache__/
-.ansible/
-/tmp/ansible_facts
-
-# Python virtual environment
-.venv/
-venv/
-*.egg-info/
-
+# =========================
 # IDE
+# =========================
 .vscode/
 .idea/
 *.swp
 *.swo
 
+# =========================
 # OS
+# =========================
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-
-# Deprecated directories
+# =========================
+# Deprecated
+# =========================
 group_vars/linux/
 
-# SSH keys (NEVER commit!)
+# =========================
+# SSH keys (NEVER commit)
+# =========================
 *.pem
 *.key
 *_rsa
 *_rsa.pub
 ccdc_rsa
 ccdc_rsa.pub
-
-# SSH Scripts
-ssh_*.sh
-.vault_pass
-.venv/
-.ansible/
-
-scripts/gen-firewall-profiles.sh
-# Testing / contingency playbooks
-playbooks/00-install-splunk.yml
