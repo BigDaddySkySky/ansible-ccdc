@@ -2,8 +2,6 @@
 # ============================================
 # AUDITD ROLE - HANDLERS
 # ============================================
-# Service restart and rule reload handlers
-# ============================================
 
 - name: restart auditd
   ansible.builtin.command: "killall -SIGHUP auditd"

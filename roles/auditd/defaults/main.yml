@@ -2,12 +2,6 @@
 # ============================================
 # AUDITD MONITORING ROLE - DEFAULT VARIABLES
 # ============================================
-# Override these in group_vars or host_vars as needed
-# ============================================
-
-# ============================================
-# Auditd Service Configuration
-# ============================================
 
 # Service name (same on both Ubuntu and Fedora)
 auditd_service_name: auditd
@@ -17,10 +11,6 @@ auditd_enabled: true
 
 # Start auditd at boot
 auditd_start_on_boot: true
-
-# ============================================
-# File Integrity Monitoring
-# ============================================
 
 # Critical files to monitor for changes
 auditd_monitored_files:
@@ -79,10 +69,6 @@ auditd_monitored_files:
     perm: wa
     comment: "Kernel and bootloader files"
 
-# ============================================
-# Privilege Escalation Monitoring
-# ============================================
-
 # Monitor sudo usage
 auditd_monitor_sudo: true
 
@@ -94,10 +80,6 @@ auditd_monitor_setuid: true
 
 # Monitor capability changes
 auditd_monitor_capabilities: true
-
-# ============================================
-# Authentication Monitoring
-# ============================================
 
 # Monitor SSH logins
 auditd_monitor_ssh_logins: true
@@ -111,10 +93,6 @@ auditd_monitor_user_mgmt: true
 # Monitor group changes
 auditd_monitor_group_mgmt: true
 
-# ============================================
-# System Activity Monitoring
-# ============================================
-
 # Monitor package installation
 auditd_monitor_package_install: true
 
@@ -126,10 +104,6 @@ auditd_monitor_kernel_modules: true
 
 # Monitor system time changes
 auditd_monitor_time_changes: true
-
-# ============================================
-# File System Operations
-# ============================================
 
 # Monitor file deletion in sensitive directories
 auditd_monitor_file_deletion: true
@@ -150,10 +124,6 @@ auditd_critical_directories:
   - /usr/sbin
   - /bin
   - /sbin
-
-# ============================================
-# Logging Configuration
-# ============================================
 
 # Log file location
 auditd_log_file: /var/log/audit/audit.log
@@ -180,10 +150,6 @@ auditd_admin_space_left_action: suspend
 # Admin space threshold (MB)
 auditd_admin_space_left: 50
 
-# ============================================
-# Discord Webhook Integration
-# ============================================
-
 # Enable Discord alerts for critical events
 auditd_enable_discord_alerts: true
 
@@ -202,10 +168,6 @@ auditd_alert_file_changes: true
 # Alert on suspicious file deletions
 auditd_alert_file_deletions: true
 
-# ============================================
-# Evidence Collection
-# ============================================
-
 # Enable automated evidence collection
 auditd_enable_evidence_collection: true
 
@@ -218,10 +180,6 @@ auditd_collect_audit_logs: true
 # Compress evidence archives
 auditd_compress_evidence: true
 
-# ============================================
-# Performance Tuning
-# ============================================
-
 # Buffer size for audit events
 auditd_buffer_size: 8192
 
@@ -230,10 +188,6 @@ auditd_backlog_wait_time: 60000
 
 # Rate limit (events per second, 0 = unlimited)
 auditd_rate_limit: 0
-
-# ============================================
-# Platform-Specific Settings
-# ============================================
 
 # Audit rules file location (platform-specific)
 auditd_rules_file: "{{ '/etc/audit/rules.d/audit.rules' if ansible_os_family == 'Debian' else '/etc/audit/rules.d/audit.rules' }}"

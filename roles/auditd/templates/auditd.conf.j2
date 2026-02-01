@@ -1,8 +1,6 @@
 # ============================================
 # AUDITD DAEMON CONFIGURATION
 # ============================================
-# Host: {{ inventory_hostname }}
-# ============================================
 
 # Log file location
 log_file = {{ auditd_log_file }}
@@ -72,12 +70,3 @@ write_logs = yes
 
 # Name resolution
 name_format = HOSTNAME
-
-# ============================================
-# CCDC-specific settings
-# ============================================
-# These settings optimize auditd for competition environment:
-# - High throughput (large buffer, async flush)
-# - Disk space protection (rotate when full)
-# - Local logging only (no remote syslog)
-# - Maximum retention ({{ auditd_num_logs }} files x {{ auditd_max_log_file }}MB = {{ auditd_num_logs * auditd_max_log_file }}MB total)

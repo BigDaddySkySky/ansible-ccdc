@@ -2,8 +2,6 @@
 # ============================================
 # DISCORD WEBHOOK INTEGRATION
 # ============================================
-# Configure alerts for critical audit events
-# ============================================
 
 - name: Display Discord integration header
   ansible.builtin.debug:
