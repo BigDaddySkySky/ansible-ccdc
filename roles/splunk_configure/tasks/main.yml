@@ -1,18 +1,5 @@
 ---
 # Splunk server configuration (competition-safe, first-run safe, idempotent)
-#
-# Goals:
-# - Seed admin exactly once (user-seed.conf) if Splunk has no user DB yet
-# - Ensure Splunk is running and management port responds
-# - Ensure vaulted admin auth works (rotate from initial/default only if needed)
-# - Enable receiving on 9997 for Universal Forwarders (idempotent)
-# - Enable boot-start (best effort)
-#
-# Assumptions:
-# - Splunk is installed to /opt/splunk
-# - Splunk runs as user: splunk
-# - vault_splunk_admin_password is the desired final admin password
-# - vault_splunk_admin_initial_password is ONLY used to rotate away from an initial/default, if applicable
 
 - name: Gather minimal facts (no sudo)
   ansible.builtin.setup:
@@ -53,10 +40,6 @@
     msg: "Splunk binary not found at {{ splunk_bin }}. Install Splunk first, then re-run."
   when: not splunk_bin_stat.stat.exists
 
-# ---------------------------------------------------------------------------
-# FIRST-RUN ADMIN SEEDING (only when user DB doesn't exist yet)
-# ---------------------------------------------------------------------------
-
 - name: Check if Splunk user database exists
   ansible.builtin.stat:
     path: "{{ splunk_user_db }}"
@@ -96,10 +79,6 @@
   when:
     - not splunk_passwd.stat.exists
     - not splunk_seed_stat.stat.exists
-
-# ---------------------------------------------------------------------------
-# START SPLUNK + WAIT FOR MGMT PORT
-# ---------------------------------------------------------------------------
 
 - name: Start Splunk (accept license / no prompt)
   ansible.builtin.command:
@@ -145,10 +124,6 @@
   when:
     - splunk_passwd_after.stat.exists
     - splunk_seed_stat.stat.exists or (seed_write is defined and seed_write is changed)
-
-# ---------------------------------------------------------------------------
-# ADMIN AUTH / PASSWORD ROTATION
-# ---------------------------------------------------------------------------
 
 - name: Verify vaulted Splunk admin password works (retry for startup races)
   ansible.builtin.uri:
@@ -211,10 +186,6 @@
       Fix manually, then rerun.
   when: (splunk_admin_verify_after.status | default(0)) != 200
 
-# ---------------------------------------------------------------------------
-# ENABLE BOOT-START (BEST EFFORT)
-# ---------------------------------------------------------------------------
-
 - name: Enable Splunk boot-start (best effort)
   ansible.builtin.command:
     cmd: "{{ splunk_bin }} enable boot-start -user splunk --accept-license --answer-yes --no-prompt"
@@ -223,10 +194,6 @@
   changed_when: "'configured to start automatically' in (splunk_bootstart.stdout | lower | default(''))"
   failed_when: false
   no_log: true
-
-# ---------------------------------------------------------------------------
-# ENABLE RECEIVING ON 9997 (IDEMPOTENT)
-# ---------------------------------------------------------------------------
 
 - name: Check if receiver port is already listening (9997)
   ansible.builtin.command:
@@ -269,10 +236,6 @@
     state: started
     delay: 2
     timeout: 90
-
-# ---------------------------------------------------------------------------
-# FINAL HEALTH CHECKS
-# ---------------------------------------------------------------------------
 
 - name: Verify Splunk status
   ansible.builtin.command:
