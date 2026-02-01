@@ -3,8 +3,8 @@ fim_aide_paths:
   - "/etc"
   - "/usr/local/bin"
   - "/usr/local/sbin"
-  - "/opt/splunk/etc"      # high-signal (Splunk configs)
-  - "/opt/splunk/bin"     
+  - "/opt/splunk/etc"
+  - "/opt/splunk/bin"
 
 fim_aide_excludes:
   - "/var/log"
@@ -14,7 +14,5 @@ fim_aide_excludes:
   - "/var/tmp"
   - "/var/cache"
   - "/var/lib/systemd/timers"
-
-  # Splunk churn (avoid constant diffs)
   - "/opt/splunk/var"
   - "/opt/splunkforwarder/var"
