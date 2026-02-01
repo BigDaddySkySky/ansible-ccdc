@@ -1,45 +1,23 @@
 #!/usr/bin/env bash
-# MWCCDC Ansible Bootstrap (Competition Mode)
-#
-# Purpose:
-#   Prepare a known-good Ansible control environment for competition execution.
-#
-# Behavior:
-#   - Creates/uses a local Python venv at ./.venv
-#   - Installs ansible-core==2.16.0
-#   - Installs collections from requirements.yml (if present)
-#   - Ensures ~/.vault_pass exists (prompts securely if missing)
-#   - Ensures ~/.ssh/ccdc_rsa exists (creates if missing)
-#   - Ensures ansible.cfg exists and sanity-checks key fields
-#
-# Notes:
-#   - No hardcoded secrets.
-#   - Operator-safety focused.
-
 set -Eeuo pipefail
 
-# ---------- UI ----------
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-VERBOSE=0
 NONINTERACTIVE=0
 
 for arg in "$@"; do
   case "$arg" in
-    -v|--verbose) VERBOSE=1 ;;
     -n|--non-interactive) NONINTERACTIVE=1 ;;
   esac
 done
 
-log()  { [[ $VERBOSE -eq 1 ]] && echo -e "${YELLOW}…${NC} $*"; }
 ok()   { echo -e "${GREEN}✓${NC} $*"; }
 warn() { echo -e "${YELLOW}!${NC} $*"; }
 die()  { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 
-# Fail loudly (this is what your current script is missing)
 on_err() {
   local ec=$?
   echo -e "${RED}✗${NC} Bootstrap failed (exit=${ec})"
@@ -48,8 +26,6 @@ on_err() {
 }
 trap on_err ERR
 
-# ---------- Paths / expected repo settings ----------
-# Resolve repo root robustly (works even if invoked via symlink)
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
@@ -65,9 +41,7 @@ EXPECTED_FORKS="10"
 EXPECTED_FACT_CACHE="/tmp/ansible_facts"
 
 echo -e "${YELLOW}=== MWCCDC Ansible Bootstrap ===${NC}"
-log "Repo root: ${REPO_ROOT}"
 
-# ---------- Environment detection ----------
 if [[ -f /etc/arch-release ]]; then
   ENV="arch"
   ok "Environment: Arch Linux"
@@ -81,28 +55,22 @@ else
   die "Unsupported distribution (need pacman/apt/dnf)"
 fi
 
-# ---------- System dependencies ----------
 echo -e "\n${YELLOW}Installing system dependencies...${NC}"
 case "$ENV" in
   arch)
-    log "pacman update/install"
     sudo pacman -Sy --noconfirm >/dev/null 2>&1 || true
     sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git >/dev/null 2>&1
     ;;
   debian)
-    log "apt update/install"
     sudo apt-get update -qq
     sudo apt-get install -y -qq python3 python3-pip python3-venv sshpass git
     ;;
   fedora)
-    log "dnf install"
-    # python3-virtualenv is not always required, but harmless if present
     sudo dnf install -y python3 python3-pip python3-virtualenv sshpass git
     ;;
 esac
 ok "System packages ready"
 
-# ---------- Python venv ----------
 echo -e "\n${YELLOW}Preparing Python virtual environment...${NC}"
 if [[ ! -d "$VENV_DIR" ]]; then
   python3 -m venv "$VENV_DIR"
@@ -111,17 +79,14 @@ else
   ok "Venv exists: ${VENV_DIR}"
 fi
 
-# shellcheck disable=SC1091
 source "${VENV_DIR}/bin/activate"
 ok "Virtual environment active"
 
-# ---------- Python deps / Ansible ----------
 echo -e "\n${YELLOW}Installing Ansible...${NC}"
 pip install --upgrade pip setuptools wheel >/dev/null
 pip install "ansible-core==2.16.0" >/dev/null
 ok "$(ansible --version | head -1)"
 
-# ---------- Ansible collections ----------
 if [[ -f "${REPO_ROOT}/requirements.yml" ]]; then
   echo -e "\n${YELLOW}Installing Ansible collections (requirements.yml)...${NC}"
   ansible-galaxy collection install -r requirements.yml --force
@@ -130,7 +95,6 @@ else
   warn "requirements.yml not found; skipping collection install"
 fi
 
-# ---------- Vault setup ----------
 echo -e "\n${YELLOW}Validating vault configuration...${NC}"
 if [[ ! -f "$VAULT_FILE" ]]; then
   warn "Vault password file not found: $VAULT_FILE"
@@ -157,7 +121,6 @@ else
   ok "Vault password file present: $VAULT_FILE"
 fi
 
-# Optional sanity check: vault decrypt
 if [[ -f "${REPO_ROOT}/group_vars/all/vault.yml" ]]; then
   ansible-vault view "${REPO_ROOT}/group_vars/all/vault.yml" --vault-password-file "$VAULT_FILE" >/dev/null
   ok "Vault decrypt sanity check passed"
@@ -165,7 +128,6 @@ else
   warn "group_vars/all/vault.yml not found; skipping decrypt sanity check"
 fi
 
-# ---------- ansible.cfg ensure + sanity ----------
 echo -e "\n${YELLOW}Validating ansible.cfg...${NC}"
 CFG="${REPO_ROOT}/ansible.cfg"
 
@@ -215,7 +177,6 @@ grep -qE "^\s*vault_password_file\s*=\s*${HOME}/\.vault_pass\s*$" "$CFG" \
   && ok "ansible.cfg vault_password_file = ~/.vault_pass" \
   || warn "ansible.cfg vault_password_file is not '~/.vault_pass'"
 
-# ---------- SSH keypair ----------
 echo -e "\n${YELLOW}Ensuring SSH keypair exists...${NC}"
 mkdir -p "${HOME}/.ssh"
 chmod 700 "${HOME}/.ssh"
@@ -229,22 +190,20 @@ else
   ok "SSH key already present: $KEY_PATH"
 fi
 
-# ---------- Optional: bootstrap SSH keys to targets ----------
 if [[ $NONINTERACTIVE -eq 1 ]]; then
   warn "Non-interactive mode: skipping SSH key bootstrap prompt"
 else
   echo ""
-  read -r -p "Run SSH key bootstrap now? (recommended) [y/N]: " REPLY
+  read -r -p "Run SSH key bootstrap now? [y/N]: " REPLY
   if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Running playbooks/00-bootstrap-keys.yml (will prompt for SSH password)...${NC}"
+    echo -e "${YELLOW}Running playbooks/00-bootstrap-keys.yml...${NC}"
     ansible-playbook playbooks/00-bootstrap-keys.yml -k
     ok "SSH key bootstrap completed"
   else
-    warn "Skipping SSH key bootstrap (you can run it later)"
+    warn "Skipping SSH key bootstrap"
   fi
 fi
 
-# ---------- Final ----------
 echo -e "\n${GREEN}=== Bootstrap Complete ===${NC}"
 echo "Repo:        ${REPO_ROOT}"
 echo "Environment: ${ENV}"
