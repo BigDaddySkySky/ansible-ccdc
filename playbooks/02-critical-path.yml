@@ -51,12 +51,14 @@
         file: "{{ playbook_dir }}/../group_vars/all/vault.yml"
       failed_when: false
       no_log: true
+      tags: [always]
 
     - name: Load host vault (best effort)
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/vault.yml"
       failed_when: false
       no_log: true
+      tags: [always]
 
     - name: Resolve become password for this host
       ansible.builtin.set_fact:
@@ -65,6 +67,7 @@
              | default(vault_os_become_initial_password
              | default(vault_default_password)) }}
       no_log: true
+      tags: [always]
 
     - name: Ensure a become password is available
       ansible.builtin.assert:
@@ -78,19 +81,23 @@
           - vault_os_become_initial_password (pre-rotation)
           - vault_default_password (global fallback)
       no_log: true
+      tags: [always]
 
     - name: Set ansible_become_password for roles
       ansible.builtin.set_fact:
         ansible_become_password: "{{ effective_become_password }}"
       no_log: true
+      tags: [always]
 
     - name: Load host firewall vars
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/firewall.yml"
       failed_when: false
       tags: [firewall]
+
     - name: Gather facts (after become password resolved)
       ansible.builtin.setup:
+      tags: [always]
 
   roles:
     - role: common_preflight
@@ -107,6 +114,13 @@
 
     - role: common_validation
       tags: [always]
+    
+    - role: fim_aide
+      tags: [fim]
+      vars:
+        # Baseline creation can take several minutes on Ubuntu.
+        # Critical Path should be fast: configure + cron only.
+        fim_aide_initialize_db: false
 
   post_tasks:
     - name: Set timestamp

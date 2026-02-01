@@ -1,13 +1,6 @@
 # ============================================
 # FINAL AUDIT RULES & SYSTEM CONFIGURATION
 # ============================================
-# Host: {{ inventory_hostname }}
-# Purpose: Finalize audit configuration and lock rules
-# ============================================
-
-# ============================================
-# BUFFER CONFIGURATION
-# ============================================
 
 # Set audit buffer size (default: 8192)
 -b {{ auditd_buffer_size }}
@@ -23,19 +16,11 @@
 -r 0
 {% endif %}
 
-# ============================================
-# AUDIT FAILURE MODE
-# ============================================
-
 # Failure mode (what to do if audit can't log)
 # 0 = silent
 # 1 = printk (print to kernel log)
 # 2 = panic (halt system)
 -f 1
-
-# ============================================
-# SYSTEM CALL AUDITING
-# ============================================
 
 {% if auditd_monitor_time_changes %}
 # Monitor system time changes
@@ -49,9 +34,6 @@
 {% endif %}
 
 {% if auditd_monitor_service_mgmt %}
-# ============================================
-# SERVICE MANAGEMENT
-# ============================================
 
 # Monitor systemctl for service starts/stops
 -w /bin/systemctl -p x -k service_management
@@ -63,9 +45,6 @@
 {% endif %}
 
 {% if auditd_monitor_package_install %}
-# ============================================
-# PACKAGE INSTALLATION
-# ============================================
 
 # Monitor package managers
 -w /usr/bin/apt -p x -k package_install
@@ -75,10 +54,6 @@
 -w /usr/bin/yum -p x -k package_install
 -w /usr/bin/rpm -p x -k package_install
 {% endif %}
-
-# ============================================
-# NETWORK CONFIGURATION CHANGES
-# ============================================
 
 # Monitor network interface changes
 -a always,exit -F arch=b64 -S sethostname,setdomainname -k network_config
@@ -91,46 +66,13 @@
 -w /etc/network -p wa -k network_config
 -w /etc/sysconfig/network -p wa -k network_config
 
-# ============================================
-# AUDITD SELF-PROTECTION
-# ============================================
-
 # Monitor audit configuration itself
 -w /etc/audit -p wa -k audit_config
 -w /etc/audisp -p wa -k audit_config
 -w /sbin/auditctl -p x -k audit_tools
 -w /sbin/auditd -p x -k audit_tools
 
-# ============================================
-# MAKE AUDIT CONFIGURATION IMMUTABLE
-# ============================================
-
 # Lock audit configuration (prevent tampering)
 # WARNING: After this line, audit rules cannot be changed until reboot!
 # Comment out this line if you need to modify rules without rebooting
 # -e 2
-
-# ============================================
-# NOTES
-# ============================================
-# This file should be loaded LAST (hence 99-finalize.rules)
-#
-# Immutability (-e 2):
-#   • Prevents Red Team from disabling auditing
-#   • Requires reboot to modify audit rules
-#   • ONLY enable in production/competition
-#   • Keep disabled during practice validation
-#
-# Competition day: Uncomment -e 2 to lock rules
-#
-# View all active rules:
-#   auditctl -l
-#
-# Search logs by key:
-#   ausearch -k <key_name>
-#   Example: ausearch -k file_integrity
-#
-# Generate report:
-#   aureport --summary
-#   aureport --auth
-#   aureport --file

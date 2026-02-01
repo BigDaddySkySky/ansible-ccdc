@@ -2,8 +2,6 @@
 # ============================================
 # AUDITD INSTALLATION
 # ============================================
-# Install auditd and required plugins
-# ============================================
 
 - name: Install auditd (Debian/Ubuntu)
   ansible.builtin.apt:

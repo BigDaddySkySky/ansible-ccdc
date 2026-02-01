@@ -1,9 +1,5 @@
 ---
-# ============================================
-# FAIL2BAN INSTALLATION & CONFIGURATION
-# ============================================
-# Intrusion prevention for SSH brute-force attacks
-# ============================================
+# fail2ban installation and configuration
 
 - name: Import Debian fail2ban tasks
   ansible.builtin.import_tasks: _fail2ban_debian.yml

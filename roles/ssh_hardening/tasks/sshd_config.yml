@@ -1,7 +1,5 @@
 ---
-# ============================================
-# SSHD_CONFIG HARDENING
-# ============================================
+# sshd configuration tasks
 
 - name: Check for authorized_keys for the remote user
   ansible.builtin.stat:

@@ -2,8 +2,6 @@
 # ============================================
 # SSH HARDENING ROLE - HANDLERS
 # ============================================
-# Service restart handlers
-# ============================================
 
 - name: restart sshd
   ansible.builtin.systemd:

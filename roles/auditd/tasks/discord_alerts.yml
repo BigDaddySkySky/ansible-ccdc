@@ -2,8 +2,6 @@
 # ============================================
 # DISCORD WEBHOOK INTEGRATION
 # ============================================
-# Configure alerts for critical audit events
-# ============================================
 
 - name: Display Discord integration header
   ansible.builtin.debug:
@@ -56,7 +54,7 @@
           """Send alert to Discord"""
           timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
           payload = {
-              "content": f"🚨 **Auditd Alert** - {HOSTNAME}",
+              "content": f"🚨 **CCDC Alert** - {HOSTNAME}",
               "embeds": [{
                   "title": event_type,
                   "description": details,

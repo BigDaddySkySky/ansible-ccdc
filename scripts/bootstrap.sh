@@ -1,161 +1,163 @@
 #!/usr/bin/env bash
-# ============================================================
-# MWCCDC Ansible Bootstrap (Competition Mode)
-#
-# Purpose:
-#   Prepare a known-good Ansible control environment for
-#   competition execution. This script is intentionally strict.
-#
-# Design principles:
-#   - No silent secret creation
-#   - No lab/practice assumptions
-#   - Fail fast on unsafe conditions
-#   - Reduce operator memory dependency
-#
-# Usage:
-#   ./scripts/bootstrap.sh [-v|--verbose]
-# ============================================================
-
-set -euo pipefail
+set -Eeuo pipefail
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-VERBOSE=0
+NONINTERACTIVE=0
+
 for arg in "$@"; do
-    case "$arg" in
-        -v|--verbose) VERBOSE=1 ;;
-    esac
+  case "$arg" in
+    -n|--non-interactive) NONINTERACTIVE=1 ;;
+  esac
 done
 
-log() {
-    [[ $VERBOSE -eq 1 ]] && echo -e "$1"
+ok()   { echo -e "${GREEN}✓${NC} $*"; }
+warn() { echo -e "${YELLOW}!${NC} $*"; }
+die()  { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
+
+on_err() {
+  local ec=$?
+  echo -e "${RED}✗${NC} Bootstrap failed (exit=${ec})" >&2
+  echo -e "${RED}✗${NC} Line: ${BASH_LINENO[0]}  Cmd: ${BASH_COMMAND}" >&2
+  exit "$ec"
 }
+trap on_err ERR
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+cd "$REPO_ROOT"
+
+VENV_DIR="${REPO_ROOT}/.venv"
+VAULT_FILE="${HOME}/.vault_pass"
+KEY_PATH="${HOME}/.ssh/ccdc_rsa"
+
+EXPECTED_INVENTORY="inventory/production.ini"
+EXPECTED_REMOTE_USER="sysadmin"
+EXPECTED_TIMEOUT="10"
+EXPECTED_FORKS="10"
+EXPECTED_FACT_CACHE="/tmp/ansible_facts"
 
 echo -e "${YELLOW}=== MWCCDC Ansible Bootstrap ===${NC}"
-echo ""
 
-# ------------------------------------------------------------
-# Environment detection
-# ------------------------------------------------------------
-if [[ -n "${CODESPACES:-}" ]]; then
-    ENV="codespaces"
-    echo -e "${GREEN}✓${NC} Environment: GitHub Codespaces"
-    echo -e "${YELLOW}⚠ Codespaces is EDITING ONLY. Do not run playbooks here.${NC}"
-elif [[ -f /etc/arch-release ]]; then
-    ENV="arch"
-    echo -e "${GREEN}✓${NC} Environment: Arch Linux"
-elif command -v apt-get &>/dev/null; then
-    ENV="debian"
-    echo -e "${GREEN}✓${NC} Environment: Debian/Ubuntu"
-elif command -v dnf &>/dev/null; then
-    ENV="fedora"
-    echo -e "${GREEN}✓${NC} Environment: Fedora/RHEL"
+if [[ -f /etc/arch-release ]]; then
+  ENV="arch"
+  ok "Environment: Arch Linux"
+elif command -v apt-get >/dev/null 2>&1; then
+  ENV="debian"
+  ok "Environment: Debian/Ubuntu"
+elif command -v dnf >/dev/null 2>&1; then
+  ENV="fedora"
+  ok "Environment: Fedora/RHEL"
 else
-    echo -e "${RED}✗ Unsupported distribution${NC}"
-    exit 1
+  die "Unsupported distribution (need pacman/apt/dnf)"
 fi
 
-# ------------------------------------------------------------
-# System dependencies
-# ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Installing system dependencies...${NC}"
-
+echo -e "\n${YELLOW}Installing system dependencies...${NC}"
 case "$ENV" in
-    arch)
-        sudo pacman -Sy --noconfirm ${VERBOSE:+} >/dev/null 2>&1 || true
-        sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git ${VERBOSE:+} >/dev/null 2>&1
-        ;;
-    debian|codespaces)
-        sudo apt-get update -qq >/dev/null 2>&1
-        sudo apt-get install -y -qq python3 python3-pip python3-venv sshpass git >/dev/null 2>&1
-        ;;
-    fedora)
-        sudo dnf install -y python3 python3-pip sshpass git ${VERBOSE:+} >/dev/null 2>&1
-        ;;
+  arch)
+    sudo pacman -Sy --noconfirm >/dev/null 2>&1 || true
+    sudo pacman -S --noconfirm python python-pip python-virtualenv sshpass git >/dev/null 2>&1
+    ;;
+  debian)
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq python3 python3-pip python3-venv sshpass git
+    ;;
+  fedora)
+    sudo dnf install -y python3 python3-pip python3-virtualenv sshpass git
+    ;;
 esac
+ok "System packages ready"
 
-echo -e "${GREEN}✓${NC} System packages ready"
-
-# ------------------------------------------------------------
-# Python virtual environment (mandatory)
-# ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Preparing Python virtual environment...${NC}"
-
-if [[ ! -d .venv ]]; then
-    python3 -m venv .venv
+echo -e "\n${YELLOW}Preparing Python virtual environment...${NC}"
+if [[ ! -d "$VENV_DIR" ]]; then
+  python3 -m venv "$VENV_DIR"
+  ok "Created venv: ${VENV_DIR}"
+else
+  ok "Venv exists: ${VENV_DIR}"
 fi
 
 # shellcheck disable=SC1091
-source .venv/bin/activate
+source "${VENV_DIR}/bin/activate"
+ok "Virtual environment active"
 
-echo -e "${GREEN}✓${NC} Virtual environment active"
-
-# ------------------------------------------------------------
-# Python dependencies
-# ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Installing Ansible...${NC}"
-
+echo -e "\n${YELLOW}Installing Ansible...${NC}"
 pip install --upgrade pip setuptools wheel >/dev/null
-pip install ansible-core==2.16.0 >/dev/null
+pip install "ansible-core==2.16.0" >/dev/null
+ok "$(ansible --version | head -1)"
 
-echo -e "${GREEN}✓${NC} $(ansible --version | head -1)"
-
-# ------------------------------------------------------------
-# Ansible collections
-# ------------------------------------------------------------
-if [[ -f requirements.yml ]]; then
-    echo ""
-    echo -e "${YELLOW}Installing Ansible collections...${NC}"
-    ansible-galaxy collection install -r requirements.yml --force
-    echo -e "${GREEN}✓${NC} Collections installed"
+if [[ -f "${REPO_ROOT}/requirements.yml" ]]; then
+  echo -e "\n${YELLOW}Installing Ansible collections (requirements.yml)...${NC}"
+  ansible-galaxy collection install -r requirements.yml --force
+  ok "Collections installed"
+else
+  warn "requirements.yml not found; skipping collection install"
 fi
 
-# ------------------------------------------------------------
-# Vault safety check (NO silent creation)
-# ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Validating vault configuration...${NC}"
-
-VAULT_FILE="$HOME/.vault_pass"
-
+echo -e "\n${YELLOW}Validating vault configuration...${NC}"
 if [[ ! -f "$VAULT_FILE" ]]; then
-    echo -e "${RED}✗ Vault password file not found:${NC} $VAULT_FILE"
-    echo ""
-    echo "Create it manually before proceeding:"
-    echo "  umask 077"
-    echo "  nano ~/.vault_pass"
-    echo ""
-    echo "Bootstrap intentionally refuses to create secrets for you."
-    exit 1
+  warn "Vault password file not found: $VAULT_FILE"
+  echo "Creating it now (permissions: 0600). Input will be hidden."
+  echo ""
+
+  if [[ $NONINTERACTIVE -eq 1 ]]; then
+    die "Non-interactive mode but ~/.vault_pass is missing. Create it first."
+  fi
+
+  read -r -s -p "Enter vault password: " VP1; echo ""
+  read -r -s -p "Confirm vault password: " VP2; echo ""
+  echo ""
+
+  [[ -n "${VP1}" ]] || die "Vault password cannot be empty"
+  [[ "${VP1}" == "${VP2}" ]] || die "Vault passwords did not match"
+
+  umask 077
+  tmpfile="$(mktemp "${VAULT_FILE}.XXXXXX")"
+  printf '%s\n' "$VP1" > "$tmpfile"
+  chmod 600 "$tmpfile"
+  mv -f "$tmpfile" "$VAULT_FILE"
+  unset VP1 VP2
+
+  ok "Vault password file created: $VAULT_FILE"
+else
+  chmod 600 "$VAULT_FILE" || true
+  ok "Vault password file present: $VAULT_FILE"
 fi
 
-chmod 600 "$VAULT_FILE"
-echo -e "${GREEN}✓${NC} Vault password file present"
+# ### CHANGED: make sanity check explicit (so a failure gives a clear error)
+if [[ -f "${REPO_ROOT}/group_vars/all/vault.yml" ]]; then
+  if ! ansible-vault view "${REPO_ROOT}/group_vars/all/vault.yml" --vault-password-file "$VAULT_FILE" >/dev/null; then
+    die "Vault decrypt sanity check failed. ~/.vault_pass does not match this repo."
+  fi
+  ok "Vault decrypt sanity check passed"
+else
+  warn "group_vars/all/vault.yml not found; skipping decrypt sanity check"
+fi
 
-# ------------------------------------------------------------
-# ansible.cfg (safe defaults, no forced inventory)
-# ------------------------------------------------------------
-if [[ ! -f ansible.cfg ]]; then
-    echo ""
-    echo -e "${YELLOW}Creating ansible.cfg...${NC}"
+echo -e "\n${YELLOW}Validating ansible.cfg...${NC}"
+CFG="${REPO_ROOT}/ansible.cfg"
 
-    cat > ansible.cfg << 'EOF'
+if [[ ! -f "$CFG" ]]; then
+  warn "ansible.cfg not found in repo root. Creating competition-safe ansible.cfg..."
+  cat > "$CFG" << EOF
 [defaults]
-vault_password_file = ~/.vault_pass
+private_key_file = ${KEY_PATH}
+inventory = ${EXPECTED_INVENTORY}
+vault_password_file = ${VAULT_FILE}
 host_key_checking = False
-timeout = 10
-forks = 10
+timeout = ${EXPECTED_TIMEOUT}
+remote_user = ${EXPECTED_REMOTE_USER}
+forks = ${EXPECTED_FORKS}
 retry_files_enabled = False
+
 gathering = smart
 fact_caching = jsonfile
-fact_caching_connection = /tmp/ansible_facts
+fact_caching_connection = ${EXPECTED_FACT_CACHE}
 fact_caching_timeout = 3600
+
+roles_path = roles:${HOME}/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles
 
 [ssh_connection]
 pipelining = True
@@ -166,49 +168,65 @@ become = True
 become_method = sudo
 become_ask_pass = False
 EOF
-
-    echo -e "${GREEN}✓${NC} ansible.cfg created"
+  ok "ansible.cfg created"
+else
+  ok "ansible.cfg present"
 fi
 
-# ------------------------------------------------------------
-# SSH keypair (idempotent)
-# ------------------------------------------------------------
-echo ""
-echo -e "${YELLOW}Ensuring SSH keypair exists...${NC}"
+# ### CHANGED: use if/else (avoids ERR trap firing on grep “no match”)
+if grep -qE "^\s*inventory\s*=\s*${EXPECTED_INVENTORY}\s*$" "$CFG"; then
+  ok "ansible.cfg inventory = ${EXPECTED_INVENTORY}"
+else
+  warn "ansible.cfg inventory is not '${EXPECTED_INVENTORY}'"
+fi
 
-KEY_PATH="$HOME/.ssh/ccdc_rsa"
-mkdir -p "$HOME/.ssh"
-chmod 700 "$HOME/.ssh"
+if grep -qE "^\s*private_key_file\s*=" "$CFG"; then
+  ok "ansible.cfg private_key_file is set"
+else
+  warn "ansible.cfg private_key_file is not set"
+fi
+
+if grep -qE "^\s*vault_password_file\s*=\s*${HOME}/\.vault_pass\s*$" "$CFG"; then
+  ok "ansible.cfg vault_password_file = ~/.vault_pass"
+else
+  warn "ansible.cfg vault_password_file is not '~/.vault_pass'"
+fi
+
+echo -e "\n${YELLOW}Ensuring SSH keypair exists...${NC}"
+mkdir -p "${HOME}/.ssh"
+chmod 700 "${HOME}/.ssh"
 
 if [[ ! -f "$KEY_PATH" ]]; then
-    ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc@$(hostname)" >/dev/null
-    chmod 600 "$KEY_PATH"
-    chmod 644 "$KEY_PATH.pub"
-    echo -e "${GREEN}✓${NC} SSH key generated"
+  ssh-keygen -t rsa -b 4096 -f "$KEY_PATH" -N "" -C "ccdc@$(hostname)" >/dev/null
+  chmod 600 "$KEY_PATH"
+  chmod 644 "${KEY_PATH}.pub"
+  ok "SSH key generated: $KEY_PATH"
 else
-    echo -e "${GREEN}✓${NC} SSH key already present"
+  ok "SSH key already present: $KEY_PATH"
 fi
 
-# ------------------------------------------------------------
-# Optional: bootstrap SSH keys (memory guardrail)
-# ------------------------------------------------------------
-echo ""
-read -r -p "Run SSH key bootstrap now? (recommended) [y/N]: " REPLY
-if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Running 00-bootstrap-keys.yml (will prompt for sudo password)...${NC}"
+if [[ $NONINTERACTIVE -eq 1 ]]; then
+  warn "Non-interactive mode: skipping SSH key bootstrap prompt"
+else
+  echo ""
+  read -r -p "Run SSH key bootstrap now? [y/N]: " REPLY
+  if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}Running playbooks/00-bootstrap-keys.yml...${NC}"
     ansible-playbook playbooks/00-bootstrap-keys.yml -k
+    ok "SSH key bootstrap completed"
+  else
+    warn "Skipping SSH key bootstrap"
+  fi
 fi
 
-# ------------------------------------------------------------
-# Final state
-# ------------------------------------------------------------
+echo -e "\n${GREEN}=== Bootstrap Complete ===${NC}"
+echo "Repo:        ${REPO_ROOT}"
+echo "Environment: ${ENV}"
+echo "Ansible:     $(ansible --version | head -1)"
+echo "Venv:        ${VENV_DIR}"
+echo "Vault file:  ${VAULT_FILE} (0600)"
+echo "SSH key:     ${KEY_PATH}"
 echo ""
-echo -e "${GREEN}=== Bootstrap Complete ===${NC}"
-echo ""
-echo "Environment: $ENV"
-echo "Ansible: $(ansible --version | head -1)"
-echo ""
-echo "Next step (competition):"
-echo "  ./scripts/preflight.sh"
-echo "  ansible-playbook -i inventory/staging.ini playbooks/02-critical-path.yml"
+echo "Next steps:"
+echo "  ansible-playbook -i ${EXPECTED_INVENTORY} playbooks/02-critical-path.yml"
 echo ""

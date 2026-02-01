@@ -1,8 +1,6 @@
 # Scripts
 
-Operator helper scripts used during competition.
-
-Only the scripts listed below are intended for use.
+Operator helper script used during competition.
 
 ---
 
@@ -10,9 +8,6 @@ Only the scripts listed below are intended for use.
 
 - `bootstrap.sh`  
   Prepares the control node (virtual environment, Ansible, required collections).
-
-- `preflight.sh`  
-  Read-only checks (syntax validation, inventory parsing, vault file presence).
 
 ---
 

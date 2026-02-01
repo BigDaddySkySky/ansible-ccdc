@@ -1,39 +1,12 @@
 # Vaulted Variables – host_vars
 
-This directory contains encrypted Ansible Vault files.
-Variables defined here are scoped per host.
+This directory contains per-host Ansible Vault files used to store secrets securely.
+This document describes categories of data stored here (not values).
 
 ## Stored Here
-- Passwords post-rotation
-- Host priority for scoring
-- Per-host role declarations
-
-## Declared Variables
-
-### Ubuntu – Ecom
-- vault_os_become_password
-- vault_host_role
-- vault_host_priority
-
-### Splunk
-- vault_os_root_initial_password
-- vault_os_sysadmin_initial_password
-- vault_os_become_password
-- vault_os_root_password
-- vault_os_sysadmin_password
-- vault_splunk_admin_initial_password
-- vault_splunk_admin_password
-
-### Fedora – Webmail
-- vault_os_become_password
-- vault_host_role
-- vault_host_priority
-
-### Ubuntu – Workstation
-- vault_os_become_password
-- vault_host_role
-- vault_host_priority
+- Per-host credentials (initial and post-rotation)
+- Application credentials (e.g., Splunk admin)
 
 ## Notes
-- Most variables track credentials after password rotation
-- Values are intentionally obfuscated to limit red-team reconnaissance
+- Non-secret host configuration (profiles, paths, priorities) should live in normal host_vars files.
+- Values are not stored in plaintext in the repository.

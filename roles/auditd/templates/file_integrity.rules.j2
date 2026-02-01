@@ -1,19 +1,12 @@
 # ============================================
 # FILE INTEGRITY MONITORING RULES
 # ============================================
-# Host: {{ inventory_hostname }}
-# Purpose: Monitor critical files for unauthorized changes
-# ============================================
 
 {% for item in auditd_monitored_files %}
 # {{ item.comment }}
 -w {{ item.path }} -p {{ item.perm }} -k {{ item.key }}
 
 {% endfor %}
-
-# ============================================
-# CRITICAL DIRECTORY MONITORING
-# ============================================
 
 {% if auditd_monitor_critical_dirs %}
 {% for dir in auditd_critical_directories %}
@@ -23,10 +16,6 @@
 {% endfor %}
 {% endif %}
 
-# ============================================
-# FILE DELETION MONITORING
-# ============================================
-
 {% if auditd_monitor_file_deletion %}
 {% for dir in auditd_deletion_watch_dirs %}
 # Monitor file deletions in {{ dir }}
@@ -34,17 +23,3 @@
 
 {% endfor %}
 {% endif %}
-
-# ============================================
-# NOTES
-# ============================================
-# -w : Watch (file/directory)
-# -p : Permissions to monitor
-#      r = read
-#      w = write
-#      x = execute
-#      a = attribute change
-# -k : Key/tag for searching logs (ausearch -k <key>)
-# -F : Filter (conditions that must be met)
-# auid>=1000 : User ID >= 1000 (regular users, not system)
-# auid!=unset : Ignore events without audit UID set

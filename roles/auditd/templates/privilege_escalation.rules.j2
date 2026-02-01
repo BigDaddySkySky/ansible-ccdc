@@ -1,14 +1,8 @@
 # ============================================
 # PRIVILEGE ESCALATION MONITORING RULES
 # ============================================
-# Host: {{ inventory_hostname }}
-# Purpose: Detect unauthorized privilege escalation attempts
-# ============================================
 
 {% if auditd_monitor_sudo %}
-# ============================================
-# SUDO USAGE MONITORING
-# ============================================
 
 # Monitor sudo execution
 -a always,exit -F arch=b64 -S execve -F euid=0 -F auid>=1000 -F auid!=unset -F key=sudo_execution
@@ -19,9 +13,6 @@
 {% endif %}
 
 {% if auditd_monitor_su %}
-# ============================================
-# SU USAGE MONITORING
-# ============================================
 
 # Monitor su command execution
 -w /bin/su -p x -k su_execution
@@ -29,9 +20,6 @@
 {% endif %}
 
 {% if auditd_monitor_setuid %}
-# ============================================
-# SETUID/SETGID EXECUTION MONITORING
-# ============================================
 
 # Monitor execution of programs with setuid bit
 -a always,exit -F arch=b64 -S execve -F euid=0 -F uid>=1000 -C uid!=euid -k setuid_execution
@@ -43,18 +31,11 @@
 {% endif %}
 
 {% if auditd_monitor_capabilities %}
-# ============================================
-# CAPABILITY CHANGES
-# ============================================
 
 # Monitor capability changes (setcap, getcap)
 -a always,exit -F arch=b64 -S setxattr,lsetxattr,fsetxattr -F auid>=1000 -F auid!=unset -k capability_changes
 -a always,exit -F arch=b32 -S setxattr,lsetxattr,fsetxattr -F auid>=1000 -F auid!=unset -k capability_changes
 {% endif %}
-
-# ============================================
-# KERNEL MODULE LOADING
-# ============================================
 
 {% if auditd_monitor_kernel_modules %}
 # Monitor kernel module insertion
@@ -71,10 +52,6 @@
 -w /sbin/modprobe -p x -k kernel_module_tools
 {% endif %}
 
-# ============================================
-# PROCESS ATTRIBUTE CHANGES
-# ============================================
-
 # Monitor process priority changes (nice, renice)
 -a always,exit -F arch=b64 -S setpriority -k priority_changes
 -a always,exit -F arch=b32 -S setpriority -k priority_changes
@@ -82,18 +59,3 @@
 # Monitor user/group ID changes
 -a always,exit -F arch=b64 -S setuid,setgid,setreuid,setregid,setresuid,setresgid -k privilege_escalation
 -a always,exit -F arch=b32 -S setuid,setgid,setreuid,setregid,setresuid,setresgid -k privilege_escalation
-
-# ============================================
-# NOTES
-# ============================================
-# Privilege escalation detection is CRITICAL for CCDC.
-# Red Team will attempt:
-#   1. sudo abuse (stolen credentials)
-#   2. setuid binary exploitation
-#   3. Kernel module backdoors
-#   4. Capability manipulation
-#
-# All events logged with -k keys for easy searching:
-#   ausearch -k sudo_execution
-#   ausearch -k setuid_execution
-#   ausearch -k privilege_escalation

@@ -2,42 +2,22 @@
 # ============================================
 # SSH HARDENING ROLE - DEFAULT VARIABLES
 # ============================================
-# Override these in group_vars or host_vars as needed
-# ============================================
-
-# ============================================
-# SSH Service Configuration
-# ============================================
-
 # SSH service name (varies by OS)
 ssh_hardening_service_name: "{{ 'sshd' if ansible_os_family == 'RedHat' else 'ssh' }}"
 
 # SSH configuration file path
 ssh_hardening_config_path: /etc/ssh/sshd_config
 
-# ============================================
-# Root Account Settings
-# ============================================
-
 # Lock root account (disable password login entirely)
 ssh_hardening_lock_root_account: true
 
 ssh_hardening_set_root_nologin: false
 
-# ============================================
-# SSH Authentication Settings
-# ============================================
-
 # Disable password authentication (key-only)
 ssh_hardening_disable_password_auth: true
 
 # Force hardening even without SSH keys (DANGEROUS!)
-# Set to true only if you're CERTAIN you won't be locked out
 ssh_hardening_force_no_keys: false
-
-# ============================================
-# SSH Security Settings
-# ============================================
 
 # Disable X11 forwarding
 ssh_hardening_disable_x11: true
@@ -56,10 +36,6 @@ ssh_hardening_login_grace_time: 60
 
 # Maximum pending unauthenticated connections
 ssh_hardening_max_startups: "10:30:60"
-
-# ============================================
-# Cryptographic Settings
-# ============================================
 
 # Strong ciphers (modern, secure algorithms)
 ssh_hardening_ciphers:
@@ -84,10 +60,6 @@ ssh_hardening_kex_algorithms:
   - diffie-hellman-group-exchange-sha256
   - diffie-hellman-group16-sha512
   - diffie-hellman-group18-sha512
-
-# ============================================
-# Fail2ban Settings
-# ============================================
 
 # Enable fail2ban for SSH protection
 ssh_hardening_enable_fail2ban: true

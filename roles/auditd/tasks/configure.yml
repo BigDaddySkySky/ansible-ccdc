@@ -2,12 +2,6 @@
 # ============================================
 # AUDITD CONFIGURATION
 # ============================================
-# Deploy audit rules and configure daemon
-# ============================================
-
-# ============================================
-# Backup Existing Configuration
-# ============================================
 
 - name: Backup existing audit rules
   ansible.builtin.shell: |
@@ -28,10 +22,6 @@
   changed_when: false
   become: true
 
-# ============================================
-# Deploy Auditd Configuration
-# ============================================
-
 - name: Deploy auditd.conf
   ansible.builtin.template:
     src: auditd.conf.j2
@@ -43,19 +33,11 @@
   notify: restart auditd
   become: true
 
-# ============================================
-# Cleanup Legacy Rules
-# ============================================
-
 - name: Remove legacy audit.rules file if present
   ansible.builtin.file:
     path: /etc/audit/audit.rules
     state: absent
   become: true
-
-# ============================================
-# Deploy Audit Rules
-# ============================================
 
 - name: Deploy file integrity monitoring rules
   ansible.builtin.template:
@@ -97,10 +79,6 @@
   notify: reload auditd rules
   become: true
 
-# ============================================
-# Enable and Start Service
-# ============================================
-
 - name: Ensure auditd is enabled and started
   ansible.builtin.systemd:
     name: "{{ auditd_service_name }}"
@@ -112,10 +90,6 @@
 - name: Display service status
   ansible.builtin.debug:
     msg: "{{ '✅ Auditd running' if auditd_service.status.ActiveState == 'active' else '⚠️  Auditd not active' }}"
-
-# ============================================
-# Load Rules
-# ============================================
 
 - name: Flush handlers to reload rules
   ansible.builtin.meta: flush_handlers
@@ -133,10 +107,6 @@
 - name: Display rules count
   ansible.builtin.debug:
     msg: "✅ Audit rules loaded: {{ rules_count.stdout }}"
-
-# ============================================
-# Create Log Rotation Configuration
-# ============================================
 
 - name: Ensure audit log rotation is configured
   ansible.builtin.copy:

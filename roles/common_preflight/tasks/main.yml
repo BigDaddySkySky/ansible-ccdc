@@ -2,8 +2,6 @@
 # ============================================
 # COMMON PRE-FLIGHT CHECKS
 # ============================================
-# Purpose: Check host state before running any hardening
-# ============================================
 
 - name: Display pre-flight header
   ansible.builtin.debug:
@@ -21,6 +19,15 @@
     success_msg: "✅ Ansible {{ ansible_version.full }}"
   delegate_to: localhost
   run_once: true
+
+
+- name: Gather minimal facts if missing (required for OS detection)
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - 'min'
+  when: ansible_os_family is not defined or ansible_distribution is not defined
+  become: false
 
 - name: Detect operating system family
   ansible.builtin.debug:

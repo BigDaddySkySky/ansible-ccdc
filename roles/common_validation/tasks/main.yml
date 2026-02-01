@@ -2,8 +2,6 @@
 # ============================================
 # COMMON POST-HARDENING COMPETITION CHECKS
 # ============================================
-# Purpose: Availability-preserving checks after hardening during competition
-# ============================================
 
 - name: Display competition check header
   ansible.builtin.debug:

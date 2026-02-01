@@ -1,21 +1,21 @@
 # MWCCDC Ansible Automation (Competition Repository)
 
-**Primary objective:** Secure reachable Linux services in the first ~20 minutes
-**Secondary objective:** Do no harm to scoring, access, or availability
+**Primary objective:** Secure reachable Linux services in the first ~20 minutes  
+**Secondary objective:** Preserve scoring, access, and availability
 
-This repository contains **competition-day automation only**.
+This repository contains **competition-day automation only**.  
 It is intentionally strict, minimal, and opinionated.
 
 ---
 
 ## Operator Assumptions (Read First)
 
-This repo assumes:
+This repository assumes:
 
-* You are operating after drop flag
-* You have valid credentials (SSH + sudo) for at least one Linux host
-* You are running from a Linux control node (Ubuntu preferred)
-* You are prioritizing service uptime and scoring stability
+- You are operating **after drop flag**
+- You have valid credentials (SSH + sudo) for **at least one Linux host**
+- You are running from a Linux control node (Ubuntu preferred)
+- You are prioritizing service uptime and scoring stability over completeness
 
 If any of the above are false, **do not proceed blindly**.
 
@@ -23,63 +23,68 @@ If any of the above are false, **do not proceed blindly**.
 
 ## Design Principles
 
-1. **Connectivity First**
+1. **Connectivity First**  
    No host is modified until SSH connectivity is verified.
 
-2. **Graceful Degradation**
+2. **Graceful Degradation**  
    If a host is unreachable, automation continues on others.
 
-3. **Competition Safety**
+3. **Competition Safety**  
    No hostname changes, no IP changes, no service removals unless explicitly defined.
 
-4. **Operator Clarity**
-   Every playbook is numbered in execution order and scoped deliberately.
+4. **Operator Clarity**  
+   Playbooks are numbered and intended to be run in order.
 
-5. **No Heroics**
-   Automation favors safe defaults over aggressive hardening.
+5. **No Heroics**  
+   Safe defaults are preferred over aggressive hardening.
 
 ---
 
 ## Competition-Day Quick Start
 
-### Step 1: Bootstrap the control environment
+### 1) Bootstrap the control environment
 
 Run once on the control node:
 
 ```bash
 ./scripts/bootstrap.sh
-```
+````
 
-This prepares Python, Ansible, required collections, and validates vault configuration.
+This prepares Python, Ansible, required collections, and validates vault access.
 
 ---
 
-### Step 2: Establish and preserve access
+### 2) Establish and preserve access
 
 ```bash
 ansible-playbook playbooks/00-bootstrap-keys.yml -k
 ```
 
-Ensure reliable SSH access before any hardening occurs.
+This deploys your SSH public key to reachable hosts.
+Do **not** proceed until you confirm key-based access works.
 
-Run a second time with, limited to Splunk, to handle default password variations:
+If Splunk requires a separate initial password:
+
 ```bash
 ansible-playbook playbooks/00-bootstrap-keys.yml -l splunk -k
 ```
 
 ---
 
-### Step 3: Rotate credentials (intentional, not blind)
+### 3) Rotate credentials (intentional, not blind)
 
 ```bash
 ansible-playbook playbooks/01-rotate-passwords.yml
 ```
 
-Only run once access is verified and recovery is possible.
+Only run once:
+
+* SSH access is verified
+* You can manually recover a host if needed
 
 ---
 
-### Step 4: Run the critical path (first ~20 minutes)
+### 4) Run the critical path (first ~20 minutes)
 
 ```bash
 ansible-playbook playbooks/02-critical-path.yml
@@ -89,14 +94,24 @@ Applies competition-tested baseline controls to reachable hosts.
 
 ---
 
-### Step 5: Configure telemetry (after stabilization)
+### 5) Configure telemetry (after stabilization)
 
 ```bash
 ansible-playbook playbooks/03-configure-splunk.yml
 ansible-playbook playbooks/04-install-forwarders.yml
 ```
 
-Enable centralized logging after core services are stable.
+Centralized logging should be enabled **after** core services are stable.
+
+---
+
+### 6) Establish file integrity baselines (optional, time-permitting)
+
+```bash
+ansible-playbook playbooks/05-fim-baseline.yml
+```
+
+This creates initial AIDE baselines and may take several minutes per host.
 
 ---
 
@@ -118,21 +133,24 @@ ansible-ccdc-v2/
 
 Sensitive values (passwords, service credentials, webhooks) are stored in **Ansible Vault**.
 
-* Vault passwords are never stored in this repository
+* Vault passwords are never committed
 * Vault contents are encrypted and guarded with `no_log: true`
 * Vault access is provided out-of-band via `~/.vault_pass`
 
-Refer to `group_vars/VAULT_CONTENTS.md` and `host_vars/VAULT_CONTENTS.md` for documented intent.
+See:
+
+* `group_vars/VAULT_CONTENTS.md`
+* `host_vars/VAULT_CONTENTS.md`
 
 ---
 
 ## What NOT to Do During Competition
 
-Do not:
+Do **not**:
 
 * Rename hosts or change IP addresses
 * Run unnumbered or experimental playbooks
-* Modify firewall rules unless explicitly instructed
+* Modify firewall rules unless explicitly defined
 * Rotate passwords without validation
 * Run automation on hosts you cannot recover manually
 
